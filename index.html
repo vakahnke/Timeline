@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #141414;
+    color: #c8c8c8;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    background: #1c1c1c;
+    border-bottom: 1px solid #2e2e2e;
+    flex-shrink: 0;
+    height: 46px;
+  }
+
+  #toolbar h1 { font-size: 13px; font-weight: 600; color: #fff; letter-spacing: 0.5px; margin-right: 4px; }
+
+  .sep { width: 1px; height: 22px; background: #383838; margin: 0 2px; }
+
+  button {
+    background: #2a2a2a;
+    border: 1px solid #3e3e3e;
+    color: #bbb;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.1s, color 0.1s;
+    white-space: nowrap;
+  }
+  button:hover  { background: #363636; color: #eee; }
+  button:active { background: #1e1e1e; }
+  button:disabled { opacity: 0.4; cursor: default; }
+
+  #zoom-display  { color: #777; font-size: 11px; min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+  #cursor-display { color: #666; font-size: 11px; min-width: 150px; font-variant-numeric: tabular-nums; }
+
+  #status-indicator {
+    font-size: 11px;
+    min-width: 120px;
+    text-align: right;
+    color: #555;
+    transition: color 0.3s;
+  }
+  #status-indicator.saving  { color: #ffd84a; }
+  #status-indicator.saved   { color: #4aff9e; }
+  #status-indicator.error   { color: #ff6b6b; }
+
+  #btn-new {
+    background: #1a4a2e;
+    border-color: #2a7a4e;
+    color: #7affc4;
+    margin-left: auto;
+  }
+  #btn-new:hover { background: #245e3a; }
+
+  /* ── Layout ── */
+  #timeline-wrapper { flex: 1; display: flex; overflow: hidden; }
+
+  /* ── Track headers panel ── */
+  #headers-panel {
+    width: 170px;
+    flex-shrink: 0;
+    background: #181818;
+    border-right: 2px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+  }
+
+  .ruler-spacer {
+    height: 38px;
+    flex-shrink: 0;
+    background: #0f0f0f;
+    border-bottom: 2px solid #2a2a2a;
+  }
+
+  #header-list { flex: 1; overflow: hidden; }
+
+  .track-header {
+    height: 64px;
+    border-bottom: 1px solid #242424;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 9px;
+  }
+
+  .track-swatch { width: 3px; height: 34px; border-radius: 2px; flex-shrink: 0; }
+  .track-name   { font-size: 11px; font-weight: 500; color: #d0d0d0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .track-count  { margin-left: auto; font-size: 10px; color: #555; flex-shrink: 0; }
+
+  /* ── Scrollable timeline ── */
+  #timeline-scroll { flex: 1; overflow: auto; position: relative; }
+  #timeline-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  #timeline-scroll::-webkit-scrollbar-track  { background: #111; }
+  #timeline-scroll::-webkit-scrollbar-thumb  { background: #3a3a3a; border-radius: 4px; }
+  #timeline-scroll::-webkit-scrollbar-corner { background: #111; }
+
+  #timeline-inner { position: relative; min-height: 100%; }
+
+  /* ── Ruler ── */
+  #ruler {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: block;
+    background: #0f0f0f;
+    border-bottom: 2px solid #2a2a2a;
+  }
+
+  /* ── Track lanes ── */
+  #track-lanes { position: relative; }
+
+  .track-lane {
+    height: 64px;
+    border-bottom: 1px solid #1e1e1e;
+    position: relative;
+    background: #181818;
+  }
+  .track-lane:nth-child(even) { background: #161616; }
+
+  /* ── Event blocks ── */
+  .event-block {
+    position: absolute;
+    top: 7px;
+    height: 50px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    padding: 0 9px;
+    cursor: grab;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-left-width: 3px;
+    min-width: 4px;
+    transition: filter 0.08s;
+  }
+  .event-block:hover        { filter: brightness(1.25); z-index: 3; }
+  .event-block:hover .event-actions { opacity: 1; }
+  .event-block.dragging     { cursor: grabbing; filter: brightness(1.4); z-index: 10; box-shadow: 0 6px 24px rgba(0,0,0,0.6); }
+  .event-block.saving-pulse { animation: pulse 0.6s ease; }
+
+  @keyframes pulse {
+    0%   { filter: brightness(1.6); }
+    100% { filter: brightness(1); }
+  }
+
+  .event-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: hidden;
+    width: 100%;
+    pointer-events: none;
+  }
+
+  .event-title { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.92); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .event-time  { font-size: 10px; color: rgba(255,255,255,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+
+  .event-actions {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity 0.1s;
+    pointer-events: all;
+    z-index: 5;
+  }
+
+  .event-actions button {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 3px;
+    font-size: 10px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.5);
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.8);
+  }
+  .event-actions .btn-delete:hover { background: #7a1a1a; border-color: #cc3333; color: #ff8888; }
+  .event-actions .btn-edit:hover   { background: #1a3a5a; border-color: #3366cc; color: #88aaff; }
+
+  /* ── Empty / Loading states ── */
+  #empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 260px;
+    color: #444;
+  }
+  #empty-state .icon { font-size: 36px; margin-bottom: 4px; }
+  #empty-state p { font-size: 13px; }
+
+  /* ── Modal (shared) ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.72);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: #1e1e1e;
+    border: 1px solid #383838;
+    border-radius: 10px;
+    width: 480px;
+    max-width: 92vw;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  }
+
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid #2e2e2e;
+    background: #181818;
+  }
+  .modal-head h2 { font-size: 13px; font-weight: 600; color: #fff; }
+
+  .btn-modal-close {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+  }
+  .btn-modal-close:hover { color: #ccc; background: none; }
+
+  .modal-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .field-row { display: flex; flex-direction: column; gap: 5px; }
+  .field-row label { font-size: 11px; color: #888; font-weight: 500; letter-spacing: 0.3px; }
+
+  .field-row input,
+  .field-row textarea,
+  .field-row select {
+    background: #111;
+    border: 1px solid #383838;
+    color: #ddd;
+    font-size: 12px;
+    padding: 7px 10px;
+    border-radius: 4px;
+    outline: none;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field-row input:focus,
+  .field-row textarea:focus,
+  .field-row select:focus { border-color: #2a5a9f; }
+
+  .field-row textarea { min-height: 70px; resize: vertical; }
+
+  .field-row-inline { display: flex; gap: 10px; }
+  .field-row-inline .field-row { flex: 1; }
+
+  .color-row { display: flex; align-items: center; gap: 10px; }
+  .color-row input[type=color] {
+    width: 36px;
+    height: 30px;
+    padding: 2px;
+    border-radius: 4px;
+    border: 1px solid #383838;
+    background: #111;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .color-row input[type=text] { flex: 1; }
+
+  .modal-error { color: #ff6b6b; font-size: 11px; min-height: 14px; }
+
+  .modal-foot {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 18px;
+    border-top: 1px solid #2e2e2e;
+    background: #181818;
+  }
+
+  .btn-primary { background: #1a4a2e; border-color: #2a7a4e; color: #7affc4; }
+  .btn-primary:hover { background: #245e3a; }
+  .btn-danger  { background: #4a1a1a; border-color: #8a3a3a; color: #ffaaaa; }
+  .btn-danger:hover { background: #602020; }
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ── -->
+<div id="toolbar">
+  <h1>Timeline</h1>
+  <div class="sep"></div>
+  <button id="btn-zoom-out" title="Zoom out (Ctrl+scroll)">&#8722;</button>
+  <span id="zoom-display">―</span>
+  <button id="btn-zoom-in" title="Zoom in (Ctrl+scroll)">+</button>
+  <button id="btn-zoom-fit" title="Fit all events">Fit</button>
+  <div class="sep"></div>
+  <span id="cursor-display"></span>
+  <span id="status-indicator"></span>
+  <button id="btn-new">+ New Event</button>
+</div>
+
+<!-- ── Main timeline ── -->
+<div id="timeline-wrapper">
+  <div id="headers-panel">
+    <div class="ruler-spacer"></div>
+    <div id="header-list"></div>
+  </div>
+  <div id="timeline-scroll">
+    <div id="timeline-inner">
+      <canvas id="ruler" height="38"></canvas>
+      <div id="track-lanes">
+        <div id="empty-state">
+          <div class="icon">&#9776;</div>
+          <p id="empty-msg">Connecting to API...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Event editor modal ── -->
+<div id="event-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">New Event</h2>
+      <button class="btn-modal-close" id="modal-close-btn">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <label>Title</label>
+        <input type="text" id="f-title" placeholder="Event title" />
+      </div>
+      <div class="field-row-inline">
+        <div class="field-row">
+          <label>Start</label>
+          <input type="datetime-local" id="f-start" />
+        </div>
+        <div class="field-row">
+          <label>End</label>
+          <input type="datetime-local" id="f-end" />
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Track</label>
+        <input type="text" id="f-track" placeholder="e.g. Engineering" />
+      </div>
+      <div class="field-row">
+        <label>Color (optional)</label>
+        <div class="color-row">
+          <input type="color" id="f-color-picker" value="#4a88ff" />
+          <input type="text"  id="f-color" placeholder="#4a88ff" maxlength="7" />
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Notes</label>
+        <textarea id="f-notes" placeholder="Optional notes..."></textarea>
+      </div>
+      <div class="modal-error" id="modal-error"></div>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-delete-event" class="btn-danger" style="margin-right:auto;display:none;">Delete</button>
+      <button id="btn-cancel-modal">Cancel</button>
+      <button id="btn-save-event" class="btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Config
+// ─────────────────────────────────────────────────────────────────────────────
+const API_BASE = 'http://localhost:8000/api';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants & palette
+// ─────────────────────────────────────────────────────────────────────────────
+const TRACK_HEIGHT  = 64;
+const RULER_HEIGHT  = 38;
+const HEADER_WIDTH  = 170;
+const MIN_PX_PER_HR = 4;
+const MAX_PX_PER_HR = 8000;
+
+const PALETTE = [
+  '#4a88ff','#ff6b4a','#4aff9e','#ffd84a','#c44aff',
+  '#ff4aaa','#4adcff','#ffaa4a','#aaff4a','#ff4a4a',
+  '#4affdd','#ff8c4a','#7a4aff','#4affa0','#ff4a70',
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let events     = [];
+let tracks     = [];
+let pxPerHour  = 120;
+let rangeStart = 0;
+let rangeEnd   = 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOM refs
+// ─────────────────────────────────────────────────────────────────────────────
+const scrollEl      = document.getElementById('timeline-scroll');
+const innerEl       = document.getElementById('timeline-inner');
+const lanesEl       = document.getElementById('track-lanes');
+const headerListEl  = document.getElementById('header-list');
+const rulerCanvas   = document.getElementById('ruler');
+const rulerCtx      = rulerCanvas.getContext('2d');
+const zoomDisplay   = document.getElementById('zoom-display');
+const cursorDisplay = document.getElementById('cursor-display');
+const statusEl      = document.getElementById('status-indicator');
+const emptyMsg      = document.getElementById('empty-msg');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API helpers
+// ─────────────────────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(API_BASE + path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`${res.status} ${res.statusText}: ${body}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function setStatus(msg, type = '') {
+  statusEl.textContent = msg;
+  statusEl.className   = type;
+  if (type === 'saved') setTimeout(() => { statusEl.textContent = ''; statusEl.className = ''; }, 2000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coordinate helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const msToX  = ms => ((ms - rangeStart) / 3_600_000) * pxPerHour;
+const xToMs  = px => rangeStart + (px / pxPerHour) * 3_600_000;
+const totalW = ()  => Math.max(
+  ((rangeEnd - rangeStart) / 3_600_000) * pxPerHour,
+  scrollEl.clientWidth
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Build derived state from raw events array
+// ─────────────────────────────────────────────────────────────────────────────
+function buildTracks() {
+  const namesSeen = new Set();
+  const newTracks = [];
+  const existingColors = Object.fromEntries(tracks.map(t => [t.name, t.color]));
+
+  for (const e of events) {
+    if (!namesSeen.has(e.track)) {
+      namesSeen.add(e.track);
+      newTracks.push({
+        name:  e.track,
+        color: existingColors[e.track] ?? PALETTE[newTracks.length % PALETTE.length],
+      });
+    }
+  }
+  tracks = newTracks;
+
+  const colorMap = Object.fromEntries(tracks.map(t => [t.name, t.color]));
+  events.forEach(e => {
+    if (!e.color) e._color = colorMap[e.track];
+    else          e._color = e.color;
+  });
+}
+
+function buildRange() {
+  if (events.length === 0) return;
+  rangeStart = Math.min(...events.map(e => new Date(e.start).getTime()));
+  rangeEnd   = Math.max(...events.map(e => new Date(e.end).getTime()));
+  const pad  = (rangeEnd - rangeStart) * 0.05;
+  rangeStart -= pad;
+  rangeEnd   += pad;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Load from API
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadFromAPI() {
+  try {
+    const data = await apiFetch('/events/');
+    events = data;
+    buildTracks();
+    if (events.length > 0) {
+      buildRange();
+      fitZoom();
+    }
+    render();
+  } catch (err) {
+    emptyMsg.textContent = 'Could not reach API. Is Django running?';
+    console.error(err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render
+// ─────────────────────────────────────────────────────────────────────────────
+function render() {
+  const empty = document.getElementById('empty-state');
+  if (events.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    headerListEl.innerHTML = '';
+    innerEl.style.width    = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  innerEl.style.width = totalW() + 'px';
+  drawRuler();
+  renderHeaders();
+  renderLanes();
+  bindBlockEvents();
+}
+
+function renderHeaders() {
+  headerListEl.innerHTML = tracks.map(t => {
+    const count = events.filter(e => e.track === t.name).length;
+    return `<div class="track-header">
+      <div class="track-swatch" style="background:${t.color}"></div>
+      <span class="track-name">${escHtml(t.name)}</span>
+      <span class="track-count">${count}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderLanes() {
+  lanesEl.innerHTML = tracks.map(t => {
+    const trackEvents = events.filter(e => e.track === t.name);
+    const blocks = trackEvents.map(e => eventBlockHTML(e)).join('');
+    return `<div class="track-lane" data-track="${escHtml(t.name)}">${blocks}</div>`;
+  }).join('');
+}
+
+function eventBlockHTML(e) {
+  const startMs = new Date(e.start).getTime();
+  const endMs   = new Date(e.end).getTime();
+  const x       = msToX(startMs);
+  const w       = Math.max(3, msToX(endMs) - msToX(startMs));
+  const color   = e._color || e.color || '#4a88ff';
+  const bg      = hexToRgba(color, 0.22);
+  return `<div class="event-block"
+    data-id="${e.id}"
+    style="left:${x}px;width:${w}px;background:${bg};border-color:${color};"
+  >
+    <div class="event-inner">
+      <span class="event-title">${escHtml(e.title)}</span>
+      <span class="event-time">${fmtTime(startMs)} &ndash; ${fmtTime(endMs)}</span>
+    </div>
+    <div class="event-actions">
+      <button class="btn-edit"   title="Edit">&#9998;</button>
+      <button class="btn-delete" title="Delete">&#10005;</button>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ruler
+// ─────────────────────────────────────────────────────────────────────────────
+const TICK_INTERVALS = [
+  { ms: 60_000,      fmt: 'time' },
+  { ms: 300_000,     fmt: 'time' },
+  { ms: 900_000,     fmt: 'time' },
+  { ms: 1_800_000,   fmt: 'time' },
+  { ms: 3_600_000,   fmt: 'time' },
+  { ms: 7_200_000,   fmt: 'time' },
+  { ms: 14_400_000,  fmt: 'hour' },
+  { ms: 28_800_000,  fmt: 'hour' },
+  { ms: 86_400_000,  fmt: 'date' },
+  { ms: 604_800_000, fmt: 'date' },
+];
+
+function drawRuler() {
+  const w = totalW();
+  rulerCanvas.width  = w;
+  rulerCanvas.height = RULER_HEIGHT;
+
+  const ctx      = rulerCtx;
+  const pxPerMs  = pxPerHour / 3_600_000;
+  let interval   = TICK_INTERVALS[TICK_INTERVALS.length - 1];
+  for (const iv of TICK_INTERVALS) {
+    if (iv.ms * pxPerMs >= 56) { interval = iv; break; }
+  }
+
+  ctx.fillStyle = '#0f0f0f';
+  ctx.fillRect(0, 0, w, RULER_HEIGHT);
+
+  const first = Math.ceil(rangeStart / interval.ms) * interval.ms;
+  ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.textBaseline = 'middle';
+
+  for (let t = first; t <= rangeEnd; t += interval.ms) {
+    const x = Math.round(msToX(t));
+    ctx.strokeStyle = '#2e2e2e';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 0.5, RULER_HEIGHT * 0.5);
+    ctx.lineTo(x + 0.5, RULER_HEIGHT);
+    ctx.stroke();
+
+    ctx.fillStyle  = '#777';
+    ctx.textAlign  = 'left';
+    ctx.fillText(rulerLabel(t, interval.fmt), x + 4, RULER_HEIGHT * 0.5 - 2);
+  }
+
+  // half-interval minor ticks
+  const half = interval.ms / 2;
+  if (half * pxPerMs >= 20) {
+    const firstHalf = Math.ceil(rangeStart / half) * half;
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth   = 1;
+    for (let t = firstHalf; t <= rangeEnd; t += half) {
+      if (t % interval.ms === 0) continue;
+      const x = Math.round(msToX(t));
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, RULER_HEIGHT * 0.72);
+      ctx.lineTo(x + 0.5, RULER_HEIGHT);
+      ctx.stroke();
+    }
+  }
+
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth   = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, RULER_HEIGHT - 1);
+  ctx.lineTo(w, RULER_HEIGHT - 1);
+  ctx.stroke();
+}
+
+function rulerLabel(ms, fmt) {
+  const d = new Date(ms);
+  if (fmt === 'date') return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (fmt === 'hour') return d.toLocaleTimeString(undefined, { hour: '2-digit', hour12: false });
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Drag to reposition (persists via PATCH)
+// ─────────────────────────────────────────────────────────────────────────────
+let drag = null;
+
+function bindBlockEvents() {
+  lanesEl.querySelectorAll('.event-block').forEach(el => {
+    el.addEventListener('mousedown', onBlockMouseDown);
+    el.querySelector('.btn-edit').addEventListener('click',   e => { e.stopPropagation(); openEditModal(el.dataset.id); });
+    el.querySelector('.btn-delete').addEventListener('click', e => { e.stopPropagation(); confirmDelete(el.dataset.id); });
+  });
+}
+
+function onBlockMouseDown(e) {
+  // Ignore clicks on action buttons
+  if (e.target.closest('.event-actions')) return;
+  if (e.button !== 0) return;
+  e.preventDefault();
+
+  const el  = e.currentTarget;
+  const id  = el.dataset.id;
+  const ev  = events.find(ev => String(ev.id) === id);
+  if (!ev) return;
+
+  const startMs = new Date(ev.start).getTime();
+  const endMs   = new Date(ev.end).getTime();
+
+  el.classList.add('dragging');
+  drag = {
+    el,
+    ev,
+    startX:    e.clientX,
+    origStart: startMs,
+    duration:  endMs - startMs,
+    moved:     false,
+  };
+
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup',   onDragUp);
+}
+
+function onDragMove(e) {
+  if (!drag) return;
+  const dx = e.clientX - drag.startX;
+  if (!drag.moved && Math.abs(dx) < 3) return;
+  drag.moved = true;
+
+  const dtMs    = (dx / pxPerHour) * 3_600_000;
+  const newStart = drag.origStart + dtMs;
+  const newEnd   = newStart + drag.duration;
+
+  drag.el.style.left = msToX(newStart) + 'px';
+  drag.el.querySelector('.event-time').textContent =
+    fmtTime(newStart) + ' \u2013 ' + fmtTime(newEnd);
+
+  // Store tentative times on the event object
+  drag._pendingStart = newStart;
+  drag._pendingEnd   = newEnd;
+}
+
+async function onDragUp() {
+  if (!drag) return;
+  drag.el.classList.remove('dragging');
+
+  if (drag.moved && drag._pendingStart !== undefined) {
+    const ev         = drag.ev;
+    const newStart   = new Date(drag._pendingStart).toISOString();
+    const newEnd     = new Date(drag._pendingEnd).toISOString();
+
+    setStatus('Saving…', 'saving');
+    try {
+      const updated = await apiFetch(`/events/${ev.id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ start: newStart, end: newEnd }),
+      });
+      // Update local state
+      Object.assign(ev, updated);
+      buildTracks();
+      drag.el.classList.add('saving-pulse');
+      setStatus('Saved', 'saved');
+    } catch (err) {
+      // Revert visual position
+      const origX = msToX(drag.origStart);
+      drag.el.style.left = origX + 'px';
+      drag.el.querySelector('.event-time').textContent =
+        fmtTime(drag.origStart) + ' \u2013 ' + fmtTime(drag.origStart + drag.duration);
+      setStatus('Save failed', 'error');
+      console.error(err);
+    }
+  }
+
+  drag = null;
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup',   onDragUp);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Zoom
+// ─────────────────────────────────────────────────────────────────────────────
+function fitZoom() {
+  if (events.length === 0) return;
+  const spanHrs = (rangeEnd - rangeStart) / 3_600_000;
+  const avail   = scrollEl.clientWidth || window.innerWidth - HEADER_WIDTH;
+  pxPerHour     = Math.max(MIN_PX_PER_HR, (avail / spanHrs) * 0.92);
+  updateZoomLabel();
+}
+
+function applyZoom(factor, anchorClientX) {
+  const rect       = scrollEl.getBoundingClientRect();
+  const anchorX    = (anchorClientX ?? rect.left + rect.width / 2) - rect.left + scrollEl.scrollLeft;
+  const anchorTime = xToMs(anchorX);
+
+  pxPerHour = Math.max(MIN_PX_PER_HR, Math.min(MAX_PX_PER_HR, pxPerHour * factor));
+  updateZoomLabel();
+
+  if (events.length === 0) return;
+  innerEl.style.width = totalW() + 'px';
+  drawRuler();
+
+  lanesEl.querySelectorAll('.event-block').forEach(el => {
+    const id  = el.dataset.id;
+    const ev  = events.find(ev => String(ev.id) === id);
+    if (!ev) return;
+    const startMs = new Date(ev.start).getTime();
+    const endMs   = new Date(ev.end).getTime();
+    el.style.left  = msToX(startMs) + 'px';
+    el.style.width = Math.max(3, msToX(endMs) - msToX(startMs)) + 'px';
+  });
+
+  scrollEl.scrollLeft = msToX(anchorTime) - anchorX + scrollEl.scrollLeft;
+}
+
+function updateZoomLabel() {
+  zoomDisplay.textContent = pxPerHour >= 1000
+    ? Math.round(pxPerHour / 60) + 'px/min'
+    : Math.round(pxPerHour) + 'px/hr';
+}
+
+document.getElementById('btn-zoom-in').addEventListener('click',  () => applyZoom(1.6));
+document.getElementById('btn-zoom-out').addEventListener('click', () => applyZoom(1 / 1.6));
+document.getElementById('btn-zoom-fit').addEventListener('click', () => { fitZoom(); render(); });
+
+scrollEl.addEventListener('wheel', e => {
+  if (e.shiftKey) return; // allow shift+scroll for horizontal pan
+  e.preventDefault();
+  applyZoom(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX);
+}, { passive: false });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cursor display & header sync
+// ─────────────────────────────────────────────────────────────────────────────
+scrollEl.addEventListener('mousemove', e => {
+  if (events.length === 0) return;
+  const rect = scrollEl.getBoundingClientRect();
+  cursorDisplay.textContent = fmtDateTime(xToMs(e.clientX - rect.left + scrollEl.scrollLeft));
+});
+scrollEl.addEventListener('mouseleave', () => { cursorDisplay.textContent = ''; });
+scrollEl.addEventListener('scroll', () => {
+  headerListEl.style.transform = `translateY(-${scrollEl.scrollTop}px)`;
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event editor modal
+// ─────────────────────────────────────────────────────────────────────────────
+const eventModal   = document.getElementById('event-modal');
+const modalTitle   = document.getElementById('modal-title');
+const modalError   = document.getElementById('modal-error');
+const btnDeleteEvt = document.getElementById('btn-delete-event');
+
+let editingId = null;
+
+function openNewModal() {
+  editingId = null;
+  modalTitle.textContent       = 'New Event';
+  modalError.textContent       = '';
+  btnDeleteEvt.style.display   = 'none';
+  document.getElementById('f-title').value  = '';
+  document.getElementById('f-start').value  = toLocalISO(new Date());
+  document.getElementById('f-end').value    = toLocalISO(new Date(Date.now() + 3_600_000));
+  document.getElementById('f-track').value  = tracks[0]?.name ?? '';
+  document.getElementById('f-color').value  = '';
+  document.getElementById('f-color-picker').value = '#4a88ff';
+  document.getElementById('f-notes').value  = '';
+  eventModal.classList.add('open');
+  document.getElementById('f-title').focus();
+}
+
+function openEditModal(id) {
+  const ev = events.find(e => String(e.id) === id);
+  if (!ev) return;
+  editingId = ev.id;
+  modalTitle.textContent       = 'Edit Event';
+  modalError.textContent       = '';
+  btnDeleteEvt.style.display   = 'block';
+  document.getElementById('f-title').value  = ev.title;
+  document.getElementById('f-start').value  = toLocalISO(new Date(ev.start));
+  document.getElementById('f-end').value    = toLocalISO(new Date(ev.end));
+  document.getElementById('f-track').value  = ev.track;
+  document.getElementById('f-color').value  = ev.color || '';
+  document.getElementById('f-color-picker').value = ev.color || '#4a88ff';
+  document.getElementById('f-notes').value  = ev.notes || '';
+  eventModal.classList.add('open');
+}
+
+function closeModal() {
+  eventModal.classList.remove('open');
+  editingId = null;
+}
+
+document.getElementById('btn-new').addEventListener('click', openNewModal);
+document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
+eventModal.addEventListener('click', e => { if (e.target === eventModal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && eventModal.classList.contains('open')) closeModal(); });
+
+// Sync color picker ↔ text field
+document.getElementById('f-color-picker').addEventListener('input', e => {
+  document.getElementById('f-color').value = e.target.value;
+});
+document.getElementById('f-color').addEventListener('input', e => {
+  if (/^#[0-9a-fA-F]{6}$/.test(e.target.value))
+    document.getElementById('f-color-picker').value = e.target.value;
+});
+
+document.getElementById('btn-save-event').addEventListener('click', saveEvent);
+
+async function saveEvent() {
+  modalError.textContent = '';
+  const title = document.getElementById('f-title').value.trim();
+  const start = document.getElementById('f-start').value;
+  const end   = document.getElementById('f-end').value;
+  const track = document.getElementById('f-track').value.trim() || 'Default';
+  const color = document.getElementById('f-color').value.trim();
+  const notes = document.getElementById('f-notes').value.trim();
+
+  if (!title) { modalError.textContent = 'Title is required.'; return; }
+  if (!start || !end) { modalError.textContent = 'Start and end are required.'; return; }
+  if (new Date(end) <= new Date(start)) { modalError.textContent = 'End must be after start.'; return; }
+
+  const payload = {
+    title,
+    start: new Date(start).toISOString(),
+    end:   new Date(end).toISOString(),
+    track,
+    color: color || '',
+    notes,
+  };
+
+  setStatus('Saving…', 'saving');
+  try {
+    if (editingId) {
+      const updated = await apiFetch(`/events/${editingId}/`, {
+        method: 'PATCH',
+        body:   JSON.stringify(payload),
+      });
+      const idx = events.findIndex(e => e.id === editingId);
+      if (idx !== -1) events[idx] = updated;
+    } else {
+      const created = await apiFetch('/events/', {
+        method: 'POST',
+        body:   JSON.stringify(payload),
+      });
+      events.push(created);
+    }
+
+    buildTracks();
+    buildRange();
+    render();
+    closeModal();
+    setStatus('Saved', 'saved');
+  } catch (err) {
+    modalError.textContent = 'Error: ' + err.message;
+    setStatus('Save failed', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Delete
+// ─────────────────────────────────────────────────────────────────────────────
+btnDeleteEvt.addEventListener('click', () => { if (editingId) confirmDelete(editingId, true); });
+
+async function confirmDelete(id, fromModal = false) {
+  const ev = events.find(e => String(e.id) === id);
+  if (!ev) return;
+  if (!confirm(`Delete "${ev.title}"?`)) return;
+
+  setStatus('Deleting…', 'saving');
+  try {
+    await apiFetch(`/events/${id}/`, { method: 'DELETE' });
+    events = events.filter(e => String(e.id) !== id);
+    buildTracks();
+    if (events.length > 0) buildRange();
+    render();
+    if (fromModal) closeModal();
+    setStatus('Deleted', 'saved');
+  } catch (err) {
+    setStatus('Delete failed', 'error');
+    console.error(err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function fmtTime(ms) {
+  return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function fmtDateTime(ms) {
+  const d = new Date(ms);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + '  ' +
+         d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function toLocalISO(date) {
+  const off  = date.getTimezoneOffset() * 60_000;
+  const local = new Date(date - off);
+  return local.toISOString().slice(0, 16);
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex || hex[0] !== '#') return `rgba(100,120,200,${alpha})`;
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────────────────
+updateZoomLabel();
+window.addEventListener('resize', () => { if (events.length > 0) render(); });
+loadFromAPI();
+</script>
+</body>
+</html>
