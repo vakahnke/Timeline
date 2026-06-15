@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 
 function fmtDT(ms) {
   const d = new Date(ms)
@@ -19,14 +18,10 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, onSaveTemplate, pxPerHour, setPxPerHour, onFit, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
-
-  const zoom = factor => {
-    setPxPerHour(prev => Math.max(MIN_PX_PER_HR, Math.min(MAX_PX_PER_HR, prev * factor)))
-  }
 
   const label = pxPerHour >= 1000
     ? `${Math.round(pxPerHour / 60)}px/min`
@@ -51,10 +46,10 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       <h1>{projectName || 'Timeline'}</h1>
       {!canEdit && <span className="ro-badge" title="You have view-only access">View only</span>}
       <div className="toolbar-sep" />
-      <button onClick={() => zoom(1 / 1.6)} title="Zoom out">−</button>
-      <span className="zoom-label">{label}</span>
-      <button onClick={() => zoom(1.6)} title="Zoom in">+</button>
-      <button onClick={onFit} title="Fit all events to view">Fit</button>
+      <button onClick={onZoomOut} title="Zoom out  ·  −  or  Ctrl/⌘ + scroll">−</button>
+      <span className="zoom-label" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
+      <button onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
+      <button onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
       <div className="toolbar-sep" />
       {projectStart != null && (
         <div className="toolbar-range">

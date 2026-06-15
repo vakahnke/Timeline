@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import { useToast } from '../ui/ToastProvider'
-import { PALETTE } from '../constants'
+import { PALETTE, MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 import Toolbar from '../components/Toolbar'
 import Timeline from '../components/Timeline'
 import EventModal from '../components/EventModal'
@@ -92,7 +92,15 @@ export default function ProjectTimeline() {
         if (cancelled) return
         setProject(proj)
         setEvents(evData)
-        setRange(buildRange(evData))
+        const r = buildRange(evData)
+        setRange(r)
+        // Fit the initial zoom right away (approx viewport) so a long-span project never
+        // first renders at the zoomed-in default — which would draw a huge ruler/canvas.
+        if (r) {
+          const spanHrs = (r.end - r.start) / 3_600_000
+          const avail   = (window.innerWidth || 1200) - 180
+          setPxPerHour(Math.max(MIN_PX_PER_HR, Math.min(MAX_PX_PER_HR, (avail / spanHrs) * 0.92)))
+        }
         setApiCategories(catData)
         setApiError(null)
       })
@@ -255,7 +263,8 @@ export default function ProjectTimeline() {
         onOpenMembers={() => setShowMembers(true)}
         onSaveTemplate={saveAsTemplate}
         pxPerHour={pxPerHour}
-        setPxPerHour={setPxPerHour}
+        onZoomIn={() => timelineRef.current?.zoomBy(1.6)}
+        onZoomOut={() => timelineRef.current?.zoomBy(1 / 1.6)}
         onFit={() => timelineRef.current?.fitZoom()}
         onNew={() => openNew()}
         onNewCategory={openNewCategory}

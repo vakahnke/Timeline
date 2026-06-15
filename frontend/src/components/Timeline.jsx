@@ -1,6 +1,9 @@
-import { useRef, useEffect, useCallback, useState, useMemo, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useEffect, useLayoutEffect, useCallback, useState, useMemo, forwardRef, useImperativeHandle } from 'react'
 import { RULER_HEIGHT, TRACK_HEIGHT, TICK_INTERVALS, MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 import EventBlock from './EventBlock'
+import Minimap from './Minimap'
+
+const clampPx = (px) => Math.max(MIN_PX_PER_HR, Math.min(MAX_PX_PER_HR, px))
 
 function fmtTime(ms) {
   return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -27,9 +30,13 @@ function drawRuler(canvas, rangeStart, rangeEnd, pxPerHour, width) {
   ctx.fillRect(0, 0, width, h)
 
   const pxPerMs  = pxPerHour / 3_600_000
+  const span     = rangeEnd - rangeStart
+  // Pick the smallest interval that's both readable (>=56px apart) AND keeps the total
+  // tick count bounded — otherwise a long span at a high zoom tries to draw tens of
+  // thousands of ticks and freezes the tab.
   let interval   = TICK_INTERVALS[TICK_INTERVALS.length - 1]
   for (const iv of TICK_INTERVALS) {
-    if (iv.ms * pxPerMs >= 56) { interval = iv; break }
+    if (iv.ms * pxPerMs >= 56 && span / iv.ms <= 600) { interval = iv; break }
   }
 
   const msToX    = ms => ((ms - rangeStart) / 3_600_000) * pxPerHour
@@ -104,7 +111,7 @@ const Timeline = forwardRef(function Timeline(
   const zoomAnchorRef   = useRef(null) // { anchorTime, mouseX } pending scroll correction
   const [dragging, setDragging] = useState(null) // { from, to }
   const [tooltip, setTooltip] = useState(null)   // { event, x, y }
-  const [cursorLabel, setCursorLabel] = useState(null)  // { text, x }
+  const cursorLabelRef = useRef(null)  // updated imperatively on mouse-move (no re-render)
   const [now, setNow] = useState(Date.now())
 
   useEffect(() => { pxRef.current      = pxPerHour    }, [pxPerHour])
@@ -122,25 +129,73 @@ const Timeline = forwardRef(function Timeline(
     return Math.max(spanHrs * pxPerHour, scrollRef.current?.clientWidth ?? 800)
   }
 
-  // Expose fitZoom to parent via ref
-  useImperativeHandle(ref, () => ({
-    fitZoom() {
-      if (!rangeRef.current) return
-      const spanHrs = (rangeRef.current.end - rangeRef.current.start) / 3_600_000
-      const avail   = scrollRef.current?.clientWidth ?? 800
-      setPxPerHour(Math.max(MIN_PX_PER_HR, (avail / spanHrs) * 0.92))
-    }
-  }), [setPxPerHour])
+  // ── Smooth zoom engine ─────────────────────────────────────────────────────
+  // Every zoom (wheel/pinch, buttons, keys, fit) eases pxPerHour toward a target via
+  // one rAF loop; re-anchoring happens synchronously before paint (useLayoutEffect),
+  // so zoom glides instead of snapping.
+  const zoomTargetRef = useRef(null)   // { px, anchorTime, mouseX }
+  const zoomRafRef    = useRef(null)
 
-  // Draw ruler
-  useEffect(() => {
+  const zoomStep = useCallback(() => {
+    const t = zoomTargetRef.current
+    if (!t) { zoomRafRef.current = null; return }
+    const cur  = pxRef.current
+    const diff = t.px - cur
+    let next
+    if (Math.abs(diff) <= t.px * 0.004) { next = t.px; zoomTargetRef.current = null }
+    else next = cur + diff * 0.3
+    zoomAnchorRef.current = { anchorTime: t.anchorTime, mouseX: t.mouseX }
+    setPxPerHour(next)
+    zoomRafRef.current = zoomTargetRef.current ? requestAnimationFrame(zoomStep) : null
+  }, [setPxPerHour])
+
+  // Aim the zoom at an absolute pxPerHour, keeping the time under `clientX` fixed.
+  const zoomTo = useCallback((targetPx, clientX) => {
+    const el = scrollRef.current
+    const r  = rangeRef.current
+    if (!el || !r) return
+    const rect    = el.getBoundingClientRect()
+    const mouseX  = (clientX != null ? clientX : rect.left + rect.width / 2) - rect.left
+    const anchorX = mouseX + el.scrollLeft
+    const anchorTime = r.start + (anchorX / pxRef.current) * 3_600_000
+    zoomTargetRef.current = { px: clampPx(targetPx), anchorTime, mouseX }
+    if (!zoomRafRef.current) zoomRafRef.current = requestAnimationFrame(zoomStep)
+  }, [zoomStep])
+
+  // Multiply the *pending* target so rapid steps compound smoothly.
+  const zoomByFactor = useCallback((factor, clientX) => {
+    const base = zoomTargetRef.current ? zoomTargetRef.current.px : pxRef.current
+    zoomTo(base * factor, clientX)
+  }, [zoomTo])
+
+  const doFit = useCallback(() => {
+    const r = rangeRef.current
+    if (!r) return
+    const spanHrs = (r.end - r.start) / 3_600_000
+    const avail   = scrollRef.current?.clientWidth ?? 800
+    zoomTo((avail / spanHrs) * 0.92, null)
+  }, [zoomTo])
+
+  useEffect(() => () => cancelAnimationFrame(zoomRafRef.current), [])
+
+  // Navigation controls exposed to the toolbar buttons + keyboard shortcuts.
+  useImperativeHandle(ref, () => ({
+    fitZoom: doFit,
+    zoomBy:  (factor) => zoomByFactor(factor),
+    panBy:   (dx, dy = 0) => { const el = scrollRef.current; if (el) { el.scrollLeft += dx; el.scrollTop += dy } },
+    scrollToStart: () => { const el = scrollRef.current; if (el) el.scrollLeft = 0 },
+    scrollToEnd:   () => { const el = scrollRef.current; if (el) el.scrollLeft = el.scrollWidth },
+  }), [doFit, zoomByFactor])
+
+  // Draw ruler in the layout phase so it stays in sync with the blocks while zooming.
+  useLayoutEffect(() => {
     if (!rulerRef.current || !range) return
     const w = totalWidth()
     drawRuler(rulerRef.current, range.start, range.end, pxPerHour, w)
   }, [range, pxPerHour])
 
-  // Apply scroll correction after pxPerHour state has been committed to DOM
-  useEffect(() => {
+  // Re-anchor scroll synchronously BEFORE paint so zoom doesn't visibly snap then correct.
+  useLayoutEffect(() => {
     const anchor = zoomAnchorRef.current
     if (!anchor || !rangeRef.current || !scrollRef.current) return
     zoomAnchorRef.current = null
@@ -148,27 +203,34 @@ const Timeline = forwardRef(function Timeline(
     scrollRef.current.scrollLeft = newAnchorX - anchor.mouseX
   }, [pxPerHour])
 
-  // Wheel zoom (anchored to cursor)
+  // Cross-platform wheel: Ctrl/Cmd (or trackpad pinch, which sets ctrlKey) zooms at the
+  // cursor; Shift forces horizontal pan; plain scroll pans (a vertical wheel is redirected
+  // to horizontal when the tracks don't overflow, so the wheel always moves the timeline).
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const onWheel = (e) => {
-      if (e.shiftKey) return
-      e.preventDefault()
-      const r = rangeRef.current
-      if (!r) return
-      const factor     = e.deltaY < 0 ? 1.12 : 1 / 1.12
-      const rect       = el.getBoundingClientRect()
-      const mouseX     = e.clientX - rect.left
-      const anchorX    = mouseX + el.scrollLeft
-      const anchorTime = r.start + (anchorX / pxRef.current) * 3_600_000
-      const newPx      = Math.max(MIN_PX_PER_HR, Math.min(MAX_PX_PER_HR, pxRef.current * factor))
-      zoomAnchorRef.current = { anchorTime, mouseX }
-      setPxPerHour(newPx)
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        // Magnitude-proportional factor → smooth for both trackpad pinch and wheel notches.
+        zoomByFactor(Math.pow(1.0015, -e.deltaY), e.clientX)
+        return
+      }
+      if (e.shiftKey) {
+        e.preventDefault()
+        el.scrollLeft += (e.deltaX !== 0 ? e.deltaX : e.deltaY)
+        return
+      }
+      const canScrollVert = el.scrollHeight > el.clientHeight + 1
+      if (!canScrollVert && e.deltaX === 0 && e.deltaY !== 0) {
+        e.preventDefault()
+        el.scrollLeft += e.deltaY
+      }
+      // else: let native scrolling handle it (trackpad two-finger swipe / vertical track scroll)
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [setPxPerHour])
+  }, [zoomByFactor])
 
   // Sync header vertical scroll
   useEffect(() => {
@@ -216,25 +278,55 @@ const Timeline = forwardRef(function Timeline(
     document.addEventListener('mouseup', onUp)
   }, [onReorderTracks])
 
-  const handleRulerMouseDown = useCallback((e) => {
+  // Drag any empty part of the timeline (ruler or lanes) to pan — works with mouse,
+  // trackpad, or touch. Event blocks keep their own move/resize drag.
+  const handlePanStart = useCallback((e) => {
+    if (e.button !== 0) return
+    if (e.target.closest('.event-block')) return
+    const el = scrollRef.current
+    if (!el) return
     e.preventDefault()
-    const startX      = e.clientX
-    const startScroll = scrollRef.current.scrollLeft
-    const ruler       = rulerRef.current
-
-    ruler.style.cursor = 'grabbing'
-
+    const startX = e.clientX, startY = e.clientY
+    const sl = el.scrollLeft, st = el.scrollTop
+    el.classList.add('panning')
     const onMove = (mv) => {
-      scrollRef.current.scrollLeft = startScroll - (mv.clientX - startX)
+      el.scrollLeft = sl - (mv.clientX - startX)
+      el.scrollTop  = st - (mv.clientY - startY)
     }
     const onUp = () => {
-      ruler.style.cursor = 'grab'
+      el.classList.remove('panning')
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup',   onUp)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup',   onUp)
   }, [])
+
+  // Keyboard navigation (ignored while typing in a field or when a modal is open).
+  useEffect(() => {
+    const onKey = (e) => {
+      const t = e.target
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return
+      if (document.querySelector('.modal-overlay')) return
+      const el = scrollRef.current
+      if (!el) return
+      const step = Math.max(60, el.clientWidth * 0.15)
+      switch (e.key) {
+        case '+': case '=': e.preventDefault(); zoomByFactor(1.6); break
+        case '-': case '_': e.preventDefault(); zoomByFactor(1 / 1.6); break
+        case '0':           e.preventDefault(); doFit(); break
+        case 'ArrowLeft':   e.preventDefault(); el.scrollLeft -= step; break
+        case 'ArrowRight':  e.preventDefault(); el.scrollLeft += step; break
+        case 'ArrowUp':     e.preventDefault(); el.scrollTop  -= step; break
+        case 'ArrowDown':   e.preventDefault(); el.scrollTop  += step; break
+        case 'Home':        e.preventDefault(); el.scrollLeft = 0; break
+        case 'End':         e.preventDefault(); el.scrollLeft = el.scrollWidth; break
+        default: break
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoomByFactor, doFit])
 
   const handleLaneClick = useCallback((e, trackName) => {
     if (!canEdit) return
@@ -251,26 +343,46 @@ const Timeline = forwardRef(function Timeline(
   }, [range, pxPerHour, onOpenNew])
 
   const handleMouseMove = useCallback((e) => {
-    if (!range) return
-    const rect = scrollRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const x  = e.clientX - rect.left + scrollRef.current.scrollLeft
+    const el = scrollRef.current
+    const label = cursorLabelRef.current
+    if (!range || !el || !label) return
+    const rect = el.getBoundingClientRect()
+    const x  = e.clientX - rect.left + el.scrollLeft
     const ms = range.start + (x / pxPerHour) * 3_600_000
-    setCursorLabel({ text: fmtDateTime(ms), x: e.clientX - rect.left + 175 })
+    label.textContent   = fmtDateTime(ms)
+    label.style.left    = (e.clientX - rect.left + 175) + 'px'
+    label.style.display = 'block'
   }, [range, pxPerHour])
 
-  const displayedTracks = dragging ? applyDrag(tracks, dragging.from, dragging.to) : tracks
-  const trackColorMap   = Object.fromEntries(displayedTracks.map(t => [t.name, t.color]))
-  const trackIndexMap   = Object.fromEntries(displayedTracks.map((t, i) => [t.name, i]))
-  const evById         = Object.fromEntries(events.map(e => [e.id, e]))
+  const displayedTracks = useMemo(
+    () => dragging ? applyDrag(tracks, dragging.from, dragging.to) : tracks,
+    [tracks, dragging],
+  )
+  // Memoized so they keep a stable identity across renders — otherwise they'd bust the
+  // CPM memo and EventBlock's React.memo on every render (incl. every mouse move).
+  const trackColorMap = useMemo(
+    () => Object.fromEntries(displayedTracks.map(t => [t.name, t.color])),
+    [displayedTracks],
+  )
+  const trackIndexMap = useMemo(
+    () => Object.fromEntries(displayedTracks.map((t, i) => [t.name, i])),
+    [displayedTracks],
+  )
+  const eventsByCategory = useMemo(() => {
+    const m = {}
+    for (const e of events) (m[e.category] ??= []).push(e)
+    return m
+  }, [events])
   const w = totalWidth()
 
   const nowX = range ? ((now - range.start) / 3_600_000) * pxPerHour : null
   const nowInRange = nowX !== null && nowX >= 0 && nowX <= w
   const svgH = RULER_HEIGHT + displayedTracks.length * TRACK_HEIGHT
 
-  const { arrows, criticalEventIds } = useMemo(() => {
-    if (!range) return { arrows: [], criticalEventIds: new Set() }
+  // ── Critical-path analysis (CPM) — depends ONLY on events' durations & dependencies.
+  // Does not recompute while panning / zooming / hovering.
+  const { criticalEventIds, criticalLinks } = useMemo(() => {
+    if (!events.length) return { criticalEventIds: new Set(), criticalLinks: new Set() }
 
     const byId = Object.fromEntries(events.map(e => [e.id, e]))
 
@@ -331,31 +443,34 @@ const Timeline = forwardRef(function Timeline(
         if (criticalEventIds.has(depId)) criticalLinks.add(`${depId}->${ev.id}`)
     }
 
-    // Build arrow geometry
-    const arrows = []
+    return { criticalEventIds, criticalLinks }
+  }, [events])
+
+  // ── Arrow geometry — depends on layout (zoom, range, track order). Cheap O(edges).
+  const arrows = useMemo(() => {
+    if (!range) return []
+    const byId = Object.fromEntries(events.map(e => [e.id, e]))
+    const out = []
     for (const ev of events) {
       if (!ev.depends_on?.length) continue
-      const ti2       = trackIndexMap[ev.category] ?? 0
-      const evStartMs = new Date(ev.start).getTime()
-      const x2 = ((evStartMs - range.start) / 3_600_000) * pxPerHour
-      const y2 = RULER_HEIGHT + ti2 * TRACK_HEIGHT + TRACK_HEIGHT / 2
-
+      const ti2 = trackIndexMap[ev.category] ?? 0
+      const x2  = ((new Date(ev.start).getTime() - range.start) / 3_600_000) * pxPerHour
+      const y2  = RULER_HEIGHT + ti2 * TRACK_HEIGHT + TRACK_HEIGHT / 2
       for (const depId of ev.depends_on) {
         const dep = byId[depId]
         if (!dep) continue
-        const ti1      = trackIndexMap[dep.category] ?? 0
-        const depEndMs = new Date(dep.end).getTime()
-        const x1 = ((depEndMs - range.start) / 3_600_000) * pxPerHour
-        const y1 = RULER_HEIGHT + ti1 * TRACK_HEIGHT + TRACK_HEIGHT / 2
-        arrows.push({ x1, y1, x2, y2, critical: criticalLinks.has(`${depId}->${ev.id}`) })
+        const ti1 = trackIndexMap[dep.category] ?? 0
+        const x1  = ((new Date(dep.end).getTime() - range.start) / 3_600_000) * pxPerHour
+        const y1  = RULER_HEIGHT + ti1 * TRACK_HEIGHT + TRACK_HEIGHT / 2
+        out.push({ x1, y1, x2, y2, critical: criticalLinks.has(`${depId}->${ev.id}`) })
       }
     }
-
-    return { arrows, criticalEventIds }
-  }, [events, range, pxPerHour, trackIndexMap])
+    return out
+  }, [events, range, pxPerHour, trackIndexMap, criticalLinks])
 
   return (
-    <div className="timeline-wrapper">
+    <div className="timeline-main">
+      <div className="timeline-wrapper">
       {/* Track header panel */}
       <div className="headers-panel" ref={headersRef}>
         <div className="ruler-spacer" />
@@ -380,7 +495,7 @@ const Timeline = forwardRef(function Timeline(
                   className={canEdit ? 'track-name' : 'track-name track-name--static'}
                   onClick={canEdit ? (() => onEditCategory(t)) : undefined}
                 >{t.name}</span>
-                <span className="track-count">{events.filter(e => e.category === t.name).length}</span>
+                <span className="track-count">{(eventsByCategory[t.name] || []).length}</span>
               </div>
             )
           })}
@@ -391,11 +506,12 @@ const Timeline = forwardRef(function Timeline(
       <div
         className="timeline-scroll"
         ref={scrollRef}
+        onMouseDown={handlePanStart}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setCursorLabel(null)}
+        onMouseLeave={() => { if (cursorLabelRef.current) cursorLabelRef.current.style.display = 'none' }}
       >
         <div className="timeline-inner" style={{ width: w + 'px' }}>
-          <canvas className="ruler" ref={rulerRef} height={RULER_HEIGHT} onMouseDown={handleRulerMouseDown} />
+          <canvas className="ruler" ref={rulerRef} height={RULER_HEIGHT} />
 
           {nowInRange && (
             <div className="now-line" style={{ left: nowX + 'px' }}>
@@ -456,8 +572,7 @@ const Timeline = forwardRef(function Timeline(
               </div>
             )}
             {displayedTracks.map(t => {
-              const trackEvents = events
-                .filter(e => e.category === t.name)
+              const trackEvents = (eventsByCategory[t.name] || [])
                 .filter(e => !settings?.showOnlyCritical || criticalEventIds.has(e.id))
               return (
                 <div
@@ -489,13 +604,20 @@ const Timeline = forwardRef(function Timeline(
           </div>
         </div>
       </div>
+      </div>{/* /timeline-wrapper */}
 
-      {/* Cursor label */}
-      {cursorLabel && (
-        <div className="cursor-label" style={{ left: cursorLabel.x + 'px' }}>
-          {cursorLabel.text}
-        </div>
-      )}
+      <Minimap
+        scrollRef={scrollRef}
+        range={range}
+        pxPerHour={pxPerHour}
+        events={events}
+        trackColorMap={trackColorMap}
+        trackIndexMap={trackIndexMap}
+        trackCount={displayedTracks.length}
+      />
+
+      {/* Cursor label — updated imperatively in handleMouseMove to avoid a re-render per move */}
+      <div className="cursor-label" ref={cursorLabelRef} style={{ display: 'none' }} />
 
       {/* Tooltip */}
       {tooltip && (

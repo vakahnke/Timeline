@@ -88,7 +88,9 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       document.body.style.cursor = ''
       activeLane?.classList.remove('drag-over')
 
-      if (!moved) return
+      // A click (no drag) opens the editor — so even a tiny block is editable
+      // without having to hit the small action button.
+      if (!moved) { onEdit(event.id); return }
 
       const dx = e.clientX - mouseX0
       const dtMs = (dx / capPx) * 3_600_000
@@ -113,7 +115,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
-  }, [event, pxPerHour, rangeStart, trackColorMap, onUpdate])
+  }, [event, pxPerHour, rangeStart, trackColorMap, onUpdate, onEdit])
 
   // ── Resize handles ────────────────────────────────────────────────────────
   const handleResizeDown = useCallback((e, edge) => {
@@ -198,7 +200,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         <span className="event-time">{fmtTime(startMs)} &ndash; {fmtTime(endMs)}</span>
       </div>
 
-      {canEdit && (
+      {canEdit && w >= 80 && (
         <div className="event-actions">
           <button className="btn-edit" title="Edit" onClick={e => { e.stopPropagation(); onEdit(event.id) }}>&#9998;</button>
           <button className="btn-del"  title="Delete" onClick={e => { e.stopPropagation(); onDelete(event.id) }}>&#10005;</button>

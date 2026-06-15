@@ -47,7 +47,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # Queryset-filtering layer: only projects I'm a member of.
         return (Project.objects
                 .filter(memberships__user=self.request.user)
-                .prefetch_related('memberships__user')
+                .prefetch_related('memberships')   # members listed via the dedicated endpoint
                 .distinct())
 
     # Owner-only actions. NOTE: get_permissions overrides any permission_classes set on
