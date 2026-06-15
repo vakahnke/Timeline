@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-export default function CategoryModal({ track, onSave, onClose }) {
+export default function CategoryModal({ track, readOnly = false, onSave, onClose }) {
   const [name,   setName]   = useState(track.name)
   const [color,  setColor]  = useState(track.color || '#4a88ff')
   const [error,  setError]  = useState('')
@@ -74,10 +74,16 @@ export default function CategoryModal({ track, onSave, onClose }) {
         </div>
 
         <div className="modal-foot">
-          <button onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          {readOnly ? (
+            <button className="btn-primary" onClick={onClose}>Close</button>
+          ) : (
+            <>
+              <button onClick={onClose} disabled={saving}>Cancel</button>
+              <button className="btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

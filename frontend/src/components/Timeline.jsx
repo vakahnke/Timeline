@@ -89,7 +89,7 @@ function applyDrag(arr, from, to) {
 }
 
 const Timeline = forwardRef(function Timeline(
-  { events, tracks, range, pxPerHour, setPxPerHour, settings, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, loading, apiError },
+  { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, loading, apiError },
   ref
 ) {
   const scrollRef       = useRef(null)
@@ -235,6 +235,7 @@ const Timeline = forwardRef(function Timeline(
   }, [])
 
   const handleLaneClick = useCallback((e, trackName) => {
+    if (!canEdit) return
     if (e.target.closest('.event-block')) return
     if (!range) return
     const rect      = e.currentTarget.getBoundingClientRect()
@@ -368,11 +369,15 @@ const Timeline = forwardRef(function Timeline(
               >
                 <div
                   className="drag-handle"
-                  onMouseDown={e => handleHeaderDragStart(e, i)}
-                  title="Drag to reorder"
+                  onMouseDown={canEdit ? (e => handleHeaderDragStart(e, i)) : undefined}
+                  title={canEdit ? 'Drag to reorder' : ''}
+                  style={canEdit ? undefined : { visibility: 'hidden' }}
                 >⠿</div>
                 <div className="track-swatch" style={{ background: t.color }} />
-                <span className="track-name" onClick={() => onEditCategory(t)}>{t.name}</span>
+                <span
+                  className={canEdit ? 'track-name' : 'track-name track-name--static'}
+                  onClick={canEdit ? (() => onEditCategory(t)) : undefined}
+                >{t.name}</span>
                 <span className="track-count">{events.filter(e => e.category === t.name).length}</span>
               </div>
             )
@@ -469,6 +474,7 @@ const Timeline = forwardRef(function Timeline(
                       trackColorMap={trackColorMap}
                       isCritical={criticalEventIds.has(ev.id)}
                       snapMinutes={settings?.snapMinutes ?? 0}
+                      canEdit={canEdit}
                       onUpdate={onUpdateEvent}
                       onEdit={onOpenEdit}
                       onDelete={handleDeleteEvent}

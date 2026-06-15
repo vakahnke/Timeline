@@ -17,7 +17,7 @@ function toLocalISO(dateStr) {
   return new Date(d - off).toISOString().slice(0, 16)
 }
 
-export default function EventModal({ eventId, defaults, events, tracks, onSave, onDelete, onClose }) {
+export default function EventModal({ eventId, defaults, events, tracks, readOnly = false, onSave, onDelete, onClose }) {
   const existing = eventId ? events.find(e => e.id === eventId) : null
 
   const [title,     setTitle]     = useState('')
@@ -97,11 +97,11 @@ export default function EventModal({ eventId, defaults, events, tracks, onSave, 
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-head">
-          <h2>{existing ? 'Edit Event' : 'New Event'}</h2>
+          <h2>{readOnly ? 'Event' : existing ? 'Edit Event' : 'New Event'}</h2>
           <button className="btn-close" onClick={onClose}>&#10005;</button>
         </div>
 
-        <div className="modal-body">
+        <fieldset className="modal-body" disabled={readOnly}>
           <div className="field">
             <label>Title</label>
             <input
@@ -109,7 +109,7 @@ export default function EventModal({ eventId, defaults, events, tracks, onSave, 
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="Event title"
-              autoFocus
+              autoFocus={!readOnly}
             />
           </div>
 
@@ -174,16 +174,22 @@ export default function EventModal({ eventId, defaults, events, tracks, onSave, 
           </div>
 
           {error && <div className="field-error">&#10005; {error}</div>}
-        </div>
+        </fieldset>
 
         <div className="modal-foot">
-          {onDelete && (
-            <button className="btn-danger" onClick={handleDelete} disabled={saving}>Delete</button>
+          {readOnly ? (
+            <button className="btn-primary" onClick={onClose}>Close</button>
+          ) : (
+            <>
+              {onDelete && (
+                <button className="btn-danger" onClick={handleDelete} disabled={saving}>Delete</button>
+              )}
+              <button onClick={onClose} disabled={saving}>Cancel</button>
+              <button className="btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </>
           )}
-          <button onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
         </div>
       </div>
     </div>
