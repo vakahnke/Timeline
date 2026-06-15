@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import Project, ProjectMembership, Role
+from .models import Project, ProjectMembership, Role, Team
 
 User = get_user_model()
 
@@ -112,3 +112,31 @@ class AddMemberSerializer(serializers.Serializer):
             raise serializers.ValidationError('No user found with that email or username.')
         self.context['target_user'] = user
         return value
+
+
+class TeamSerializer(serializers.ModelSerializer):
+    members      = UserSerializer(many=True, read_only=True)
+    member_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = Team
+        fields = ['id', 'name', 'description', 'members', 'member_count', 'created_at']
+        read_only_fields = ['id', 'members', 'member_count', 'created_at']
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_member_count(self, obj):
+        return len(obj.members.all())  # uses the prefetch cache
+
+
+class IdentifierSerializer(serializers.Serializer):
+    identifier = serializers.CharField(help_text='Email or username of an existing user.')
+
+
+class AddTeamToProjectSerializer(serializers.Serializer):
+    team = serializers.IntegerField(help_text='Id of one of your teams.')
+    role = serializers.ChoiceField(choices=Role.choices, default=Role.EDITOR)
+
+
+class AddTeamResultSerializer(serializers.Serializer):
+    added   = serializers.IntegerField()
+    members = ProjectMembershipSerializer(many=True)

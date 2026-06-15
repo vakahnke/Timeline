@@ -12,6 +12,12 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
   const [newRole,    setNewRole]    = useState('viewer')
   const [adding,     setAdding]     = useState(false)
 
+  const [teams,      setTeams]      = useState([])
+  const [selTeam,    setSelTeam]    = useState('')
+  const [teamRole,   setTeamRole]   = useState('editor')
+  const [addingTeam, setAddingTeam] = useState(false)
+  const [note,       setNote]       = useState('')
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -25,6 +31,29 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
   }, [projectId])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!isOwner) return
+    api.teams.list()
+      .then(ts => { setTeams(ts); if (ts.length) setSelTeam(String(ts[0].id)) })
+      .catch(() => {})
+  }, [isOwner])
+
+  const addTeam = useCallback(async () => {
+    if (!selTeam) return
+    setAddingTeam(true); setError(''); setNote('')
+    try {
+      const res = await api.projects.addTeam(projectId, { team: Number(selTeam), role: teamRole })
+      setMembers(res.members)
+      setNote(`Added ${res.added} member${res.added === 1 ? '' : 's'} from the team.`)
+    } catch (err) {
+      let msg = 'Could not add team.'
+      try { msg = Object.values(JSON.parse(err.body)).flat()[0] || msg } catch { /* keep */ }
+      setError(msg)
+    } finally {
+      setAddingTeam(false)
+    }
+  }, [projectId, selTeam, teamRole])
 
   const addMember = useCallback(async (e) => {
     e.preventDefault()
@@ -92,6 +121,21 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
             </form>
           )}
 
+          {isOwner && teams.length > 0 && (
+            <div className="invite-row">
+              <select style={{ flex: 1 }} value={selTeam} onChange={e => setSelTeam(e.target.value)}>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.member_count})</option>)}
+              </select>
+              <select value={teamRole} onChange={e => setTeamRole(e.target.value)}>
+                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <button className="btn-template" onClick={addTeam} disabled={addingTeam}>
+                {addingTeam ? 'Adding…' : 'Add team'}
+              </button>
+            </div>
+          )}
+
+          {note && <div className="dim" style={{ fontSize: 11, marginTop: -4 }}>{note}</div>}
           {error && <div className="field-error">&#10005; {error}</div>}
 
           {loading ? (

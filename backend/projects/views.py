@@ -6,15 +6,19 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Project, ProjectMembership, ProjectTemplate, Role
+from .models import Project, ProjectMembership, ProjectTemplate, Role, Team
 from .permissions import IsProjectMember, IsProjectOwner, get_role
 from .serializers import (
     AddMemberSerializer,
+    AddTeamResultSerializer,
+    AddTeamToProjectSerializer,
+    IdentifierSerializer,
     InstantiateTemplateSerializer,
     ProjectMembershipSerializer,
     ProjectSerializer,
     RegisterSerializer,
     SaveTemplateSerializer,
+    TeamSerializer,
     TemplateListItemSerializer,
     UserSerializer,
 )
@@ -22,6 +26,14 @@ from .templates import create_project_from_spec, spec_from_project
 from .templates_builtin import BUILTIN_TEMPLATES, builtin_spec
 
 User = get_user_model()
+
+
+def _resolve_user(identifier):
+    identifier = (identifier or '').strip()
+    if not identifier:
+        return None
+    return (User.objects.filter(email__iexact=identifier).first()
+            or User.objects.filter(username__iexact=identifier).first())
 
 
 class RegisterView(generics.CreateAPIView):
@@ -52,7 +64,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     # Owner-only actions. NOTE: get_permissions overrides any permission_classes set on
     # the @action decorators, so owner-only actions must be enumerated here.
-    OWNER_ONLY_ACTIONS = {'destroy', 'members', 'member_detail'}
+    OWNER_ONLY_ACTIONS = {'destroy', 'members', 'member_detail', 'add_team'}
 
     def get_permissions(self):
         # Writes to events/categories are handled by their own viewsets; project metadata
@@ -128,6 +140,29 @@ class ProjectViewSet(viewsets.ModelViewSet):
         membership.role = new_role
         membership.save(update_fields=['role'])
         return Response(ProjectMembershipSerializer(membership).data)
+
+    @extend_schema(request=AddTeamToProjectSerializer, responses=AddTeamResultSerializer)
+    @action(detail=True, methods=['post'], url_path='add-team')  # owner-only via get_permissions
+    def add_team(self, request, pk=None):
+        """Add all current members of one of your teams to this project at a chosen role."""
+        project = self.get_object()
+        serializer = AddTeamToProjectSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        team = Team.objects.filter(pk=serializer.validated_data['team'], owner=request.user).first()
+        if not team:
+            return Response({'team': 'Team not found.'}, status=status.HTTP_400_BAD_REQUEST)
+        role = serializer.validated_data['role']
+        added = 0
+        for user in team.members.all():
+            _, created = ProjectMembership.objects.get_or_create(
+                project=project, user=user, defaults={'role': role})
+            if created:
+                added += 1
+        members = project.memberships.select_related('user')
+        return Response(
+            {'added': added, 'members': ProjectMembershipSerializer(members, many=True).data},
+            status=status.HTTP_200_OK,
+        )
 
 
 def _builtin_items():
@@ -241,3 +276,39 @@ class TemplateViewSet(viewsets.ViewSet):
             ProjectSerializer(project, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class TeamViewSet(viewsets.ModelViewSet):
+    """User-owned, reusable groups of people. Private to their creator."""
+    serializer_class   = TeamSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Team.objects.none()
+        return Team.objects.filter(owner=self.request.user).prefetch_related('members')
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    @extend_schema(request=IdentifierSerializer, responses=TeamSerializer)
+    @action(detail=True, methods=['post'], url_path='members')
+    def add_member(self, request, pk=None):
+        """Add a user (by email or username) to this team."""
+        team = self.get_object()
+        user = _resolve_user(request.data.get('identifier'))
+        if not user:
+            return Response({'identifier': 'No user found with that email or username.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        team.members.add(user)
+        return Response(TeamSerializer(team).data)
+
+    @extend_schema(responses=TeamSerializer, parameters=[
+        OpenApiParameter('user_id', OpenApiTypes.INT, OpenApiParameter.PATH),
+    ])
+    @action(detail=True, methods=['delete'], url_path=r'members/(?P<user_id>[^/.]+)')
+    def remove_member(self, request, pk=None, user_id=None):
+        """Remove a user from this team."""
+        team = self.get_object()
+        team.members.remove(user_id)
+        return Response(TeamSerializer(team).data)

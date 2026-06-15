@@ -10,11 +10,12 @@ from drf_spectacular.views import (
 
 from events.views import CategoryViewSet, EventViewSet
 
-from .views import MeView, ProjectViewSet, RegisterView, TemplateViewSet
+from .views import MeView, ProjectViewSet, RegisterView, TeamViewSet, TemplateViewSet
 
 router = DefaultRouter()
 router.register(r'projects', ProjectViewSet, basename='project')
 router.register(r'templates', TemplateViewSet, basename='template')
+router.register(r'teams', TeamViewSet, basename='team')
 
 projects_nested = NestedDefaultRouter(router, r'projects', lookup='project')
 projects_nested.register(r'events',     EventViewSet,    basename='project-events')

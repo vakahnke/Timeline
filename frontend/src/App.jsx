@@ -6,6 +6,7 @@ import { ProtectedRoute, PublicOnly, NotFound, RouteFallback } from './routes/Pr
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ProjectsDashboard from './pages/ProjectsDashboard'
+import TeamsPage from './pages/TeamsPage'
 
 // Code-split the heavy timeline route (canvas ruler + CPM + drag math).
 const ProjectTimeline = lazy(() => import('./pages/ProjectTimeline'))
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<ProjectsDashboard />} />
+              <Route path="/teams" element={<TeamsPage />} />
               <Route
                 path="/projects/:projectId"
                 element={
