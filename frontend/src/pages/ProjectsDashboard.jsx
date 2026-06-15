@@ -52,6 +52,7 @@ export default function ProjectsDashboard() {
       <header className="dash-header">
         <div className="dash-brand">Timeline</div>
         <div className="dash-userbox">
+          <button onClick={() => navigate('/teams')}>Teams</button>
           <span className="dash-user">{user?.username}</span>
           <button onClick={logout}>Log out</button>
         </div>

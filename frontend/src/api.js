@@ -16,6 +16,11 @@ const url = {
   templates:  ()        => '/templates/',
   template:   (id)      => `/templates/${id}/`,
   instantiate:()        => '/templates/instantiate/',
+  teams:       ()        => '/teams/',
+  team:        (id)      => `/teams/${id}/`,
+  teamMembers: (id)      => `/teams/${id}/members/`,
+  teamMember:  (id, uid) => `/teams/${id}/members/${uid}/`,
+  addTeam:     (pid)     => `/projects/${pid}/add-team/`,
 }
 
 export class ApiError extends Error {
@@ -95,6 +100,17 @@ export const api = {
       updateRole: (pid, mid, d) => req(url.member(pid, mid), { method: 'PATCH', body: body(d) }),
       remove:     (pid, mid) => req(url.member(pid, mid), { method: 'DELETE' }),
     },
+    addTeam: (pid, d) => req(url.addTeam(pid), { method: 'POST', body: body(d) }),
+  },
+
+  teams: {
+    list:         ()        => req(url.teams()),
+    get:          (id)      => req(url.team(id)),
+    create:       (d)       => req(url.teams(), { method: 'POST', body: body(d) }),
+    update:       (id, d)   => req(url.team(id), { method: 'PATCH', body: body(d) }),
+    remove:       (id)      => req(url.team(id), { method: 'DELETE' }),
+    addMember:    (id, d)   => req(url.teamMembers(id), { method: 'POST', body: body(d) }),
+    removeMember: (id, uid) => req(url.teamMember(id, uid), { method: 'DELETE' }),
   },
 
   // Same method names as the old prototype, now project-scoped.

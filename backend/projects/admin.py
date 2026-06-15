@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Project, ProjectMembership, ProjectTemplate
+from .models import Project, ProjectMembership, ProjectTemplate, Team
 
 
 class ProjectMembershipInline(admin.TabularInline):
@@ -27,3 +27,10 @@ class ProjectMembershipAdmin(admin.ModelAdmin):
 class ProjectTemplateAdmin(admin.ModelAdmin):
     list_display  = ['name', 'owner', 'created_at']
     search_fields = ['name', 'owner__username']
+
+
+@admin.register(Team)
+class TeamAdmin(admin.ModelAdmin):
+    list_display       = ['name', 'owner', 'created_at']
+    search_fields      = ['name', 'owner__username']
+    filter_horizontal  = ['members']
