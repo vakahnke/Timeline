@@ -13,6 +13,9 @@ const url = {
   category:   (pid, id) => `/projects/${pid}/categories/${id}/`,
   members:    (pid)     => `/projects/${pid}/members/`,
   member:     (pid, id) => `/projects/${pid}/members/${id}/`,
+  templates:  ()        => '/templates/',
+  template:   (id)      => `/templates/${id}/`,
+  instantiate:()        => '/templates/instantiate/',
 }
 
 export class ApiError extends Error {
@@ -101,6 +104,13 @@ export const api = {
     update: (pid, id, d) => req(url.event(pid, id), { method: 'PATCH', body: body(d) }),
     remove: (pid, id)    => req(url.event(pid, id), { method: 'DELETE' }),
     bulk:   (pid, list)  => req(url.bulkEvents(pid), { method: 'POST', body: body(list) }),
+  },
+
+  templates: {
+    list:        ()   => req(url.templates()),
+    instantiate: (d)  => req(url.instantiate(), { method: 'POST', body: body(d) }),
+    save:        (d)  => req(url.templates(),   { method: 'POST', body: body(d) }),
+    remove:      (id) => req(url.template(id),  { method: 'DELETE' }),
   },
 
   categories: {

@@ -72,6 +72,7 @@ export default function ProjectTimeline() {
   const [apiError,       setApiError]     = useState(null)
   const [accessError,    setAccessError]  = useState(null)
   const timelineRef = useRef(null)
+  const didFitRef   = useRef(false)
 
   const role    = project?.my_role
   const canEdit = role === 'owner' || role === 'editor'
@@ -81,6 +82,7 @@ export default function ProjectTimeline() {
     let cancelled = false
     setLoading(true)
     setAccessError(null)
+    didFitRef.current = false  // re-fit when switching projects
     Promise.all([
       api.projects.get(projectId),
       api.events.list(projectId),
@@ -109,6 +111,14 @@ export default function ProjectTimeline() {
   useEffect(() => {
     setTracks(prev => buildTracks(events, apiCategories, prev))
   }, [events, apiCategories])
+
+  // Auto-fit the zoom once on first load so events are visible regardless of span.
+  useEffect(() => {
+    if (loading || !range || didFitRef.current) return
+    didFitRef.current = true
+    const id = requestAnimationFrame(() => timelineRef.current?.fitZoom())
+    return () => cancelAnimationFrame(id)
+  }, [loading, range])
 
   const updateEvent = useCallback(async (id, patch) => {
     flash('Saving…', 'saving')
@@ -198,6 +208,18 @@ export default function ProjectTimeline() {
   const openEdit   = useCallback(id => setModal({ id, defaults: null }), [])
   const closeModal = useCallback(() => setModal(null), [])
 
+  const saveAsTemplate = useCallback(async () => {
+    const tplName = window.prompt('Save this project as a template named:', project?.name || 'My Template')
+    if (!tplName?.trim()) return
+    flash('Saving template…', 'saving')
+    try {
+      await api.templates.save({ project: Number(projectId), name: tplName.trim() })
+      flash('Template saved', 'saved')
+    } catch (err) {
+      flash('Error: ' + err.message, 'error')
+    }
+  }, [projectId, project, flash])
+
   const handleSave = useCallback(async (data) => {
     const categoryColor = tracks.find(t => t.name === data.category)?.color ?? ''
     const payload = { ...data, color: categoryColor }
@@ -231,6 +253,7 @@ export default function ProjectTimeline() {
         canEdit={canEdit}
         isOwner={isOwner}
         onOpenMembers={() => setShowMembers(true)}
+        onSaveTemplate={saveAsTemplate}
         pxPerHour={pxPerHour}
         setPxPerHour={setPxPerHour}
         onFit={() => timelineRef.current?.fitZoom()}

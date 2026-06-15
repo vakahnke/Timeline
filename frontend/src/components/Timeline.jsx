@@ -48,7 +48,9 @@ function drawRuler(canvas, rangeStart, rangeEnd, pxPerHour, width) {
 
     const d = new Date(t)
     let label
-    if (interval.fmt === 'date') label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    if (interval.fmt === 'year') label = String(d.getFullYear())
+    else if (interval.fmt === 'month') label = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+    else if (interval.fmt === 'date') label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     else if (interval.fmt === 'hour') label = d.toLocaleTimeString(undefined, { hour: '2-digit', hour12: false })
     else label = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
 

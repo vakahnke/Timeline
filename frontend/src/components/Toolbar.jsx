@@ -19,7 +19,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, pxPerHour, setPxPerHour, onFit, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, onSaveTemplate, pxPerHour, setPxPerHour, onFit, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -30,7 +30,9 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
 
   const label = pxPerHour >= 1000
     ? `${Math.round(pxPerHour / 60)}px/min`
-    : `${Math.round(pxPerHour)}px/hr`
+    : pxPerHour >= 1
+      ? `${Math.round(pxPerHour)}px/hr`
+      : `${(pxPerHour * 24).toFixed(1)}px/day`
 
   // Close popover on outside click
   useEffect(() => {
@@ -78,6 +80,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       )}
       {canEdit && (
         <>
+          <button className="btn-save-tpl" onClick={onSaveTemplate} title="Save this project as a reusable template">Save as Template</button>
           <button className="btn-new-cat" onClick={onNewCategory}>+ New Category</button>
           <button className="btn-new" onClick={onNew}>+ New Event</button>
         </>
