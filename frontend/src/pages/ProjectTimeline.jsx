@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import { useToast } from '../ui/ToastProvider'
@@ -71,8 +71,9 @@ export default function ProjectTimeline() {
   const [loading,        setLoading]      = useState(true)
   const [apiError,       setApiError]     = useState(null)
   const [accessError,    setAccessError]  = useState(null)
-  const timelineRef = useRef(null)
-  const didFitRef   = useRef(false)
+  const timelineRef    = useRef(null)
+  const didFitRef      = useRef(false)
+  const pendingFrameRef = useRef(null)
 
   const role    = project?.my_role
   const canEdit = role === 'owner' || role === 'editor'
@@ -127,6 +128,39 @@ export default function ProjectTimeline() {
     const id = requestAnimationFrame(() => timelineRef.current?.fitZoom())
     return () => cancelAnimationFrame(id)
   }, [loading, range])
+
+  // Today / this week / this month quick views. Extend the displayed range to reach the
+  // period (so it's framable even if the project's events are elsewhere in time), then frame it.
+  const viewPeriod = useCallback((period) => {
+    const now = new Date()
+    let from, to
+    if (period === 'day') {
+      from = new Date(now); from.setHours(0, 0, 0, 0)
+      to = new Date(from); to.setDate(to.getDate() + 1)
+    } else if (period === 'week') {
+      from = new Date(now); from.setHours(0, 0, 0, 0)
+      from.setDate(from.getDate() - ((from.getDay() + 6) % 7))  // Monday-start week
+      to = new Date(from); to.setDate(to.getDate() + 7)
+    } else {  // month
+      from = new Date(now.getFullYear(), now.getMonth(), 1)
+      to   = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    }
+    const fromMs = from.getTime(), toMs = to.getTime()
+    const ev = buildRange(events)
+    pendingFrameRef.current = { from: fromMs, to: toMs }
+    setRange({
+      start: Math.min(ev?.start ?? fromMs, fromMs),
+      end:   Math.max(ev?.end ?? toMs, toMs),
+    })
+  }, [events])
+
+  useLayoutEffect(() => {
+    const pf = pendingFrameRef.current
+    if (!pf || !range) return
+    pendingFrameRef.current = null
+    const id = requestAnimationFrame(() => timelineRef.current?.frameWindow(pf.from, pf.to))
+    return () => cancelAnimationFrame(id)
+  }, [range])
 
   const updateEvent = useCallback(async (id, patch) => {
     flash('Saving…', 'saving')
@@ -266,6 +300,7 @@ export default function ProjectTimeline() {
         onZoomIn={() => timelineRef.current?.zoomBy(1.6)}
         onZoomOut={() => timelineRef.current?.zoomBy(1 / 1.6)}
         onFit={() => timelineRef.current?.fitZoom()}
+        onViewPeriod={viewPeriod}
         onNew={() => openNew()}
         onNewCategory={openNewCategory}
         settings={settings}
