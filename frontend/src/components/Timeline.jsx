@@ -135,6 +135,7 @@ const Timeline = forwardRef(function Timeline(
   // so zoom glides instead of snapping.
   const zoomTargetRef = useRef(null)   // { px, anchorTime, mouseX }
   const zoomRafRef    = useRef(null)
+  const frameRafRef   = useRef(null)
 
   const zoomStep = useCallback(() => {
     const t = zoomTargetRef.current
@@ -176,16 +177,44 @@ const Timeline = forwardRef(function Timeline(
     zoomTo((avail / spanHrs) * 0.92, null)
   }, [zoomTo])
 
-  useEffect(() => () => cancelAnimationFrame(zoomRafRef.current), [])
+  // Smoothly frame a time window [fromMs, toMs] with `fromMs` near the left edge — eases
+  // the zoom while re-anchoring `fromMs` at the margin each frame (reuses zoomAnchorRef).
+  const frameWindow = useCallback((fromMs, toMs) => {
+    const el = scrollRef.current
+    const r  = rangeRef.current
+    if (!el || !r) return
+    zoomTargetRef.current = null
+    cancelAnimationFrame(zoomRafRef.current); zoomRafRef.current = null
+    const margin   = Math.max(8, el.clientWidth * 0.02)
+    const hours    = Math.max(1 / 60, (toMs - fromMs) / 3_600_000)
+    const targetPx = clampPx((el.clientWidth - margin * 2) / hours)
+    const startPx  = pxRef.current
+    const t0 = performance.now(), dur = 240
+    cancelAnimationFrame(frameRafRef.current)
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur)
+      const e = 1 - Math.pow(1 - k, 3)
+      zoomAnchorRef.current = { anchorTime: fromMs, mouseX: margin }
+      setPxPerHour(startPx + (targetPx - startPx) * e)
+      if (k < 1) frameRafRef.current = requestAnimationFrame(step)
+    }
+    frameRafRef.current = requestAnimationFrame(step)
+  }, [setPxPerHour])
+
+  useEffect(() => () => {
+    cancelAnimationFrame(zoomRafRef.current)
+    cancelAnimationFrame(frameRafRef.current)
+  }, [])
 
   // Navigation controls exposed to the toolbar buttons + keyboard shortcuts.
   useImperativeHandle(ref, () => ({
     fitZoom: doFit,
     zoomBy:  (factor) => zoomByFactor(factor),
+    frameWindow,
     panBy:   (dx, dy = 0) => { const el = scrollRef.current; if (el) { el.scrollLeft += dx; el.scrollTop += dy } },
     scrollToStart: () => { const el = scrollRef.current; if (el) el.scrollLeft = 0 },
     scrollToEnd:   () => { const el = scrollRef.current; if (el) el.scrollLeft = el.scrollWidth },
-  }), [doFit, zoomByFactor])
+  }), [doFit, zoomByFactor, frameWindow])
 
   // Draw ruler in the layout phase so it stays in sync with the blocks while zooming.
   useLayoutEffect(() => {

@@ -18,7 +18,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -50,6 +50,9 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       <span className="zoom-label" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
       <button onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
       <button onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
+      <button onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
+      <button onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
+      <button onClick={() => onViewPeriod?.('month')} title="Frame this month">Month</button>
       <div className="toolbar-sep" />
       {projectStart != null && (
         <div className="toolbar-range">

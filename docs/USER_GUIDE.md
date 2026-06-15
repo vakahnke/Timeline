@@ -15,7 +15,9 @@ With the demo data loaded, you can sign in as `demo`, `editor`, or `viewer` (pas
 
 ## 2. Projects
 
-The dashboard lists every project you're a member of, each with a **role badge**.
+The dashboard lists every project you're a member of. Each card shows its **role badge**,
+**date range** (first task → last task), a **progress bar** (average task completion), and
+counts. Hover a card to **edit** (editors+) or **delete** (owners) it.
 
 - **+ New Project** — a blank project (you become its owner).
 - **From Template** — a ready-made plan: pick a template, set a **name** and **start date**,
@@ -67,6 +69,7 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
 |--------|-----|
 | **Zoom** | `Ctrl`/`⌘` + scroll, or pinch on a trackpad, or the toolbar `+` / `−`, or the `+` / `−` keys |
 | **Fit everything** | **Fit** button, or press `0` |
+| **Frame today / this week / this month** | the **Today** / **Week** / **Month** buttons (next to Fit) — smoothly frame that period and show the "now" line |
 | **Pan** | Drag any empty area, or `Shift` + scroll, or the `←` `→` `↑` `↓` keys |
 | **Jump to start / end** | `Home` / `End` |
 | **Overview** | The **minimap** at the bottom shows the whole project; the bright box is what's on screen — click or drag it to jump there |
