@@ -52,15 +52,19 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     my_role      = serializers.SerializerMethodField()
-    members      = ProjectMembershipSerializer(source='memberships', many=True, read_only=True)
-    member_count = serializers.IntegerField(source='memberships.count', read_only=True)
+    member_count = serializers.SerializerMethodField()
 
     class Meta:
         model  = Project
         fields = ['id', 'name', 'description', 'owner', 'my_role',
-                  'member_count', 'members', 'created_at', 'updated_at']
+                  'member_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'owner', 'my_role', 'member_count',
-                            'members', 'created_at', 'updated_at']
+                            'created_at', 'updated_at']
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_member_count(self, obj):
+        # len() of the prefetched memberships — avoids an N+1 COUNT query per project.
+        return len(obj.memberships.all())
 
     @extend_schema_field(serializers.ChoiceField(choices=Role.choices, allow_null=True))
     def get_my_role(self, obj):

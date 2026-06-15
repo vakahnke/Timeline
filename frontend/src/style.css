@@ -223,10 +223,40 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
 .btn-danger:hover { background: rgba(248,113,113,0.24); border-color: rgba(248,113,113,0.45); }
 
 /* ── Timeline wrapper ─────────────────────────────────────────────────────── */
+.timeline-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .timeline-wrapper {
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Minimap / overview strip ─────────────────────────────────────────────── */
+.minimap {
+  height: 56px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--border-mid);
+  background: var(--bg-mid);
+  cursor: pointer;
+  user-select: none;
+}
+.minimap-canvas { position: absolute; inset: 0; display: block; }
+.minimap-viewport {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(129,140,248,0.14);
+  border: 1px solid rgba(129,140,248,0.75);
+  border-radius: 2px;
+  pointer-events: none;
+  box-shadow: 0 0 0 2000px rgba(0,0,0,0.32);  /* dims the off-screen area (clipped by overflow) */
 }
 
 /* ── Track headers panel ──────────────────────────────────────────────────── */
@@ -314,8 +344,10 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
   flex: 1;
   overflow: auto;
   position: relative;
-  cursor: default;
+  cursor: grab;
 }
+.timeline-scroll.panning { cursor: grabbing; }
+.timeline-scroll.panning * { cursor: grabbing !important; }
 
 .timeline-scroll::-webkit-scrollbar         { width: 5px; height: 5px; }
 .timeline-scroll::-webkit-scrollbar-track   { background: transparent; }
@@ -390,6 +422,7 @@ canvas.ruler {
 .event-block:hover {
   filter: brightness(1.18);
   z-index: 3;
+  overflow: visible;   /* let the edit/delete buttons show even on narrow blocks */
   box-shadow:
     0 4px 18px rgba(0,0,0,0.45),
     inset 0 1px 0 rgba(255,255,255,0.10);
@@ -456,9 +489,11 @@ canvas.ruler {
   display: flex;
   gap: 3px;
   opacity: 0;
+  pointer-events: none;   /* don't intercept clicks/drags on the block until hovered */
   transition: opacity 0.12s;
   z-index: 5;
 }
+.event-block:hover .event-actions { pointer-events: auto; }
 
 .event-actions button {
   width: 20px;
@@ -758,6 +793,9 @@ canvas.ruler {
     inset 0 1px 0 rgba(255,255,255,0.06);
 }
 .event-block.critical-path .event-title { color: #fca5a5; }
+
+/* Read-only events aren't draggable — don't imply a grab affordance. */
+.event-block.readonly { cursor: default; }
 
 .field-error { color: var(--danger); font-size: 11px; min-height: 14px; }
 

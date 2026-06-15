@@ -6,7 +6,8 @@ Task timing is relative: `start_offset_minutes` is measured from the project's
 chosen start datetime; `depends_on` holds indices into the task list.
 """
 
-DAY = 1440  # minutes
+DAY = 1440        # minutes
+MONTH = 30 * DAY  # ~1 month, for long acquisition-scale schedules
 
 BUILTIN_TEMPLATES = {
     'sprint': {
@@ -126,6 +127,55 @@ BUILTIN_TEMPLATES = {
             {'title': 'Site grading, gutters & apron',       'category': 'Finishing & Closeout', 'start_offset_minutes': 67 * DAY, 'duration_minutes': 5 * DAY,  'notes': 'Final grade for drainage, gutters/downspouts, and concrete apron/driveway.',              'percent_complete': 0, 'depends_on': [16]},
             {'title': 'Final inspections',                   'category': 'Inspections',          'start_offset_minutes': 91 * DAY, 'duration_minutes': 1 * DAY,  'notes': 'Final building, electrical, and plumbing sign-offs / certificate of occupancy.',          'percent_complete': 0, 'depends_on': [28, 29]},
             {'title': 'Punch list & closeout',               'category': 'Finishing & Closeout', 'start_offset_minutes': 92 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Fix punch-list items, clean up, and move in.',                                            'percent_complete': 0, 'depends_on': [30]},
+        ],
+    },
+    'mta_ota': {
+        'name': 'MTA Rapid Prototyping (OTA)',
+        'description': 'A Middle Tier of Acquisition (MTA) Rapid Prototyping program (DoDI 5000.80 / 10 USC 4022) '
+                       'executed with a prototype Other Transaction via a consortium. Per DAU\'s Adaptive Acquisition '
+                       'Framework: starts at the initiation ADM, requirements within 6 months, documentation within '
+                       '2 years, and prototype demonstrated within 5 years through the Outcome Determination ADM.',
+        'categories': [
+            {'name': 'Requirements',             'color': '#818cf8'},
+            {'name': 'Acquisition Strategy',     'color': '#fbbf24'},
+            {'name': 'OT Solicitation & Award',  'color': '#ff8c4a'},
+            {'name': 'Prototype Development',     'color': '#4a88ff'},
+            {'name': 'Test & Demonstration',     'color': '#4adcff'},
+            {'name': 'Program Management',        'color': '#4aff9e'},
+            {'name': 'Transition & Production',   'color': '#c44aff'},
+        ],
+        'tasks': [
+            # ── Requirements (approved ≤ 6 months) ──────────────────────────────
+            {'title': 'Identify capability gap & emerging need',     'category': 'Requirements',            'start_offset_minutes': 0,                'duration_minutes': 1 * MONTH,  'notes': 'Merit-based need from COCOMs/JCS; confirm fit for MTA rapid prototyping.',                 'percent_complete': 0, 'depends_on': []},
+            {'title': 'Develop requirements document',               'category': 'Requirements',            'start_offset_minutes': 1 * MONTH,        'duration_minutes': 4 * MONTH,  'notes': 'Succinct requirements; MTA is not subject to JCIDS.',                                      'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Requirements approval (≤ 6 months)',          'category': 'Requirements',            'start_offset_minutes': 5 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'Requirement approved not more than 6 months after initiation.',                            'percent_complete': 0, 'depends_on': [1]},
+            # ── Acquisition Strategy ────────────────────────────────────────────
+            {'title': 'Develop MTA acquisition strategy',            'category': 'Acquisition Strategy',    'start_offset_minutes': 2 * MONTH,        'duration_minutes': 4 * MONTH,  'notes': 'Tailored strategy incl. schedule/technical/security risk and a transition plan.',         'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Develop prototype OT strategy',               'category': 'Acquisition Strategy',    'start_offset_minutes': 4 * MONTH,        'duration_minutes': 2 * MONTH,  'notes': 'Use a prototype Other Transaction (10 USC 4022), executed via a consortium.',             'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Program baseline & cost estimate',            'category': 'Acquisition Strategy',    'start_offset_minutes': 5 * MONTH,        'duration_minutes': 2 * MONTH,  'notes': 'Cost, schedule, and performance baseline for the prototype effort.',                      'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Test & evaluation strategy',                  'category': 'Acquisition Strategy',    'start_offset_minutes': 5 * MONTH,        'duration_minutes': 2 * MONTH,  'notes': 'How prototype performance will be demonstrated/assessed in an operational environment.',   'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'MTA initiation — sign Acquisition Decision Memo (ADM)', 'category': 'Acquisition Strategy', 'start_offset_minutes': 7 * MONTH, 'duration_minutes': 3 * DAY, 'notes': 'AE signs ADM designating the MTA program; starts the 5-year clock.',                       'percent_complete': 0, 'depends_on': [2, 4, 5, 6]},
+            # ── OT Solicitation & Award (via consortium) ────────────────────────
+            {'title': 'Develop problem statement & solicitation',    'category': 'OT Solicitation & Award', 'start_offset_minutes': 7 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'With the consortium manager, frame the problem statement and evaluation approach.',        'percent_complete': 0, 'depends_on': [7]},
+            {'title': 'Issue Request for White Papers (RWP)',        'category': 'OT Solicitation & Award', 'start_offset_minutes': 8 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'Solicit white papers from consortium members.',                                           'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Evaluate white papers & down-select',         'category': 'OT Solicitation & Award', 'start_offset_minutes': 9 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'Assess concepts against criteria; invite the strongest to propose.',                      'percent_complete': 0, 'depends_on': [9]},
+            {'title': 'Issue Request for Prototype Proposals (RFPP)', 'category': 'OT Solicitation & Award', 'start_offset_minutes': 10 * MONTH,       'duration_minutes': 64800,      'notes': 'Detailed prototype proposals from down-selected offerors (~1.5 months).',                 'percent_complete': 0, 'depends_on': [10]},
+            {'title': 'Evaluate prototype proposals',                'category': 'OT Solicitation & Award', 'start_offset_minutes': 496800,           'duration_minutes': 64800,      'notes': 'Technical + cost evaluation (~1.5 months); government sponsor approves selection.',        'percent_complete': 0, 'depends_on': [11]},
+            {'title': 'Negotiate & award prototype OT agreement',    'category': 'OT Solicitation & Award', 'start_offset_minutes': 13 * MONTH,       'duration_minutes': 2 * MONTH,  'notes': 'Competitively awarded prototype OT (enables sole-source follow-on production later).',     'percent_complete': 0, 'depends_on': [12]},
+            # ── Prototype Development ───────────────────────────────────────────
+            {'title': 'Prototype design & systems engineering',      'category': 'Prototype Development',   'start_offset_minutes': 15 * MONTH,       'duration_minutes': 6 * MONTH,  'notes': 'Mature the design; define interfaces and build plan.',                                    'percent_complete': 0, 'depends_on': [13]},
+            {'title': 'Fabricate / build prototype',                 'category': 'Prototype Development',   'start_offset_minutes': 21 * MONTH,       'duration_minutes': 12 * MONTH, 'notes': 'Build the fieldable prototype using innovative technology.',                               'percent_complete': 0, 'depends_on': [14]},
+            {'title': 'Integration & checkout',                      'category': 'Prototype Development',   'start_offset_minutes': 33 * MONTH,       'duration_minutes': 4 * MONTH,  'notes': 'Integrate subsystems; bench/ground checkout before test.',                                'percent_complete': 0, 'depends_on': [15]},
+            # ── Test & Demonstration ────────────────────────────────────────────
+            {'title': 'Developmental test & evaluation (DT&E)',      'category': 'Test & Demonstration',    'start_offset_minutes': 36 * MONTH,       'duration_minutes': 6 * MONTH,  'notes': 'Verify performance against the requirement.',                                             'percent_complete': 0, 'depends_on': [16]},
+            {'title': 'Operational demonstration',                   'category': 'Test & Demonstration',    'start_offset_minutes': 42 * MONTH,       'duration_minutes': 6 * MONTH,  'notes': 'Demonstrate the prototype in an operationally relevant environment.',                     'percent_complete': 0, 'depends_on': [17]},
+            # ── Program Management (milestones) ─────────────────────────────────
+            {'title': 'Program documentation complete (≤ 2 years)',  'category': 'Program Management',      'start_offset_minutes': 24 * MONTH,       'duration_minutes': 3 * DAY,    'notes': 'All necessary documentation complete NLT 2 years after program start.',                   'percent_complete': 0, 'depends_on': [7]},
+            {'title': 'Governance review / IPR',                     'category': 'Program Management',      'start_offset_minutes': 30 * MONTH,       'duration_minutes': 3 * DAY,    'notes': 'Report status to governance bodies; update baseline as needed.',                          'percent_complete': 0, 'depends_on': [7]},
+            # ── Transition & Production ─────────────────────────────────────────
+            {'title': 'Evaluate prototype results',                  'category': 'Transition & Production', 'start_offset_minutes': 48 * MONTH,       'duration_minutes': 1 * MONTH,  'notes': 'Assess demonstration results against the requirement.',                                   'percent_complete': 0, 'depends_on': [18]},
+            {'title': 'Outcome Determination ADM (transition decision)', 'category': 'Transition & Production', 'start_offset_minutes': 49 * MONTH,   'duration_minutes': 3 * DAY,    'notes': 'AE decision: transition to Rapid Fielding / a program of record, or end the effort.',     'percent_complete': 0, 'depends_on': [21]},
+            {'title': 'Award follow-on production OT / transition',  'category': 'Transition & Production', 'start_offset_minutes': 49 * MONTH + 15 * DAY, 'duration_minutes': 5 * MONTH, 'notes': 'Sole-source follow-on production OT or transition to the next acquisition pathway.',       'percent_complete': 0, 'depends_on': [22]},
         ],
     },
 }
