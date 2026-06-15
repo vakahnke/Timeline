@@ -1,115 +1,156 @@
-# Timeline — Team Project Planning
+# Timeline
 
-A multi-user, team-based project-management app built around a fast, designed
-Gantt-style timeline. Sign up, create projects, invite teammates with roles, and
-plan each project on its own isolated timeline.
+A multi-user, team-based **project-planning** app built around a fast, designed
+Gantt-style timeline. Sign up, create projects, invite teammates with roles, and plan
+each project on its own isolated, interactive timeline — with dependency arrows, a
+critical path, templates, and reusable teams.
 
-- **Backend:** Django + DRF, JWT auth (`djangorestframework-simplejwt`), PostgreSQL.
-- **Frontend:** React 18 + Vite SPA, React Router, project-scoped timeline UI.
-- **Infra:** Docker for dev; nginx + gunicorn + Postgres for production.
+![Timeline](docs/images/timeline.png)
 
-## Architecture
+---
 
-- **Tenancy:** `User → ProjectMembership(role) → Project`. Every `Category` and
-  `Event` belongs to a project. Access is enforced in both the queryset and a DRF
-  permission class — a user only ever sees projects they're a member of.
-- **Roles:** `owner` (manage members, delete project, full edit), `editor`
-  (create/edit events & categories), `viewer` (read-only).
-- **Routes:** nested per project — `/api/projects/<id>/{events,categories,members}/`.
+## Highlights
 
-## Development (one command)
+- **Interactive timeline** — drag to move events, resize to reschedule, drag across tracks
+  to recategorize, smooth cursor-anchored zoom (sub-pixel-per-hour to minute detail), a
+  draggable **minimap** for long projects, dependency arrows, and an automatic **critical
+  path** (CPM).
+- **Multi-tenant & team-based** — every project is isolated; you only ever see projects
+  you're a member of. Per-project roles: **owner / editor / viewer**.
+- **Templates** — spin up a fully-formed project (categories + timed, dependency-linked
+  tasks) anchored to a start date. Built-ins include *Two-Week Sprint*, *Product Launch*,
+  *Event Plan*, *Custom Shop Build*, and *MTA Rapid Prototyping (OTA)*. Save any project as
+  your own reusable template.
+- **Teams** — reusable groups of users; add a whole team to a project at a chosen role in
+  one click.
+- **JWT auth**, self-service registration, and a Django **admin** console.
+- **Self-documenting API** — Swagger UI, ReDoc, and an OpenAPI schema generated from the code.
 
-Requires Docker. Postgres, the Django API, and the Vite dev server (with HMR) all
-run in containers.
+## Tech stack
+
+| Layer | Stack |
+|------|-------|
+| **Backend** | Django 4.2 · Django REST Framework · SimpleJWT · drf-spectacular · drf-nested-routers · PostgreSQL 16 |
+| **Frontend** | React 18 · Vite 5 · React Router 6 (plain JSX, no UI framework — small & fast) |
+| **Infra** | Docker (dev) · nginx + gunicorn + Postgres (prod) · GitHub Actions CI |
+
+## Documentation
+
+- 📐 [Architecture](docs/ARCHITECTURE.md) — tenancy model, data model, auth flow, frontend design, request flow
+- 📖 [User Guide](docs/USER_GUIDE.md) — accounts, projects, the timeline (gestures & shortcuts), templates, teams, roles
+- 🚀 [Deployment](docs/DEPLOYMENT.md) — Docker dev & prod, environment variables, nginx/gunicorn, CI
+
+## Quick start (development)
+
+Requires Docker. Postgres, the Django API, and the Vite dev server (with hot reload) all
+run in containers — one command brings the whole stack up.
 
 ```bash
 cp .env.example .env          # dev defaults work out of the box
 docker compose up --build
 ```
 
-- SPA (dev):  http://localhost:5173
-- API:        http://localhost:8000/api/
-- Admin:      http://localhost:8000/admin/
+| Surface | URL |
+|---------|-----|
+| App (SPA, hot reload) | http://localhost:5173 |
+| API | http://localhost:8000/api/ |
+| API docs (Swagger) | http://localhost:8000/api/docs/ |
+| Django admin | http://localhost:8000/admin/ |
 
-> The dev DB is published on host port **5433** (override with `POSTGRES_HOST_PORT`)
-> to avoid clashing with a local Postgres on 5432.
+> The dev database is published on host port **5433** (override with `POSTGRES_HOST_PORT`)
+> so it won't clash with a local Postgres on 5432.
 
-First-run extras (migrations run automatically on backend start):
+Seed demo data and an admin (migrations run automatically on backend start):
 
 ```bash
-docker compose exec backend python manage.py createsuperuser
 docker compose exec backend python manage.py load_sample      # demo project + users
+docker compose exec backend python manage.py createsuperuser  # for /admin
 ```
 
-`load_sample` seeds a **Demo Project** and three users (password `demo12345`):
+### Demo accounts
 
-| Username | Role   |
-|----------|--------|
+`load_sample` creates a **Demo Project** and three users (password `demo12345`):
+
+| Username | Role on the demo project |
+|----------|--------------------------|
 | `demo`   | owner  |
 | `editor` | editor |
 | `viewer` | viewer |
 
-## API quick reference
+## Using it
+
+A 60-second tour (full details in the [User Guide](docs/USER_GUIDE.md)):
+
+1. **Register** or log in. New accounts land on the projects dashboard.
+2. **Create a project** — blank, or **From Template** to get a ready-made plan.
+3. **Open the timeline.** Drag events to move them, drag edges to resize, drag across tracks
+   to recategorize. Zoom with **Ctrl/⌘ + scroll** (or pinch) or the toolbar; **pan** by
+   dragging empty space; **Fit** (or press `0`) to frame the whole project. Use the
+   **minimap** at the bottom to jump around long projects.
+4. **Invite teammates** (owner) via the **Members** panel — by email/username, or add a
+   whole **Team** at a role.
+
+**Keyboard:** `+`/`−` zoom · `0` fit · `←`/`→`/`↑`/`↓` pan · `Home`/`End` jump to start/end.
+
+## API
+
+Nested, per-project REST API (JWT in the `Authorization` header). Browse it live at
+`/api/docs/` (Swagger) or `/api/redoc/`.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| POST | `/api/auth/register/` | open self-registration |
-| POST | `/api/auth/token/` | obtain access + refresh |
-| POST | `/api/auth/token/refresh/` | refresh access token |
-| GET  | `/api/me/` | current user |
-| GET/POST | `/api/projects/` | your projects / create one |
-| GET/POST | `/api/projects/<id>/members/` | owner-only |
-| GET/POST | `/api/projects/<id>/events/` | viewer reads, editor writes |
-| GET/POST | `/api/projects/<id>/categories/` | viewer reads, editor writes |
-| GET/POST/DELETE | `/api/templates/` `…/<id>/` | list built-in + saved templates; save a project as one |
-| POST | `/api/templates/instantiate/` | create a project from a template at a chosen start date / owner |
+| POST | `/api/auth/register/` · `/api/auth/token/` · `/api/auth/token/refresh/` | register · log in · refresh |
+| GET | `/api/me/` | current user |
+| GET/POST/PATCH/DELETE | `/api/projects/` · `…/<id>/` | your projects |
+| GET/POST/PATCH/DELETE | `/api/projects/<id>/members/` · `…/<mid>/` | members (owner-only) |
+| GET/POST/PATCH/DELETE | `/api/projects/<id>/events/` · `…/categories/` | viewer reads, editor writes |
+| POST | `/api/projects/<id>/events/bulk/` | bulk-create events |
+| GET/POST/DELETE | `/api/templates/` · `…/<id>/` | built-in + saved templates |
+| POST | `/api/templates/instantiate/` | create a project from a template |
+| GET/POST/PATCH/DELETE | `/api/teams/` · `…/<id>/` · `…/members/` | reusable teams |
+| POST | `/api/projects/<id>/add-team/` | add a team's members at a role (owner-only) |
 
-### Templates
+## Project structure
 
-Spin up a fully-formed project from a template — categories plus sample timed tasks
-(with dependencies) shifted to a start date you choose, on any user's timeline:
-
-- **Built-in** templates ship in code (`backend/projects/templates_builtin.py`): Two-Week
-  Sprint, Product Launch, Event Plan.
-- **Saved** templates: snapshot any project as a reusable template ("Save as Template"
-  on the project toolbar). They're private to their creator.
-- On the dashboard, **From Template** → pick one, set name + start date, optionally
-  assign to another user by email/username (they become owner; you're added as co-owner).
-
-### Interactive API docs
-
-Generated from the live code with [drf-spectacular](https://drf-spectacular.readthedocs.io/):
-
-- **Swagger UI:** http://localhost:8000/api/docs/ — click **Authorize**, paste an
-  access token (from `POST /api/auth/token/`) as `Bearer <token>`, and call endpoints.
-- **ReDoc:** http://localhost:8000/api/redoc/
-- **OpenAPI schema:** http://localhost:8000/api/schema/ (YAML)
+```
+Timeline/
+├── backend/                 # Django + DRF
+│   ├── timeline_project/     # settings, root urls, wsgi
+│   ├── projects/             # tenancy: Project, Membership, Team, Template, auth, permissions
+│   ├── events/               # timeline domain: Category, Event (+ load_sample)
+│   ├── Dockerfile · entrypoint.sh · requirements.txt
+├── frontend/                # React + Vite SPA
+│   └── src/
+│       ├── pages/            # LoginPage, RegisterPage, ProjectsDashboard, ProjectTimeline, TeamsPage
+│       ├── components/       # Timeline, EventBlock, Minimap, Toolbar, modals (Event/Category/Members/Team/...)
+│       ├── auth/ · routes/ · ui/   # AuthContext + token store, ProtectedRoute, ToastProvider
+│       └── api.js            # JWT client with single-flight refresh
+├── nginx/nginx.conf         # prod reverse proxy + SPA serving
+├── docker-compose.yml       # dev stack
+├── docker-compose.prod.yml  # prod stack (nginx + gunicorn + postgres)
+└── docs/                    # architecture, user guide, deployment
+```
 
 ## Production
 
+Single-origin: nginx serves the built SPA and reverse-proxies `/api`, `/admin`, `/static`,
+`/media` to gunicorn. See **[Deployment](docs/DEPLOYMENT.md)** for the full guide.
+
 ```bash
 cp .env.example .env
-# EDIT .env: set DJANGO_DEBUG=0, a real DJANGO_SECRET_KEY, a strong POSTGRES_PASSWORD,
-# real DJANGO_ALLOWED_HOSTS, and DJANGO_CSRF_TRUSTED_ORIGINS for your https domain.
-docker compose -f docker-compose.prod.yml up --build -d
+# Set DJANGO_DEBUG=0, a real DJANGO_SECRET_KEY, a strong POSTGRES_PASSWORD,
+# real DJANGO_ALLOWED_HOSTS, and DJANGO_CSRF_TRUSTED_ORIGINS.
+docker compose -f docker-compose.prod.yml up --build -d   # app on http://localhost
 ```
 
-- App on http://localhost (nginx :80). `migrate` + `collectstatic` run automatically
-  on backend start.
-- nginx serves the built SPA and reverse-proxies `/api`, `/admin`, `/static`, `/media`
-  to gunicorn (single origin — no CORS needed in production).
+## Continuous integration
 
-Create an admin and redeploy frontend changes:
-
-```bash
-docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
-docker compose -f docker-compose.prod.yml build nginx && \
-  docker compose -f docker-compose.prod.yml up -d nginx
-```
+`.github/workflows/ci.yml` runs, on every push/PR: Django system checks, a
+missing-migration check, `migrate` and tests against a Postgres service container, plus a
+frontend `npm ci && npm run build`.
 
 ## Notes
 
-- `index.html` at the repo root is a legacy standalone prototype, kept for reference —
-  it is **not** part of the built app (the real frontend lives in `frontend/`).
-- CI (`.github/workflows/ci.yml`) runs Django checks, a missing-migration check,
-  migrations, and tests against a Postgres service container, plus a frontend build.
+- `index.html` at the repo root is a **legacy standalone prototype** kept for reference —
+  it is not part of the built app (the real frontend lives in `frontend/`).
+- This started as a single-user prototype and grew into the multi-tenant app documented here.
