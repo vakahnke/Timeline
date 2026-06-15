@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Avg, Count, Max, Min
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status, viewsets
@@ -56,11 +57,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Project.objects.none()  # schema generation has no authenticated user
-        # Queryset-filtering layer: only projects I'm a member of.
+        # Membership filter via subquery (not a join) so the event aggregates below aren't
+        # multiplied by the number of memberships.
+        my_ids = ProjectMembership.objects.filter(user=self.request.user).values('project')
         return (Project.objects
-                .filter(memberships__user=self.request.user)
-                .prefetch_related('memberships')   # members listed via the dedicated endpoint
-                .distinct())
+                .filter(id__in=my_ids)
+                .annotate(
+                    ev_start=Min('events__start'),
+                    ev_end=Max('events__end'),
+                    avg_progress=Avg('events__percent_complete'),
+                    ev_count=Count('events'),
+                )
+                .prefetch_related('memberships'))   # members listed via the dedicated endpoint
 
     # Owner-only actions. NOTE: get_permissions overrides any permission_classes set on
     # the @action decorators, so owner-only actions must be enumerated here.

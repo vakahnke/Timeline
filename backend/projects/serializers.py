@@ -53,18 +53,40 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     my_role      = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    # Aggregates over the project's events (annotated in ProjectViewSet.get_queryset).
+    start        = serializers.SerializerMethodField()
+    end          = serializers.SerializerMethodField()
+    progress     = serializers.SerializerMethodField()
+    event_count  = serializers.SerializerMethodField()
 
     class Meta:
         model  = Project
-        fields = ['id', 'name', 'description', 'owner', 'my_role',
-                  'member_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'owner', 'my_role', 'member_count',
-                            'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'owner', 'my_role', 'member_count',
+                  'start', 'end', 'progress', 'event_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'owner', 'my_role', 'member_count', 'start', 'end',
+                            'progress', 'event_count', 'created_at', 'updated_at']
 
     @extend_schema_field(serializers.IntegerField())
     def get_member_count(self, obj):
         # len() of the prefetched memberships — avoids an N+1 COUNT query per project.
         return len(obj.memberships.all())
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_start(self, obj):
+        return getattr(obj, 'ev_start', None)
+
+    @extend_schema_field(serializers.DateTimeField(allow_null=True))
+    def get_end(self, obj):
+        return getattr(obj, 'ev_end', None)
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_progress(self, obj):
+        p = getattr(obj, 'avg_progress', None)
+        return round(p) if p is not None else 0
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_event_count(self, obj):
+        return getattr(obj, 'ev_count', 0)
 
     @extend_schema_field(serializers.ChoiceField(choices=Role.choices, allow_null=True))
     def get_my_role(self, obj):
