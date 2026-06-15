@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     # third-party
     'rest_framework',
     'rest_framework_simplejwt',
+    'drf_spectacular',
     'corsheaders',
     # local
     'projects',
@@ -113,6 +114,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
@@ -120,6 +122,19 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ],
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Timeline API',
+    'DESCRIPTION': 'Multi-tenant, team-based project-planning API. '
+                   'Authenticate via JWT (POST /api/auth/token/), then send '
+                   'Authorization: Bearer <access>. All project data is scoped to '
+                   'projects you are a member of.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,        # don't expose the raw schema in the UIs
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'SWAGGER_UI_SETTINGS': {'persistAuthorization': True},
+    'ENUM_NAME_OVERRIDES': {'RoleEnum': 'projects.models.Role'},
 }
 
 SIMPLE_JWT = {

@@ -32,6 +32,8 @@ class CategoryViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Category.objects.none()  # no project_pk during schema generation
         return Category.objects.filter(project_id=self.kwargs['project_pk'])
 
 
@@ -40,6 +42,8 @@ class EventViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Event.objects.none()  # no project_pk during schema generation
         qs = (Event.objects
               .filter(project_id=self.kwargs['project_pk'])
               .prefetch_related('depends_on'))

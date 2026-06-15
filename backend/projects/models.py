@@ -31,6 +31,34 @@ class Role(models.TextChoices):
     VIEWER = 'viewer', 'Viewer'
 
 
+class ProjectTemplate(models.Model):
+    """
+    A reusable project blueprint. `categories` and `tasks` are stored as JSON in the
+    same shape as the built-in templates (see projects/templates_builtin.py), so the
+    instantiate logic treats built-in and saved templates identically.
+
+        categories: [{"name": str, "color": str}]
+        tasks:      [{"title", "category", "start_offset_minutes", "duration_minutes",
+                      "notes", "percent_complete", "depends_on": [task_index, ...]}]
+    """
+    name        = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default='')
+    owner       = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='project_templates',
+    )
+    categories  = models.JSONField(default=list)
+    tasks       = models.JSONField(default=list)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class ProjectMembership(models.Model):
     user      = models.ForeignKey(
         settings.AUTH_USER_MODEL,

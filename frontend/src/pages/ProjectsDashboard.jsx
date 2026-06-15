@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../ui/ToastProvider'
 import CreateProjectModal from '../components/CreateProjectModal'
+import TemplateModal from '../components/TemplateModal'
 
 function RoleBadge({ role }) {
   if (!role) return null
@@ -16,9 +17,10 @@ export default function ProjectsDashboard() {
   const navigate = useNavigate()
 
   const [projects, setProjects] = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState(null)
-  const [creating, setCreating] = useState(false)
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
+  const [creating,   setCreating]   = useState(false)
+  const [templating, setTemplating] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -40,6 +42,11 @@ export default function ProjectsDashboard() {
     navigate(`/projects/${created.id}`)
   }, [flash, navigate])
 
+  const handleFromTemplate = useCallback((project) => {
+    flash('Project created from template', 'saved')
+    navigate(`/projects/${project.id}`)
+  }, [flash, navigate])
+
   return (
     <div className="dashboard scroll-page">
       <header className="dash-header">
@@ -53,7 +60,10 @@ export default function ProjectsDashboard() {
       <main className="dash-main">
         <div className="dash-titlebar">
           <h1>Your projects</h1>
-          <button className="btn-new" onClick={() => setCreating(true)}>+ New Project</button>
+          <div className="dash-actions">
+            <button className="btn-template" onClick={() => setTemplating(true)}>From Template</button>
+            <button className="btn-new" onClick={() => setCreating(true)}>+ New Project</button>
+          </div>
         </div>
 
         {loading && (
@@ -75,7 +85,10 @@ export default function ProjectsDashboard() {
             <div className="icon">&#9776;</div>
             <p>No projects yet.</p>
             <p className="dim">Create your first project to start planning.</p>
-            <button className="btn-new" onClick={() => setCreating(true)}>+ New Project</button>
+            <div className="dash-actions">
+              <button className="btn-template" onClick={() => setTemplating(true)}>From Template</button>
+              <button className="btn-new" onClick={() => setCreating(true)}>+ New Project</button>
+            </div>
           </div>
         )}
 
@@ -99,6 +112,9 @@ export default function ProjectsDashboard() {
 
       {creating && (
         <CreateProjectModal onCreate={handleCreate} onClose={() => setCreating(false)} />
+      )}
+      {templating && (
+        <TemplateModal onCreated={handleFromTemplate} onClose={() => setTemplating(false)} />
       )}
     </div>
   )

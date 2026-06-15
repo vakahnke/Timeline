@@ -61,6 +61,29 @@ docker compose exec backend python manage.py load_sample      # demo project + u
 | GET/POST | `/api/projects/<id>/members/` | owner-only |
 | GET/POST | `/api/projects/<id>/events/` | viewer reads, editor writes |
 | GET/POST | `/api/projects/<id>/categories/` | viewer reads, editor writes |
+| GET/POST/DELETE | `/api/templates/` `…/<id>/` | list built-in + saved templates; save a project as one |
+| POST | `/api/templates/instantiate/` | create a project from a template at a chosen start date / owner |
+
+### Templates
+
+Spin up a fully-formed project from a template — categories plus sample timed tasks
+(with dependencies) shifted to a start date you choose, on any user's timeline:
+
+- **Built-in** templates ship in code (`backend/projects/templates_builtin.py`): Two-Week
+  Sprint, Product Launch, Event Plan.
+- **Saved** templates: snapshot any project as a reusable template ("Save as Template"
+  on the project toolbar). They're private to their creator.
+- On the dashboard, **From Template** → pick one, set name + start date, optionally
+  assign to another user by email/username (they become owner; you're added as co-owner).
+
+### Interactive API docs
+
+Generated from the live code with [drf-spectacular](https://drf-spectacular.readthedocs.io/):
+
+- **Swagger UI:** http://localhost:8000/api/docs/ — click **Authorize**, paste an
+  access token (from `POST /api/auth/token/`) as `Bearer <token>`, and call endpoints.
+- **ReDoc:** http://localhost:8000/api/redoc/
+- **OpenAPI schema:** http://localhost:8000/api/schema/ (YAML)
 
 ## Production
 

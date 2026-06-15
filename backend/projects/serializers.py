@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Project, ProjectMembership, Role
@@ -61,6 +62,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'owner', 'my_role', 'member_count',
                             'members', 'created_at', 'updated_at']
 
+    @extend_schema_field(serializers.ChoiceField(choices=Role.choices, allow_null=True))
     def get_my_role(self, obj):
         request = self.context.get('request')
         if not request:
@@ -68,6 +70,31 @@ class ProjectSerializer(serializers.ModelSerializer):
         user = request.user
         membership = next((m for m in obj.memberships.all() if m.user_id == user.id), None)
         return membership.role if membership else None
+
+
+class TemplateListItemSerializer(serializers.Serializer):
+    key            = serializers.CharField()
+    source         = serializers.ChoiceField(choices=['builtin', 'saved'])
+    id             = serializers.IntegerField(required=False)
+    name           = serializers.CharField()
+    description    = serializers.CharField()
+    category_count = serializers.IntegerField()
+    task_count     = serializers.IntegerField()
+
+
+class SaveTemplateSerializer(serializers.Serializer):
+    project     = serializers.IntegerField(help_text='Id of an existing project to snapshot.')
+    name        = serializers.CharField(max_length=200)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class InstantiateTemplateSerializer(serializers.Serializer):
+    key         = serializers.CharField(help_text='Template key, e.g. "builtin:sprint" or "saved:3".')
+    start       = serializers.DateTimeField(help_text='When the project starts; tasks are shifted to it.')
+    name        = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+    owner       = serializers.CharField(required=False, allow_blank=True,
+                                        help_text='Email/username of the target owner. Defaults to you.')
 
 
 class AddMemberSerializer(serializers.Serializer):

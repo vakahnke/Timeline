@@ -1,6 +1,7 @@
 export const RULER_HEIGHT  = 38;
 export const TRACK_HEIGHT  = 64;
-export const MIN_PX_PER_HR = 4;
+// Low floor so multi-month / multi-year projects can be zoomed out to fit the whole span.
+export const MIN_PX_PER_HR = 0.02;
 export const MAX_PX_PER_HR = 8000;
 
 export const PALETTE = [
@@ -10,14 +11,17 @@ export const PALETTE = [
 ];
 
 export const TICK_INTERVALS = [
-  { ms: 60_000,      fmt: 'time' },
-  { ms: 300_000,     fmt: 'time' },
-  { ms: 900_000,     fmt: 'time' },
-  { ms: 1_800_000,   fmt: 'time' },
-  { ms: 3_600_000,   fmt: 'time' },
-  { ms: 7_200_000,   fmt: 'time' },
-  { ms: 14_400_000,  fmt: 'hour' },
-  { ms: 28_800_000,  fmt: 'hour' },
-  { ms: 86_400_000,  fmt: 'date' },
-  { ms: 604_800_000, fmt: 'date' },
+  { ms: 60_000,         fmt: 'time' },   // 1 min
+  { ms: 300_000,        fmt: 'time' },   // 5 min
+  { ms: 900_000,        fmt: 'time' },   // 15 min
+  { ms: 1_800_000,      fmt: 'time' },   // 30 min
+  { ms: 3_600_000,      fmt: 'time' },   // 1 hr
+  { ms: 7_200_000,      fmt: 'time' },   // 2 hr
+  { ms: 14_400_000,     fmt: 'hour' },   // 4 hr
+  { ms: 28_800_000,     fmt: 'hour' },   // 8 hr
+  { ms: 86_400_000,     fmt: 'date' },   // 1 day
+  { ms: 604_800_000,    fmt: 'date' },   // 1 week
+  { ms: 2_592_000_000,  fmt: 'month' },  // ~1 month
+  { ms: 7_776_000_000,  fmt: 'month' },  // ~1 quarter
+  { ms: 31_536_000_000, fmt: 'year' },   // ~1 year
 ];
