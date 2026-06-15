@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 
-export default function CreateProjectModal({ onCreate, onClose }) {
-  const [name,        setName]        = useState('')
-  const [description, setDescription] = useState('')
+// project == null -> create mode; project set -> edit mode. The parent's onSubmit
+// decides whether to create or update.
+export default function CreateProjectModal({ project, onSubmit, onClose }) {
+  const editing = !!project
+  const [name,        setName]        = useState(project?.name || '')
+  const [description, setDescription] = useState(project?.description || '')
   const [error,       setError]       = useState('')
   const [saving,      setSaving]      = useState(false)
 
@@ -10,12 +13,12 @@ export default function CreateProjectModal({ onCreate, onClose }) {
     if (!name.trim()) { setError('Project name is required.'); return }
     setSaving(true)
     try {
-      await onCreate({ name: name.trim(), description: description.trim() })
+      await onSubmit({ name: name.trim(), description: description.trim() })
     } catch (err) {
-      setError('Could not create project: ' + err.message)
+      setError(`Could not ${editing ? 'save' : 'create'} project: ` + err.message)
       setSaving(false)
     }
-  }, [name, description, onCreate])
+  }, [name, description, onSubmit, editing])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -30,7 +33,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-head">
-          <h2>New Project</h2>
+          <h2>{editing ? 'Edit Project' : 'New Project'}</h2>
           <button className="btn-close" onClick={onClose}>&#10005;</button>
         </div>
 
@@ -51,7 +54,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
         <div className="modal-foot">
           <button onClick={onClose} disabled={saving}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Creating…' : 'Create project'}
+            {saving ? 'Saving…' : (editing ? 'Save changes' : 'Create project')}
           </button>
         </div>
       </div>

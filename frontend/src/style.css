@@ -968,7 +968,61 @@ fieldset.modal-body:disabled { opacity: 1; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.project-card-foot { color: var(--text-dimmer); font-size: 11px; margin-top: 2px; }
+.project-card-dates {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1px;
+}
+.project-card-dates .arrow { color: var(--text-dimmer); margin: 0 2px; }
+.project-card-dates.dim { color: var(--text-dimmer); }
+
+.project-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.project-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  transition: width 0.25s ease;
+  min-width: 0;
+}
+
+.project-card-foot {
+  color: var(--text-dimmer);
+  font-size: 11px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+}
+.project-card-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+.project-card:hover .project-card-actions,
+.project-card:focus-within .project-card-actions { opacity: 1; }
+.card-action {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+}
+.card-action:hover { background: rgba(129,140,248,0.18); border-color: rgba(129,140,248,0.4); color: #a5b4fc; }
+.card-action--danger:hover { background: rgba(248,113,113,0.2); border-color: rgba(248,113,113,0.4); color: #fca5a5; }
 
 .project-card.skeleton {
   cursor: default;
