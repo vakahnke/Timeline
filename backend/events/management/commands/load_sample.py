@@ -1,6 +1,11 @@
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
-from events.models import Event
+
+from events.models import Category, Event
+from projects.models import Project, ProjectMembership, Role
+
+User = get_user_model()
 
 SAMPLE_EVENTS = [
     # ── Engineering ──────────────────────────────────────────────────────────
@@ -32,26 +37,70 @@ SAMPLE_EVENTS = [
     dict(title='Launch Prep',         start='2026-03-07T15:30:00Z', end='2026-03-07T17:00:00Z', category='Marketing',   color='#ffd84a', notes='Coordinate launch announcement assets.'),
 ]
 
+DEMO_USERS = [
+    # username, email, password, role on the demo project
+    ('demo',   'demo@example.com',   'demo12345', Role.OWNER),
+    ('editor', 'editor@example.com', 'demo12345', Role.EDITOR),
+    ('viewer', 'viewer@example.com', 'demo12345', Role.VIEWER),
+]
+
 
 class Command(BaseCommand):
-    help = 'Load sample schedule events into the database.'
+    help = 'Seed a demo user, a demo project (with members) and a sample timeline.'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--clear',
             action='store_true',
-            help='Delete all existing events before loading samples.',
+            help='Delete the demo project (and its events/categories) before reseeding.',
         )
 
     def handle(self, *args, **options):
-        if options['clear']:
-            count = Event.objects.count()
-            Event.objects.all().delete()
-            self.stdout.write(self.style.WARNING(f'Cleared {count} existing event(s).'))
+        # Demo users
+        users = {}
+        for username, email, password, _role in DEMO_USERS:
+            user, created = User.objects.get_or_create(
+                username=username, defaults={'email': email},
+            )
+            if created:
+                user.set_password(password)
+                user.save(update_fields=['password'])
+                self.stdout.write(self.style.SUCCESS(f'Created user "{username}" (password: {password}).'))
+            users[username] = user
 
-        created = 0
+        owner = users['demo']
+
+        if options['clear']:
+            deleted, _ = Project.objects.filter(name='Demo Project', owner=owner).delete()
+            if deleted:
+                self.stdout.write(self.style.WARNING('Cleared existing Demo Project.'))
+
+        project, created = Project.objects.get_or_create(
+            name='Demo Project', owner=owner,
+            defaults={'description': 'A sample timeline to explore the app.'},
+        )
+        if not created and not options['clear']:
+            self.stdout.write(self.style.WARNING('Demo Project already exists; use --clear to reseed.'))
+            return
+
+        # Memberships
+        for username, _email, _password, role in DEMO_USERS:
+            ProjectMembership.objects.get_or_create(
+                project=project, user=users[username], defaults={'role': role},
+            )
+
+        # Categories (project-scoped, unique per project)
+        cat_colors = {}
+        for data in SAMPLE_EVENTS:
+            cat_colors.setdefault(data['category'], data['color'])
+        for name, color in cat_colors.items():
+            Category.objects.get_or_create(project=project, name=name, defaults={'color': color})
+
+        # Events
+        created_events = 0
         for data in SAMPLE_EVENTS:
             Event.objects.create(
+                project=project,
                 title=data['title'],
                 start=parse_datetime(data['start']),
                 end=parse_datetime(data['end']),
@@ -59,6 +108,9 @@ class Command(BaseCommand):
                 color=data['color'],
                 notes=data.get('notes', ''),
             )
-            created += 1
+            created_events += 1
 
-        self.stdout.write(self.style.SUCCESS(f'Created {created} sample events.'))
+        self.stdout.write(self.style.SUCCESS(
+            f'Seeded "Demo Project" with {len(cat_colors)} categories and {created_events} events. '
+            f'Owner: demo / Editor: editor / Viewer: viewer (password: demo12345).'
+        ))

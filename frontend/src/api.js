@@ -1,25 +1,112 @@
-const BASE = '/api';
+import { tokens } from './auth/tokenStore'
 
-async function req(path, opts = {}) {
-  const res = await fetch(BASE + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  });
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-  if (res.status === 204) return null;
-  return res.json();
+const BASE = '/api'
+
+// All nested-route building lives here -> switching route shapes is a one-place edit.
+const url = {
+  projects:   ()        => '/projects/',
+  project:    (id)      => `/projects/${id}/`,
+  events:     (pid)     => `/projects/${pid}/events/`,
+  event:      (pid, id) => `/projects/${pid}/events/${id}/`,
+  bulkEvents: (pid)     => `/projects/${pid}/events/bulk/`,
+  categories: (pid)     => `/projects/${pid}/categories/`,
+  category:   (pid, id) => `/projects/${pid}/categories/${id}/`,
+  members:    (pid)     => `/projects/${pid}/members/`,
+  member:     (pid, id) => `/projects/${pid}/members/${id}/`,
 }
 
+export class ApiError extends Error {
+  constructor(status, body) {
+    super(`${status}: ${body}`)
+    this.status = status
+    this.body = body
+  }
+}
+
+// Wired up by AuthProvider so the interceptor can force a logout + redirect.
+let onAuthFailure = () => {}
+export function setAuthFailureHandler(fn) { onAuthFailure = fn }
+
+let refreshPromise = null  // single-flight guard: concurrent 401s share one refresh
+
+async function rawFetch(path, opts = {}, withAuth = true) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  if (withAuth && tokens.access) headers.Authorization = `Bearer ${tokens.access}`
+  return fetch(BASE + path, { ...opts, headers })
+}
+
+function doRefresh() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refresh = tokens.refresh
+      if (!refresh) throw new Error('no-refresh')
+      const res = await rawFetch('/auth/token/refresh/',
+        { method: 'POST', body: JSON.stringify({ refresh }) }, false)
+      if (!res.ok) throw new Error('refresh-failed')
+      const data = await res.json()           // { access, refresh? }
+      tokens.set({ access: data.access, refresh: data.refresh })
+      return data.access
+    })().finally(() => { refreshPromise = null })
+  }
+  return refreshPromise
+}
+
+async function req(path, opts = {}, withAuth = true, _retried = false) {
+  const res = await rawFetch(path, opts, withAuth)
+
+  if (res.status === 401 && withAuth && !_retried && tokens.refresh) {
+    try {
+      await doRefresh()
+      return req(path, opts, withAuth, true)   // retry exactly once
+    } catch {
+      tokens.clear()
+      onAuthFailure()
+      throw new ApiError(401, 'session expired')
+    }
+  }
+
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  if (res.status === 204) return null
+  return res.json()
+}
+
+const body = (data) => JSON.stringify(data)
+
 export const api = {
-  list:   ()      => req('/events/'),
-  create: (data)  => req('/events/',        { method: 'POST',  body: JSON.stringify(data) }),
-  update: (id, d) => req(`/events/${id}/`,  { method: 'PATCH', body: JSON.stringify(d) }),
-  remove: (id)    => req(`/events/${id}/`,  { method: 'DELETE' }),
+  auth: {
+    register: (d) => req('/auth/register/', { method: 'POST', body: body(d) }, false),
+    login:    (d) => req('/auth/token/',    { method: 'POST', body: body(d) }, false),
+    me:       ()  => req('/me/'),
+  },
+
+  projects: {
+    list:   ()    => req(url.projects()),
+    get:    (id)  => req(url.project(id)),
+    create: (d)   => req(url.projects(), { method: 'POST', body: body(d) }),
+    update: (id, d) => req(url.project(id), { method: 'PATCH', body: body(d) }),
+    remove: (id)  => req(url.project(id), { method: 'DELETE' }),
+
+    members: {
+      list:       (pid)      => req(url.members(pid)),
+      add:        (pid, d)   => req(url.members(pid), { method: 'POST', body: body(d) }),
+      updateRole: (pid, mid, d) => req(url.member(pid, mid), { method: 'PATCH', body: body(d) }),
+      remove:     (pid, mid) => req(url.member(pid, mid), { method: 'DELETE' }),
+    },
+  },
+
+  // Same method names as the old prototype, now project-scoped.
+  events: {
+    list:   (pid)        => req(url.events(pid)),
+    create: (pid, d)     => req(url.events(pid),    { method: 'POST',  body: body(d) }),
+    update: (pid, id, d) => req(url.event(pid, id), { method: 'PATCH', body: body(d) }),
+    remove: (pid, id)    => req(url.event(pid, id), { method: 'DELETE' }),
+    bulk:   (pid, list)  => req(url.bulkEvents(pid), { method: 'POST', body: body(list) }),
+  },
 
   categories: {
-    list:   ()         => req('/categories/'),
-    create: (data)     => req('/categories/',       { method: 'POST',  body: JSON.stringify(data) }),
-    update: (id, data) => req(`/categories/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
-    remove: (id)       => req(`/categories/${id}/`, { method: 'DELETE' }),
+    list:   (pid)        => req(url.categories(pid)),
+    create: (pid, d)     => req(url.categories(pid),   { method: 'POST',  body: body(d) }),
+    update: (pid, id, d) => req(url.category(pid, id), { method: 'PATCH', body: body(d) }),
+    remove: (pid, id)    => req(url.category(pid, id), { method: 'DELETE' }),
   },
-};
+}

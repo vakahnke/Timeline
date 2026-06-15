@@ -19,7 +19,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ pxPerHour, setPxPerHour, onFit, onNew, onNewCategory, status, settings, onSettingsChange, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, pxPerHour, setPxPerHour, onFit, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -45,7 +45,9 @@ export default function Toolbar({ pxPerHour, setPxPerHour, onFit, onNew, onNewCa
 
   return (
     <div className="toolbar">
-      <h1>Timeline</h1>
+      <button className="btn-back" onClick={onBack} title="Back to projects">←</button>
+      <h1>{projectName || 'Timeline'}</h1>
+      {!canEdit && <span className="ro-badge" title="You have view-only access">View only</span>}
       <div className="toolbar-sep" />
       <button onClick={() => zoom(1 / 1.6)} title="Zoom out">−</button>
       <span className="zoom-label">{label}</span>
@@ -71,11 +73,15 @@ export default function Toolbar({ pxPerHour, setPxPerHour, onFit, onNew, onNewCa
         </div>
       )}
       <div className="toolbar-spacer" />
-      {status && (
-        <span className={`status ${status.type}`}>{status.msg}</span>
+      {isOwner && (
+        <button className="btn-members" onClick={onOpenMembers} title="Manage members">Members</button>
       )}
-      <button className="btn-new-cat" onClick={onNewCategory}>+ New Category</button>
-      <button className="btn-new" onClick={onNew}>+ New Event</button>
+      {canEdit && (
+        <>
+          <button className="btn-new-cat" onClick={onNewCategory}>+ New Category</button>
+          <button className="btn-new" onClick={onNew}>+ New Event</button>
+        </>
+      )}
       <div className="settings-wrap">
         <button
           ref={gearRef}

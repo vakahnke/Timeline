@@ -1,0 +1,56 @@
+# Development stack — one command: `docker compose up --build`
+#   SPA:    http://localhost:5173   (Vite dev server, HMR)
+#   API:    http://localhost:8000/api/
+#   Admin:  http://localhost:8000/admin/
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-timeline}
+      POSTGRES_USER: ${POSTGRES_USER:-timeline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-timeline}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # Host port is overridable to avoid clashing with a local Postgres on 5432.
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-timeline} -d ${POSTGRES_DB:-timeline}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    environment:
+      RUN_COLLECTSTATIC: "0"
+      POSTGRES_HOST: db
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

@@ -1,12 +1,26 @@
 from pathlib import Path
+from datetime import timedelta
+
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-change-this-in-production-use-env-var'
+env = environ.Env(
+    DJANGO_DEBUG=(bool, False),
+    DJANGO_ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']),
+    DJANGO_CORS_ALLOWED_ORIGINS=(list, []),
+    DJANGO_CSRF_TRUSTED_ORIGINS=(list, []),
+    DJANGO_SECURE_SSL_REDIRECT=(bool, False),
+)
 
-DEBUG = True
+# Load a local .env if present (dev). In Docker, real env vars take precedence.
+environ.Env.read_env(BASE_DIR / '.env')
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+SECRET_KEY = env('DJANGO_SECRET_KEY', default='django-insecure-dev-only-change-me')
+
+DEBUG = env('DJANGO_DEBUG')
+
+ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOSTS')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -17,14 +31,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # third-party
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     # local
+    'projects',
     'events',
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # must be before CommonMiddleware
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # serve static under gunicorn
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -53,11 +70,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'timeline_project.wsgi.application'
 
+# ── Database (Postgres via DATABASE_URL) ─────────────────────────────────────
+# e.g. postgres://timeline:timeline@db:5432/timeline
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db(
+        'DATABASE_URL',
+        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
+    ),
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -73,14 +92,27 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ── CORS (allow the file:// frontend and localhost dev servers) ──────────────
-CORS_ALLOW_ALL_ORIGINS = True  # restrict to specific origins in production
+# ── CORS ─────────────────────────────────────────────────────────────────────
+# Same-origin in prod (nginx) -> empty. Dev (Vite :5173 -> API :8000) -> set via env.
+CORS_ALLOWED_ORIGINS = env('DJANGO_CORS_ALLOWED_ORIGINS')
 
 # ── Django REST Framework ────────────────────────────────────────────────────
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
@@ -89,3 +121,23 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',
     ],
 }
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,
+}
+
+# ── Security (prod only; behind nginx TLS-terminating proxy) ──────────────────
+CSRF_TRUSTED_ORIGINS = env('DJANGO_CSRF_TRUSTED_ORIGINS')
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = env('DJANGO_SECURE_SSL_REDIRECT')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True

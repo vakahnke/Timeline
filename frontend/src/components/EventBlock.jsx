@@ -16,7 +16,7 @@ function snap(ms, snapMinutes) {
   return Math.round(ms / grid) * grid
 }
 
-function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, onUpdate, onEdit, onDelete, onTooltip }) {
+function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, canEdit = true, onUpdate, onEdit, onDelete, onTooltip }) {
   const blockRef = useRef(null)
 
   const color   = event.color || trackColor || '#4a88ff'
@@ -27,6 +27,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
   // ── Drag to move (horizontal + vertical track switching) ──────────────────
   const handleMoveDown = useCallback((e) => {
+    if (!canEdit) return
     if (e.button !== 0) return
     if (e.target.closest('.resize-handle') || e.target.closest('.event-actions')) return
     e.preventDefault()
@@ -174,19 +175,19 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
   return (
     <div
       ref={blockRef}
-      className={`event-block${isCritical ? ' critical-path' : ''}`}
+      className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}`}
       style={{
         left:        x + 'px',
         width:       w + 'px',
         background:  hexToRgba(color, 0.22),
         borderColor: color,
       }}
-      onMouseDown={handleMoveDown}
+      onMouseDown={canEdit ? handleMoveDown : undefined}
       onMouseEnter={e => onTooltip(event, e.clientX, e.clientY)}
       onMouseLeave={() => onTooltip(null)}
     >
-      <div className="resize-handle left"  onMouseDown={e => handleResizeDown(e, 'left')} />
-      <div className="resize-handle right" onMouseDown={e => handleResizeDown(e, 'right')} />
+      {canEdit && <div className="resize-handle left"  onMouseDown={e => handleResizeDown(e, 'left')} />}
+      {canEdit && <div className="resize-handle right" onMouseDown={e => handleResizeDown(e, 'right')} />}
 
       {(event.percent_complete > 0) && (
         <div className="event-progress" style={{ width: event.percent_complete + '%', background: hexToRgba(color, 0.45) }} />
@@ -197,10 +198,12 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         <span className="event-time">{fmtTime(startMs)} &ndash; {fmtTime(endMs)}</span>
       </div>
 
-      <div className="event-actions">
-        <button className="btn-edit" title="Edit" onClick={e => { e.stopPropagation(); onEdit(event.id) }}>&#9998;</button>
-        <button className="btn-del"  title="Delete" onClick={e => { e.stopPropagation(); onDelete(event.id) }}>&#10005;</button>
-      </div>
+      {canEdit && (
+        <div className="event-actions">
+          <button className="btn-edit" title="Edit" onClick={e => { e.stopPropagation(); onEdit(event.id) }}>&#9998;</button>
+          <button className="btn-del"  title="Delete" onClick={e => { e.stopPropagation(); onDelete(event.id) }}>&#10005;</button>
+        </div>
+      )}
     </div>
   )
 }
