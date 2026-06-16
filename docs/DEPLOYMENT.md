@@ -58,8 +58,9 @@ Defined in `.env` and injected into the containers.
 | `DJANGO_SECURE_SSL_REDIRECT` | backend | prod, behind TLS |
 | `RUN_COLLECTSTATIC` | backend | `0` dev, `1` prod (entrypoint runs `collectstatic`) |
 | `REQUIRE_ACCOUNT_APPROVAL` | backend | `1` (default): new sign-ups inactive until approved; `0` to disable |
-| `EMAIL_URL` | backend | mail backend — `consolemail://` (dev) or `smtp+tls://user:pass@host:port` |
-| `DEFAULT_FROM_EMAIL` | backend | `From:` on outgoing account emails |
+| `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | backend | Gmail account + App Password. Empty ⇒ console backend (dev) |
+| `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` | backend | SMTP server (default `smtp.gmail.com` / `587` / on) |
+| `DEFAULT_FROM_EMAIL` | backend | `From:` on outgoing email (defaults to `EMAIL_HOST_USER`) |
 | `ACCOUNT_NOTIFY_EMAIL` | backend | inbox that receives "new account pending approval" alerts |
 | `SITE_URL` | backend | public app URL used in email links (sign-in / admin) |
 | `VITE_PROXY_TARGET` | frontend (dev) | `http://backend:8000` |
@@ -130,14 +131,16 @@ By default (`REQUIRE_ACCOUNT_APPROVAL=1`) nobody can use the app until **you** a
 
 **Email backend** is set by `EMAIL_URL`. In dev it defaults to `consolemail://` (messages print
 to the backend container logs — `docker compose logs backend`), so nothing is actually sent.
-For prod, point it at an SMTP server, e.g. Gmail with an **App Password** (not your account
-password; requires 2-Step Verification):
+For prod, set the Gmail SMTP credentials — an **App Password** (not your account password;
+requires 2-Step Verification):
 
 ```bash
-EMAIL_URL=smtp+tls://you%40gmail.com:APP_PASSWORD@smtp.gmail.com:587   # @ in the user = %40
-DEFAULT_FROM_EMAIL=Timeline <no-reply@yourdomain>
+EMAIL_HOST_USER=you@gmail.com
+EMAIL_HOST_PASSWORD=your-16-char-app-password
 ACCOUNT_NOTIFY_EMAIL=you@gmail.com
 SITE_URL=https://yourdomain
+# EMAIL_HOST/PORT/USE_TLS default to smtp.gmail.com / 587 / on; DEFAULT_FROM_EMAIL
+# defaults to EMAIL_HOST_USER. Setting EMAIL_HOST_USER switches on the SMTP backend.
 ```
 
 > To run an open instance (no approval), set `REQUIRE_ACCOUNT_APPROVAL=0` — registrations become
