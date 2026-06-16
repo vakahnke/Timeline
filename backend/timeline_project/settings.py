@@ -148,13 +148,24 @@ SIMPLE_JWT = {
 }
 
 # ── Email & account approval ─────────────────────────────────────────────────
-# EMAIL_URL drives the backend: "consolemail://" (dev, prints to stdout) or
-# "smtp+tls://user:pass@smtp.gmail.com:587" (prod). It sets EMAIL_BACKEND/HOST/… below.
-vars().update(env.email_url('EMAIL_URL', default='consolemail://'))
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Timeline <no-reply@localhost>')
+# Gmail SMTP via an app-specific password (myaccount.google.com/apppasswords; the Google
+# account needs 2-Step Verification). Set EMAIL_HOST_USER + EMAIL_HOST_PASSWORD in prod and
+# real mail is sent automatically; leave them empty in dev and mail prints to the backend
+# logs (console backend). These are the SAME variable names as nastran-deck-studio, so the
+# same Gmail block can be copied verbatim between the two projects' .env files.
+EMAIL_HOST          = env('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT          = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS       = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER     = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+EMAIL_BACKEND = env('EMAIL_BACKEND', default=(
+    'django.core.mail.backends.smtp.EmailBackend' if EMAIL_HOST_USER
+    else 'django.core.mail.backends.console.EmailBackend'))
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL',
+                         default=(EMAIL_HOST_USER or 'Timeline <no-reply@localhost>'))
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
-# Where "new account pending approval" notifications are sent (the operator's inbox).
-ACCOUNT_NOTIFY_EMAIL = env('ACCOUNT_NOTIFY_EMAIL', default='')
+# Where "new account pending approval" alerts go (ADMIN_NOTIFY_EMAIL accepted for parity).
+ACCOUNT_NOTIFY_EMAIL = env('ACCOUNT_NOTIFY_EMAIL', default=env('ADMIN_NOTIFY_EMAIL', default=''))
 # Public app URL used to build links in account emails (sign-in / admin).
 SITE_URL = env('SITE_URL', default='http://localhost:5173')
 # New registrations stay inactive until an admin approves them. Set to 0 to disable.

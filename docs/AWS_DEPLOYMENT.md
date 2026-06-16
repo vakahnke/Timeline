@@ -76,8 +76,9 @@ WEB_CONCURRENCY=3
 REQUIRE_ACCOUNT_APPROVAL=1
 SITE_URL=https://timeline.vakahnke.com
 ACCOUNT_NOTIFY_EMAIL=you@gmail.com
-DEFAULT_FROM_EMAIL=Timeline <no-reply@timeline.vakahnke.com>
-EMAIL_URL=smtp+tls://you%40gmail.com:APP_PASSWORD@smtp.gmail.com:587   # @ in user = %40
+EMAIL_HOST_USER=you@gmail.com
+EMAIL_HOST_PASSWORD=your-16-char-app-password
+# EMAIL_HOST/PORT/USE_TLS default to smtp.gmail.com/587/on; DEFAULT_FROM_EMAIL -> EMAIL_HOST_USER
 ```
 
 > **Gmail SMTP:** use an **App Password** (Google Account → Security → 2-Step Verification →
