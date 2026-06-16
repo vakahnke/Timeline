@@ -82,9 +82,10 @@ const body = (data) => JSON.stringify(data)
 
 export const api = {
   auth: {
-    register: (d) => req('/auth/register/', { method: 'POST', body: body(d) }, false),
-    login:    (d) => req('/auth/token/',    { method: 'POST', body: body(d) }, false),
-    me:       ()  => req('/me/'),
+    register: (d)       => req('/auth/register/', { method: 'POST', body: body(d) }, false),
+    login:    (d)       => req('/auth/token/',    { method: 'POST', body: body(d) }, false),
+    logout:   (refresh) => req('/auth/logout/',   { method: 'POST', body: body({ refresh }) }, false),
+    me:       ()        => req('/me/'),
   },
 
   projects: {

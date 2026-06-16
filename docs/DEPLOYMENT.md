@@ -57,6 +57,11 @@ Defined in `.env` and injected into the containers.
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | backend | prod: your `https://` origin(s) — needed for `/admin` login |
 | `DJANGO_SECURE_SSL_REDIRECT` | backend | prod, behind TLS |
 | `RUN_COLLECTSTATIC` | backend | `0` dev, `1` prod (entrypoint runs `collectstatic`) |
+| `REQUIRE_ACCOUNT_APPROVAL` | backend | `1` (default): new sign-ups inactive until approved; `0` to disable |
+| `EMAIL_URL` | backend | mail backend — `consolemail://` (dev) or `smtp+tls://user:pass@host:port` |
+| `DEFAULT_FROM_EMAIL` | backend | `From:` on outgoing account emails |
+| `ACCOUNT_NOTIFY_EMAIL` | backend | inbox that receives "new account pending approval" alerts |
+| `SITE_URL` | backend | public app URL used in email links (sign-in / admin) |
 | `VITE_PROXY_TARGET` | frontend (dev) | `http://backend:8000` |
 
 Generate a production secret:
@@ -111,6 +116,33 @@ Terminate TLS in front of nginx (a load balancer, or add a certbot/`443` server 
 Django honors `X-Forwarded-Proto` via `SECURE_PROXY_SSL_HEADER`, and prod enables HSTS +
 secure cookies when `DJANGO_DEBUG=0`.
 
+## Account approval & email
+
+By default (`REQUIRE_ACCOUNT_APPROVAL=1`) nobody can use the app until **you** approve them:
+
+1. A visitor registers → their account is created **inactive** and they see a "pending
+   approval" screen. They cannot obtain a token / sign in.
+2. You get an email at **`ACCOUNT_NOTIFY_EMAIL`** with their details and a link to the admin.
+3. In **Django admin → Users**, open the account and tick **Active** (the newest sign-ups sort
+   to the top), or select them on the list and run **"Approve & notify"**. Either way the
+   person is automatically emailed that their account is ready.
+4. They sign in with **email or username** + password.
+
+**Email backend** is set by `EMAIL_URL`. In dev it defaults to `consolemail://` (messages print
+to the backend container logs — `docker compose logs backend`), so nothing is actually sent.
+For prod, point it at an SMTP server, e.g. Gmail with an **App Password** (not your account
+password; requires 2-Step Verification):
+
+```bash
+EMAIL_URL=smtp+tls://you%40gmail.com:APP_PASSWORD@smtp.gmail.com:587   # @ in the user = %40
+DEFAULT_FROM_EMAIL=Timeline <no-reply@yourdomain>
+ACCOUNT_NOTIFY_EMAIL=you@gmail.com
+SITE_URL=https://yourdomain
+```
+
+> To run an open instance (no approval), set `REQUIRE_ACCOUNT_APPROVAL=0` — registrations become
+> active immediately and sign in seamlessly.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push/PR:
@@ -130,3 +162,10 @@ secure cookies when `DJANGO_DEBUG=0`.
   `POSTGRES_PASSWORD` in prod; consider Docker secrets / a secrets manager for real deploys.
 - **gunicorn** runs `--workers 3 --timeout 60` by default (tune for your box;
   `2 × CPU + 1` is a common starting point).
+- **JWT refresh tokens** are revocable: logout (`POST /api/auth/logout/`) blacklists the
+  refresh token, and rotation blacklists the one it replaces (`token_blacklist` app). The
+  blacklist tables grow over time — prune expired rows periodically:
+  ```bash
+  docker compose -f docker-compose.prod.yml exec backend python manage.py flushexpiredtokens
+  # e.g. weekly cron: 0 4 * * 0  cd /opt/timeline && docker compose -f docker-compose.prod.yml exec -T backend python manage.py flushexpiredtokens
+  ```

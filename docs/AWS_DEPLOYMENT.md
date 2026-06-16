@@ -71,7 +71,18 @@ RUN_COLLECTSTATIC=1
 DOMAIN=timeline.vakahnke.com
 CERTBOT_EMAIL=you@example.com
 WEB_CONCURRENCY=3
+
+# Account approval + email (new sign-ups stay inactive until you approve them)
+REQUIRE_ACCOUNT_APPROVAL=1
+SITE_URL=https://timeline.vakahnke.com
+ACCOUNT_NOTIFY_EMAIL=you@gmail.com
+DEFAULT_FROM_EMAIL=Timeline <no-reply@timeline.vakahnke.com>
+EMAIL_URL=smtp+tls://you%40gmail.com:APP_PASSWORD@smtp.gmail.com:587   # @ in user = %40
 ```
+
+> **Gmail SMTP:** use an **App Password** (Google Account → Security → 2-Step Verification →
+> App passwords), not your normal password. Or use a transactional provider (SES, Postmark,
+> Resend) — just point `EMAIL_URL` at its SMTP endpoint.
 
 Obtain the TLS certificate, then bring the stack up:
 
@@ -176,5 +187,8 @@ from ECR, TLS via ACM. Rough cost ~$200–400/mo depending on instance count and
 - **Admin:** `https://timeline.vakahnke.com/admin/` (after `createsuperuser`).
 - **Health check:** `GET /api/health/` returns `200` (`{"status":"ok"}`) — use it for monitoring or
   an ALB target-group health check later.
+- **Approving accounts:** new sign-ups are inactive; you're emailed when one registers. Approve in
+  `…/admin/auth/user/` (tick **Active**, or the **"Approve & notify"** action) and the person is
+  emailed automatically. Set `REQUIRE_ACCOUNT_APPROVAL=0` to run an open instance.
 - **Secrets:** `.env` lives only on the box (gitignored). For a team, consider AWS SSM Parameter
   Store / Secrets Manager.

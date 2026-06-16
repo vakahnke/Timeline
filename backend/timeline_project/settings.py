@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     # third-party
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # server-side logout / refresh revocation
     'drf_spectacular',
     'corsheaders',
     # local
@@ -141,8 +142,23 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
+    # Revoke the old refresh token on every rotation, so a rotated-away (or leaked,
+    # then-rotated) token can't be reused. Logout blacklists the current one too.
+    'BLACKLIST_AFTER_ROTATION': True,
 }
+
+# ── Email & account approval ─────────────────────────────────────────────────
+# EMAIL_URL drives the backend: "consolemail://" (dev, prints to stdout) or
+# "smtp+tls://user:pass@smtp.gmail.com:587" (prod). It sets EMAIL_BACKEND/HOST/… below.
+vars().update(env.email_url('EMAIL_URL', default='consolemail://'))
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Timeline <no-reply@localhost>')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+# Where "new account pending approval" notifications are sent (the operator's inbox).
+ACCOUNT_NOTIFY_EMAIL = env('ACCOUNT_NOTIFY_EMAIL', default='')
+# Public app URL used to build links in account emails (sign-in / admin).
+SITE_URL = env('SITE_URL', default='http://localhost:5173')
+# New registrations stay inactive until an admin approves them. Set to 0 to disable.
+REQUIRE_ACCOUNT_APPROVAL = env.bool('REQUIRE_ACCOUNT_APPROVAL', default=True)
 
 # ── Security (prod only; behind nginx TLS-terminating proxy) ──────────────────
 CSRF_TRUSTED_ORIGINS = env('DJANGO_CSRF_TRUSTED_ORIGINS')

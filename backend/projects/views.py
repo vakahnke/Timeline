@@ -8,7 +8,10 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 
+from .emails import notify_admin_new_registration
 from .models import Project, ProjectMembership, ProjectTemplate, Role, Team
 from .permissions import IsProjectMember, IsProjectOwner, get_role
 from .serializers import (
@@ -17,6 +20,7 @@ from .serializers import (
     AddTeamToProjectSerializer,
     IdentifierSerializer,
     InstantiateTemplateSerializer,
+    LogoutSerializer,
     ProjectMembershipSerializer,
     ProjectSerializer,
     RegisterSerializer,
@@ -40,9 +44,14 @@ def _resolve_user(identifier):
 
 
 class RegisterView(generics.CreateAPIView):
-    """Open self-registration."""
+    """Open self-registration. New accounts are inactive until an admin approves them."""
     permission_classes = [AllowAny]
     serializer_class   = RegisterSerializer
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        if not user.is_active:                  # approval required -> tell the operator
+            notify_admin_new_registration(user)
 
 
 class MeView(generics.RetrieveAPIView):
@@ -51,6 +60,27 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class LogoutView(generics.GenericAPIView):
+    """Server-side logout: blacklist a refresh token so it can't be used again.
+
+    Takes just the refresh token (the access token may already be expired), so it needs
+    no authentication. Idempotent — an already-invalid/expired token returns 200 too.
+    """
+    permission_classes     = [AllowAny]
+    authentication_classes = []
+    serializer_class       = LogoutSerializer
+
+    @extend_schema(responses={200: None})
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            RefreshToken(serializer.validated_data['refresh']).blacklist()
+        except TokenError:
+            pass  # malformed/expired/already-blacklisted — nothing left to revoke
+        return Response({'detail': 'Logged out.'}, status=status.HTTP_200_OK)
 
 
 class HealthView(APIView):

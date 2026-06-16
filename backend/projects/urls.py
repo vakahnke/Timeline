@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedDefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -10,7 +10,16 @@ from drf_spectacular.views import (
 
 from events.views import CategoryViewSet, EventViewSet
 
-from .views import HealthView, MeView, ProjectViewSet, RegisterView, TeamViewSet, TemplateViewSet
+from .auth import EmailOrUsernameTokenObtainPairView
+from .views import (
+    HealthView,
+    LogoutView,
+    MeView,
+    ProjectViewSet,
+    RegisterView,
+    TeamViewSet,
+    TemplateViewSet,
+)
 
 router = DefaultRouter()
 router.register(r'projects', ProjectViewSet, basename='project')
@@ -22,9 +31,10 @@ projects_nested.register(r'events',     EventViewSet,    basename='project-event
 projects_nested.register(r'categories', CategoryViewSet, basename='project-categories')
 
 urlpatterns = [
-    path('auth/register/',      RegisterView.as_view(),        name='register'),
-    path('auth/token/',         TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/token/refresh/', TokenRefreshView.as_view(),    name='token_refresh'),
+    path('auth/register/',      RegisterView.as_view(),                       name='register'),
+    path('auth/token/',         EmailOrUsernameTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/token/refresh/', TokenRefreshView.as_view(),                   name='token_refresh'),
+    path('auth/logout/',        LogoutView.as_view(),                         name='logout'),
     path('me/',                 MeView.as_view(),              name='me'),
     path('health/',             HealthView.as_view(),          name='health'),
 
