@@ -26,6 +26,9 @@ node_modules/
 
 # ---- Deploy / Terraform ----
 /backups/
+# Cloudflare Origin Certificate + key (server-only; never commit the private key)
+/nginx/certs/*
+!/nginx/certs/.gitkeep
 .terraform/
 *.tfstate
 *.tfstate.*

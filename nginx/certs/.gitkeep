@@ -1,0 +1,2 @@
+# The Cloudflare Origin Certificate (origin.pem) and its private key (origin.key) live
+# here on the server only — they are gitignored and never committed.
