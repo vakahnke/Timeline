@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.db.models import Avg, Count, Max, Min
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -6,6 +7,7 @@ from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Project, ProjectMembership, ProjectTemplate, Role, Team
 from .permissions import IsProjectMember, IsProjectOwner, get_role
@@ -49,6 +51,24 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class HealthView(APIView):
+    """Unauthenticated liveness/readiness probe (for monitoring / a load balancer)."""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @extend_schema(responses={200: None, 503: None})
+    def get(self, request):
+        try:
+            connection.ensure_connection()
+            db_ok = True
+        except Exception:
+            db_ok = False
+        return Response(
+            {'status': 'ok' if db_ok else 'degraded', 'database': db_ok},
+            status=status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
