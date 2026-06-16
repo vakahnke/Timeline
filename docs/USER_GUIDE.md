@@ -102,13 +102,15 @@ Teams are reusable groups of people, so you can add a whole group to a project a
 - It's a **one-time add**: editing the team afterward doesn't change projects it was already
   added to.
 
-## 6. Members
+## 6. Members & access
 
-In a project, owners open **Members** to:
+Owners control who can see/edit a project from the **Members** panel — open it from the
+project's toolbar **or** the **Manage access** (👥) button on its dashboard card. From there:
 
-- **Invite** an existing user by email/username at a role.
-- **Add a team** (above).
-- **Change roles** or **remove** members (the last owner can't be removed/demoted).
+- **Add a person** by email/username at a privilege: **Read only** (viewer) or **Read &
+  edit** (editor).
+- **Add a team** — every current member of that team is added at the chosen privilege.
+- **Change** a person's privilege or **remove** them (the last owner can't be removed/demoted).
 
 ## 7. Admin console
 
