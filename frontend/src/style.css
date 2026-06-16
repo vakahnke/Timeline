@@ -644,6 +644,8 @@ canvas.ruler {
   padding: 20px;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;       /* let the body actually scroll inside the flex column (don't shove the footer) */
   overflow-y: auto;
   gap: 14px;
 }
@@ -1218,3 +1220,82 @@ fieldset.modal-body:disabled { opacity: 1; }
   flex-shrink: 0;
 }
 .template-del:hover { background: rgba(248,113,113,0.2); border-color: rgba(248,113,113,0.4); color: #fca5a5; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Responsive — phones & small tablets, and touch (no-hover) devices
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Touch devices can't hover: reveal the controls desktop shows on hover (otherwise
+   card/event actions are unreachable), drop hover-only affordances, and enlarge the
+   icon-button targets. Applies at any width. */
+@media (hover: none) {
+  .project-card-actions,
+  .event-block .event-actions { opacity: 1; pointer-events: auto; }
+  .card-action          { width: 32px; height: 32px; font-size: 13px; }
+  .event-actions button { width: 26px; height: 26px; font-size: 12px; }
+  .cursor-label         { display: none; }
+}
+
+@media (max-width: 640px) {
+  /* ── Timeline toolbar: wrap instead of overflowing; drop the wide/desktop-only bits ── */
+  .toolbar {
+    height: auto;
+    min-height: 48px;
+    flex-wrap: wrap;
+    padding: 7px 10px;
+    gap: 6px 5px;
+  }
+  .toolbar-sep,
+  .toolbar-spacer,
+  .toolbar-range { display: none; }
+  .toolbar h1 {
+    max-width: 45vw;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .toolbar button { min-height: 36px; padding: 7px 11px; font-size: 12px; }
+  .btn-back, .btn-gear { min-height: 36px; min-width: 36px; }
+  .settings-popover { right: auto; left: 0; }   /* keep the menu on-screen near the gear */
+
+  /* ── More canvas room: slimmer track-header panel + minimap ── */
+  .headers-panel { width: 112px; }
+  .track-header  { padding: 0 9px; gap: 7px; }
+  .minimap       { height: 46px; }
+
+  /* ── Dashboard ── */
+  .dash-header  { height: 52px; padding: 0 14px; gap: 8px; }
+  .dash-user    { display: none; }            /* username label eats width on phones */
+  .dash-userbox { gap: 8px; }
+  .dash-main    { padding: 20px 14px 56px; }
+  .dash-titlebar { flex-direction: column; align-items: stretch; gap: 12px; }
+  .dash-titlebar h1 { font-size: 18px; }
+  .dash-actions { width: 100%; }
+  .dash-actions button { flex: 1; min-height: 38px; }
+  .project-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* ── Modals become bottom sheets; rows stack; inputs 16px so iOS doesn't zoom ── */
+  .modal-overlay { align-items: flex-end; }
+  .modal, .modal-wide {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+    overflow-y: auto;                /* scroll the whole sheet — robust vs the <fieldset> body quirk */
+  }
+  .modal-body { flex: 0 0 auto; min-height: auto; overflow: visible; }
+  .fields-row { flex-direction: column; gap: 12px; }
+  .depends-list { height: 190px; }   /* don't let the predecessor list dominate a phone modal */
+  .invite-row { flex-wrap: wrap; }
+  .invite-row input { flex: 1 0 100%; }
+  .field input, .field textarea, .field select,
+  .invite-row input { font-size: 16px; padding: 10px 12px; }
+
+  /* Comfortable default touch targets */
+  button { padding: 7px 12px; }
+  .btn-sm { padding: 5px 10px; }
+}
+
+@media (max-width: 400px) {
+  .toolbar h1 { flex: 1 0 100%; max-width: none; }  /* project name gets its own row */
+  .auth-card   { padding: 24px 18px; }
+  .dash-header { padding: 0 12px; }
+}
