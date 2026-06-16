@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars and adjust.
+region              = "us-east-1"
+
+# ARM/Graviton (recommended — ~20% cheaper). For x86 use t3.medium + ami_architecture = "x86_64".
+instance_type       = "t4g.medium"
+ami_architecture    = "arm64"
+
+root_volume_size    = 30
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+
+# IMPORTANT: lock SSH to your IP.
+allowed_ssh_cidr    = "203.0.113.4/32"
+
+domain              = "timeline.vakahnke.com"

@@ -67,34 +67,37 @@ python -c "import secrets; print(secrets.token_urlsafe(64))"
 
 ## Production
 
-Single-origin topology: **nginx** serves the built React bundle and reverse-proxies
-`/api`, `/admin`, `/static`, and `/media` to **gunicorn**. Because the SPA and API share an
-origin, there's no CORS in production.
+Single-origin topology with **HTTPS**: **nginx** terminates TLS (Let's Encrypt via the
+`certbot` service), serves the built React bundle, and reverse-proxies `/api`, `/admin`,
+`/static`, and `/media` to **gunicorn**. Same origin → no CORS.
+
+`docker-compose.prod.yml` runs db + backend (gunicorn) + nginx (80 + 443) + certbot. It
+expects a domain and a certificate, so the flow is:
 
 ```bash
 cp .env.example .env
-# Edit .env for prod:
-#   DJANGO_DEBUG=0
-#   DJANGO_SECRET_KEY=<strong random>
-#   POSTGRES_PASSWORD=<strong>
-#   DJANGO_ALLOWED_HOSTS=your.domain
-#   DJANGO_CSRF_TRUSTED_ORIGINS=https://your.domain
-docker compose -f docker-compose.prod.yml up --build -d
+# Edit .env: DJANGO_DEBUG=0, a strong DJANGO_SECRET_KEY + POSTGRES_PASSWORD,
+#   DOMAIN=<your domain>, CERTBOT_EMAIL=<you>, RUN_COLLECTSTATIC=1,
+#   DJANGO_ALLOWED_HOSTS=<your domain>, DJANGO_CSRF_TRUSTED_ORIGINS=https://<your domain>
+./deploy/init-letsencrypt.sh                          # one-time: obtain the certificate
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 ```
 
-- The app is served on **http://localhost** (nginx `:80`).
-- On backend start the entrypoint runs `migrate` **and** `collectstatic` (into a shared
-  `static_volume` that nginx serves). The Postgres port is **not** published in prod.
-- Client-side routing works because nginx falls back to `index.html`
-  (`try_files $uri $uri/ /index.html`).
+- `migrate` + `collectstatic` run automatically on backend start; the Postgres port is **not**
+  published. Cert renewal is automatic (the `certbot` service). nginx falls back to
+  `index.html` for client-side routing.
+- **`WEB_CONCURRENCY`** in `.env` sets gunicorn worker count (tune to the instance).
+- **`/api/health/`** is an unauthenticated health probe for monitoring / load balancers.
 
-Create an admin, and redeploy after frontend changes (the SPA is baked into the nginx image):
+Redeploy after changes:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
-docker compose -f docker-compose.prod.yml build nginx
-docker compose -f docker-compose.prod.yml up -d nginx
+git pull && docker compose -f docker-compose.prod.yml up -d --build
 ```
+
+> **Full AWS walkthrough** (EC2 + elastic IP + Cloudflare + Terraform + instance sizing):
+> see **[AWS Deployment](AWS_DEPLOYMENT.md)**.
 
 ### Static & media
 

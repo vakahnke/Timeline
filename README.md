@@ -39,6 +39,7 @@ critical path, templates, and reusable teams.
 - 📐 [Architecture](docs/ARCHITECTURE.md) — tenancy model, data model, auth flow, frontend design, request flow
 - 📖 [User Guide](docs/USER_GUIDE.md) — accounts, projects, the timeline (gestures & shortcuts), templates, teams, roles
 - 🚀 [Deployment](docs/DEPLOYMENT.md) — Docker dev & prod, environment variables, nginx/gunicorn, CI
+- ☁️ [AWS Deployment](docs/AWS_DEPLOYMENT.md) — EC2 + elastic IP + Cloudflare + HTTPS via Terraform, and instance sizing
 
 ## Quick start (development)
 
@@ -133,15 +134,18 @@ Timeline/
 
 ## Production
 
-Single-origin: nginx serves the built SPA and reverse-proxies `/api`, `/admin`, `/static`,
-`/media` to gunicorn. See **[Deployment](docs/DEPLOYMENT.md)** for the full guide.
+Single-origin, **HTTPS**: nginx terminates TLS (Let's Encrypt via certbot), serves the built
+SPA, and reverse-proxies `/api`, `/admin`, `/static`, `/media` to gunicorn — all in Docker.
 
 ```bash
-cp .env.example .env
-# Set DJANGO_DEBUG=0, a real DJANGO_SECRET_KEY, a strong POSTGRES_PASSWORD,
-# real DJANGO_ALLOWED_HOSTS, and DJANGO_CSRF_TRUSTED_ORIGINS.
-docker compose -f docker-compose.prod.yml up --build -d   # app on http://localhost
+cp .env.example .env   # set DJANGO_DEBUG=0, secrets, DOMAIN, CERTBOT_EMAIL, RUN_COLLECTSTATIC=1
+./deploy/init-letsencrypt.sh
+docker compose -f docker-compose.prod.yml up -d --build
 ```
+
+- **On AWS** (EC2 + elastic IP + Cloudflare + Terraform) with **instance sizing**, follow
+  **[AWS Deployment](docs/AWS_DEPLOYMENT.md)**. Infra lives in [`terraform/`](terraform/).
+- General prod details: **[Deployment](docs/DEPLOYMENT.md)**.
 
 ## Continuous integration
 

@@ -1,6 +1,12 @@
-# Production stack: nginx (serves built SPA + reverse-proxies) -> gunicorn -> Postgres.
-#   docker compose -f docker-compose.prod.yml up --build -d
-#   App on http://localhost  (nginx :80). migrate + collectstatic run on backend start.
+# Production stack: nginx (TLS, serves built SPA + reverse-proxies) -> gunicorn -> Postgres,
+# with certbot for Let's Encrypt certificates.
+#
+#   1) Point DNS (e.g. timeline.vakahnke.com) at the server's elastic IP.
+#   2) Set DOMAIN + CERTBOT_EMAIL (and prod secrets) in .env.
+#   3) ./deploy/init-letsencrypt.sh        # one-time: obtain the certificate
+#   4) docker compose -f docker-compose.prod.yml up -d --build
+#
+# migrate + collectstatic run automatically on backend start.
 services:
   db:
     image: postgres:16-alpine
@@ -24,6 +30,7 @@ services:
     environment:
       RUN_COLLECTSTATIC: "1"
       POSTGRES_HOST: db
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-3}   # gunicorn workers; tune to instance size
     env_file:
       - .env
     volumes:
@@ -40,16 +47,33 @@ services:
       context: ./frontend
       target: prod
     restart: always
+    environment:
+      DOMAIN: ${DOMAIN}
+      NGINX_ENVSUBST_FILTER: DOMAIN   # only substitute ${DOMAIN}, leave nginx $vars alone
     volumes:
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media:ro
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/nginx.prod.conf:/etc/nginx/templates/default.conf.template:ro
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - backend
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renew twice a day; certbot only acts when a cert is within 30 days of expiry.
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'
 
 volumes:
   pgdata:
   static_volume:
   media_volume:
+  certbot_certs:
+  certbot_www:

@@ -10,7 +10,7 @@ from drf_spectacular.views import (
 
 from events.views import CategoryViewSet, EventViewSet
 
-from .views import MeView, ProjectViewSet, RegisterView, TeamViewSet, TemplateViewSet
+from .views import HealthView, MeView, ProjectViewSet, RegisterView, TeamViewSet, TemplateViewSet
 
 router = DefaultRouter()
 router.register(r'projects', ProjectViewSet, basename='project')
@@ -26,6 +26,7 @@ urlpatterns = [
     path('auth/token/',         TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(),    name='token_refresh'),
     path('me/',                 MeView.as_view(),              name='me'),
+    path('health/',             HealthView.as_view(),          name='health'),
 
     # API documentation (OpenAPI schema + Swagger UI + ReDoc).
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
