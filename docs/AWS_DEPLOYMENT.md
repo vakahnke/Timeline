@@ -1,16 +1,18 @@
 # AWS Deployment (EC2 + Elastic IP + Cloudflare + HTTPS)
 
-This deploys Timeline to a **single EC2 instance** — Postgres, gunicorn, and nginx (TLS via
-Let's Encrypt) all in Docker on the box, behind an **elastic IP**, with DNS on **Cloudflare**.
-Infrastructure is managed with **Terraform**. It's sized for a small team now and has a clear
-path to ~3000 users (see [Scaling](#scaling-to-3000-users)).
+This deploys Timeline to a **single EC2 instance** — Postgres, gunicorn, and nginx all in
+Docker on the box, behind an **elastic IP**, with DNS and TLS on **Cloudflare**. Cloudflare's
+proxy terminates browser-facing HTTPS at its edge; nginx presents a **Cloudflare Origin
+Certificate** to secure the Cloudflare→origin leg. Infrastructure is managed with **Terraform**.
+It's sized for a small team now and has a clear path to ~3000 users (see
+[Scaling](#scaling-to-3000-users)).
 
 ```
-Cloudflare DNS (timeline.vakahnke.com → Elastic IP)
+Cloudflare proxy (timeline.vakahnke.com → Elastic IP) — edge TLS, Full (strict)
         │  HTTPS
         ▼
-   EC2 instance ── nginx (TLS, SPA + reverse proxy) ── gunicorn (Django) ── Postgres
-                    certbot (auto-renew)              (containers, EBS volume)
+   EC2 instance ── nginx (Origin Cert, SPA + reverse proxy) ── gunicorn (Django) ── Postgres
+                                                              (containers, EBS volume)
 ```
 
 ## Prerequisites
@@ -43,10 +45,13 @@ terraform output next_steps
 
 Create an **A record**: `timeline.vakahnke.com → <elastic IP>`.
 
-> For the initial Let's Encrypt issuance, set the record to **DNS only** (grey cloud) so the
-> ACME HTTP-01 challenge reaches the origin directly. Once HTTPS works you may switch the proxy
-> **on** (orange cloud) — if you do, set Cloudflare's SSL/TLS mode to **Full (strict)** (it has a
-> valid origin cert). Leaving it DNS-only is perfectly fine too.
+> While testing, you can leave the record **DNS only** (grey cloud) to hit the origin directly.
+> Once it's working, switch the proxy **on** (orange cloud) and set Cloudflare's SSL/TLS mode to
+> **Full (strict)** so the edge validates the origin certificate.
+>
+> Note: Cloudflare's SSL/TLS encryption mode is **zone-wide**, so switching to **Full (strict)**
+> affects *every* proxied hostname in the zone — make sure all of them present a valid origin
+> cert first.
 
 ## 3. Deploy the app
 
@@ -69,7 +74,6 @@ DJANGO_CSRF_TRUSTED_ORIGINS=https://timeline.vakahnke.com
 DJANGO_CORS_ALLOWED_ORIGINS=
 RUN_COLLECTSTATIC=1
 DOMAIN=timeline.vakahnke.com
-CERTBOT_EMAIL=you@example.com
 WEB_CONCURRENCY=3
 
 # Account approval + email (new sign-ups stay inactive until you approve them)
@@ -83,19 +87,25 @@ EMAIL_HOST_PASSWORD=your-16-char-app-password
 
 > **Gmail SMTP:** use an **App Password** (Google Account → Security → 2-Step Verification →
 > App passwords), not your normal password. Or use a transactional provider (SES, Postmark,
-> Resend) — just point `EMAIL_URL` at its SMTP endpoint.
+> Resend) — just point the `EMAIL_HOST_*` vars at its SMTP endpoint.
 
-Obtain the TLS certificate, then bring the stack up:
+Install the origin certificate, then bring the stack up:
 
 ```bash
-./deploy/init-letsencrypt.sh                              # one-time: dummy cert → real cert
+# In the Cloudflare dashboard: SSL/TLS → Origin Server → Create Certificate
+#   (defaults: RSA, hostnames *.vakahnke.com + vakahnke.com, 15-year validity).
+# Copy the Origin Certificate and Private Key onto the box:
+mkdir -p nginx/certs
+# paste the Origin Certificate into  nginx/certs/origin.pem
+# paste the Private Key        into  nginx/certs/origin.key
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 ```
 
-`migrate` + `collectstatic` run automatically on backend start. The app is now live at
-**https://timeline.vakahnke.com**. (Tip: while testing certs, run `STAGING=1 ./deploy/init-letsencrypt.sh`
-to avoid Let's Encrypt rate limits, then rerun without `STAGING`.)
+`migrate` + `collectstatic` run automatically on backend start. nginx mounts
+`nginx/certs/origin.pem` + `origin.key` read-only (both are gitignored). The app is now live at
+**https://timeline.vakahnke.com** once the Cloudflare proxy is on (orange) with SSL/TLS mode
+**Full (strict)**.
 
 ## 4. Backups
 
@@ -120,7 +130,7 @@ cd /opt/timeline && git pull
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Cert renewal is automatic (the `certbot` service renews; nginx picks it up).
+There's no cert renewal to worry about — the Cloudflare Origin Certificate is valid for ~15 years.
 
 ---
 
@@ -134,7 +144,7 @@ The whole stack runs on one box (Postgres included). Approximate steady-state me
 | Docker daemon | ~0.1 GB |
 | PostgreSQL 16 | ~0.2 GB |
 | gunicorn (3 workers × ~120 MB) | ~0.4 GB |
-| nginx + certbot | ~0.05 GB |
+| nginx | ~0.05 GB |
 | **Runtime total** | **~1.0–1.3 GB** |
 | Building the frontend image on-box (vite/node, transient) | **+1–1.5 GB peak** |
 
@@ -172,8 +182,8 @@ base to build on):
 2. **Build images in CI → push to ECR**; instances *pull* (no on-box builds → smaller app boxes).
 3. **Scale the web tier** — either one larger instance (`m6g.large`/`xlarge`, 8/16 GiB, 8–16 gunicorn
    workers) **or** an **Application Load Balancer + Auto Scaling Group** of 2+ `t4g.large` app
-   instances. Terminate TLS at the **ALB with an ACM cert** (then the box-level certbot/nginx-TLS is
-   no longer needed — nginx just serves the SPA + proxies).
+   instances. Terminate TLS at the **ALB with an ACM cert** (then the box-level origin-cert/nginx-TLS
+   is no longer needed — nginx just serves the SPA + proxies).
 4. **CloudFront** in front of the SPA/assets for CDN caching (optional, helps global latency).
 5. Consider **PgBouncer** and tuned `shared_buffers` / `max_connections` on the DB.
 

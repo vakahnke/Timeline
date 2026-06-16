@@ -137,12 +137,14 @@ Timeline/
 
 ## Production
 
-Single-origin, **HTTPS**: nginx terminates TLS (Let's Encrypt via certbot), serves the built
-SPA, and reverse-proxies `/api`, `/admin`, `/static`, `/media` to gunicorn — all in Docker.
+Single-origin, **HTTPS**: the app runs behind Cloudflare's proxy, which terminates the
+browser-facing TLS at its edge. nginx presents a **Cloudflare Origin Certificate** so the
+Cloudflare→origin leg is encrypted and validated (SSL/TLS mode **Full (strict)**), serves the
+built SPA, and reverse-proxies `/api`, `/admin`, `/static`, `/media` to gunicorn — all in Docker.
 
 ```bash
-cp .env.example .env   # set DJANGO_DEBUG=0, secrets, DOMAIN, CERTBOT_EMAIL, RUN_COLLECTSTATIC=1
-./deploy/init-letsencrypt.sh
+cp .env.example .env   # set DJANGO_DEBUG=0, secrets, DOMAIN, RUN_COLLECTSTATIC=1
+# Create a Cloudflare Origin Certificate and save it to nginx/certs/origin.pem + origin.key
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
