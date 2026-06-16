@@ -1,9 +1,10 @@
-# Production stack: nginx (TLS, serves built SPA + reverse-proxies) -> gunicorn -> Postgres,
-# with certbot for Let's Encrypt certificates.
+# Production stack: nginx (TLS via Cloudflare Origin Certificate, serves built SPA +
+# reverse-proxies) -> gunicorn -> Postgres.
 #
-#   1) Point DNS (e.g. timeline.vakahnke.com) at the server's elastic IP.
-#   2) Set DOMAIN + CERTBOT_EMAIL (and prod secrets) in .env.
-#   3) ./deploy/init-letsencrypt.sh        # one-time: obtain the certificate
+#   1) Point DNS (e.g. timeline.vakahnke.com) at the server's elastic IP (Cloudflare,
+#      proxied / orange-cloud), and set the SSL/TLS mode to "Full (strict)".
+#   2) Set prod secrets + DOMAIN in .env.
+#   3) Place the Cloudflare Origin Certificate at nginx/certs/origin.pem + origin.key.
 #   4) docker compose -f docker-compose.prod.yml up -d --build
 #
 # migrate + collectstatic run automatically on backend start.
@@ -54,26 +55,14 @@ services:
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media:ro
       - ./nginx/nginx.prod.conf:/etc/nginx/templates/default.conf.template:ro
-      - certbot_certs:/etc/letsencrypt:ro
-      - certbot_www:/var/www/certbot:ro
+      - ./nginx/certs:/etc/nginx/certs:ro   # Cloudflare Origin Certificate (origin.pem + origin.key)
     ports:
       - "80:80"
       - "443:443"
     depends_on:
       - backend
 
-  certbot:
-    image: certbot/certbot
-    restart: unless-stopped
-    volumes:
-      - certbot_certs:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
-    # Renew twice a day; certbot only acts when a cert is within 30 days of expiry.
-    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'
-
 volumes:
   pgdata:
   static_volume:
   media_volume:
-  certbot_certs:
-  certbot_www:
