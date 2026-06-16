@@ -11,6 +11,7 @@ resource "aws_instance" "app" {
   vpc_security_group_ids = [aws_security_group.web.id]
   key_name               = aws_key_pair.this.key_name
   user_data              = file("${path.module}/user_data.sh")
+  iam_instance_profile   = aws_iam_instance_profile.ssm.name # SSM Session Manager access
 
   root_block_device {
     volume_size           = var.root_volume_size
@@ -24,6 +25,14 @@ resource "aws_instance" "app" {
   }
 
   tags = merge(local.tags, { Name = "${var.project_name}-app" })
+
+  # Protect the live instance: AMI drift (the SSM-published latest AL2023 id moves over time)
+  # and user_data edits both force-replace an instance. Those changes are only meant to apply
+  # to a *future* freshly-built box, never to silently destroy the running one. To rebuild
+  # intentionally, `terraform taint aws_instance.app` (or -replace) then apply.
+  lifecycle {
+    ignore_changes = [ami, user_data]
+  }
 }
 
 resource "aws_eip" "app" {
