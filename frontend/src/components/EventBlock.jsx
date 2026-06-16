@@ -41,8 +41,24 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     if (!canEdit) return
     if (e.button !== 0) return
     if (e.target.closest('.resize-handle') || e.target.closest('.event-actions')) return
+
+    // Events are "sticky": without a modifier, a plain drag pans the timeline (handled by
+    // the scroll container — we don't stopPropagation) and a clean click opens the editor.
+    // Hold Ctrl/⌘ to actually move the event.
+    if (!(e.ctrlKey || e.metaKey)) {
+      const cx = e.clientX, cy = e.clientY
+      const clickUp = (up) => {
+        document.removeEventListener('mouseup', clickUp)
+        if (Math.abs(up.clientX - cx) < 5 && Math.abs(up.clientY - cy) < 5) onEdit(event.id)
+      }
+      document.addEventListener('mouseup', clickUp)
+      return
+    }
+
     e.preventDefault()
     e.stopPropagation()
+    const noCtx = (ev) => ev.preventDefault()   // suppress the macOS Ctrl-click context menu
+    document.addEventListener('contextmenu', noCtx)
 
     const el       = blockRef.current
     const mouseX0  = e.clientX
@@ -94,6 +110,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     const onUp = async (e) => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('contextmenu', noCtx)
       el.classList.remove('dragging')
       el.style.top = '8px'
       document.body.style.cursor = ''
@@ -130,6 +147,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
   // ── Resize handles ────────────────────────────────────────────────────────
   const handleResizeDown = useCallback((e, edge) => {
+    // Sticky: only resize while holding Ctrl/⌘ (otherwise let the timeline pan).
+    if (!(e.ctrlKey || e.metaKey)) return
     e.stopPropagation()
     e.preventDefault()
 

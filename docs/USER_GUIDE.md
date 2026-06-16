@@ -43,9 +43,10 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
 - **Open / edit:** **click an event** (works even on tiny bars) to open the editor — title,
   start/end, category, **% complete**, notes, and **dependencies**. Wider bars also show
   inline ✎ edit / ✕ delete buttons on hover.
-- **Move:** drag an event left/right to reschedule; drag it onto another track to
-  recategorize.
-- **Resize:** drag either edge.
+- **Move:** events are *sticky* so you don't nudge them by accident — **hold Ctrl/⌘ and
+  drag** to reschedule (drag onto another track to recategorize). A plain drag pans the
+  timeline instead. The cursor turns into a move arrow over events while Ctrl/⌘ is held.
+- **Resize:** **Ctrl/⌘-drag** either edge.
 - **Delete:** from the inline ✕ or the editor's **Delete** button.
 
 ### Categories (tracks)

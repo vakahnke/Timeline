@@ -561,6 +561,12 @@ canvas.ruler {
   font-size: 11px;
   line-height: 1.5;
 }
+.tt-hint {
+  color: var(--text-dimmer);
+  font-size: 10px;
+  margin-top: 7px;
+  letter-spacing: 0.2px;
+}
 
 /* ── Empty / Loading ──────────────────────────────────────────────────────── */
 .empty-state {
@@ -796,6 +802,9 @@ canvas.ruler {
 
 /* Read-only events aren't draggable — don't imply a grab affordance. */
 .event-block.readonly { cursor: default; }
+
+/* While Ctrl/⌘ is held, events become movable — show it in the cursor. */
+.timeline-scroll.armed .event-block:not(.readonly) { cursor: move; }
 
 .field-error { color: var(--danger); font-size: 11px; min-height: 14px; }
 
