@@ -318,7 +318,9 @@ const Timeline = forwardRef(function Timeline(
   // trackpad, or touch. Event blocks keep their own move/resize drag.
   const handlePanStart = useCallback((e) => {
     if (e.button !== 0) return
-    if (e.target.closest('.event-block')) return
+    // Pan even when the drag starts over an event (events only move with Ctrl/⌘, which
+    // stops propagation before this runs). Only the action buttons opt out.
+    if (e.target.closest('.event-actions')) return
     const el = scrollRef.current
     if (!el) return
     e.preventDefault()
@@ -363,6 +365,22 @@ const Timeline = forwardRef(function Timeline(
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [zoomByFactor, doFit])
+
+  // Show a "move" cursor over events while Ctrl/⌘ is held (the modifier that arms dragging).
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const sync  = (e) => el.classList.toggle('armed', e.ctrlKey || e.metaKey)
+    const clear = () => el.classList.remove('armed')
+    window.addEventListener('keydown', sync)
+    window.addEventListener('keyup', sync)
+    window.addEventListener('blur', clear)
+    return () => {
+      window.removeEventListener('keydown', sync)
+      window.removeEventListener('keyup', sync)
+      window.removeEventListener('blur', clear)
+    }
+  }, [])
 
   const handleLaneClick = useCallback((e, trackName) => {
     if (!canEdit) return
@@ -670,6 +688,7 @@ const Timeline = forwardRef(function Timeline(
           </div>
           {tooltip.event.notes && <div className="tt-notes">{tooltip.event.notes}</div>}
           <div className="tt-track">{tooltip.event.category}</div>
+          {canEdit && <div className="tt-hint">Click to edit · ⌘/Ctrl-drag to move</div>}
         </div>
       )}
     </div>
