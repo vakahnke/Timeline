@@ -4,6 +4,17 @@ function fmtTime(ms) {
   return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+function fmtDate(ms) {
+  return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+// Sub-day tasks read in clock time; multi-day tasks read in calendar dates.
+function fmtSpan(startMs, endMs) {
+  return (endMs - startMs) < 86_400_000
+    ? `${fmtTime(startMs)} – ${fmtTime(endMs)}`
+    : `${fmtDate(startMs)} – ${fmtDate(endMs)}`
+}
+
 function hexToRgba(hex, alpha) {
   if (!hex || hex[0] !== '#') return `rgba(100,120,200,${alpha})`
   const n = parseInt(hex.slice(1), 16)
@@ -75,7 +86,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       const newS = snap(s0 + dtMs, capSnap)
       el.style.left = msToX(newS) + 'px'
       el.style.top  = (8 + dy) + 'px'
-      if (timeEl) timeEl.textContent = `${fmtTime(newS)} – ${fmtTime(newS + dur)}`
+      if (timeEl) timeEl.textContent = fmtSpan(newS, newS + dur)
 
       setActiveLane(getLaneAt(e.clientX, e.clientY))
     }
@@ -109,7 +120,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         })
       } catch {
         el.style.left = msToX(s0) + 'px'
-        if (timeEl) timeEl.textContent = `${fmtTime(s0)} – ${fmtTime(e0)}`
+        if (timeEl) timeEl.textContent = fmtSpan(s0, e0)
       }
     }
 
@@ -140,11 +151,11 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         const newS = Math.min(snap(s0 + dtMs, capSnap), e0 - 300_000)
         el.style.left  = msToX(newS) + 'px'
         el.style.width = Math.max(4, msToX(e0) - msToX(newS)) + 'px'
-        if (timeEl) timeEl.textContent = `${fmtTime(newS)} – ${fmtTime(e0)}`
+        if (timeEl) timeEl.textContent = fmtSpan(newS, e0)
       } else {
         const newE = Math.max(snap(e0 + dtMs, capSnap), s0 + 300_000)
         el.style.width = Math.max(4, msToX(newE) - msToX(s0)) + 'px'
-        if (timeEl) timeEl.textContent = `${fmtTime(s0)} – ${fmtTime(newE)}`
+        if (timeEl) timeEl.textContent = fmtSpan(s0, newE)
       }
     }
 
@@ -166,7 +177,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       } catch {
         el.style.left  = msToX(s0) + 'px'
         el.style.width = Math.max(4, msToX(e0) - msToX(s0)) + 'px'
-        if (timeEl) timeEl.textContent = `${fmtTime(s0)} – ${fmtTime(e0)}`
+        if (timeEl) timeEl.textContent = fmtSpan(s0, e0)
       }
     }
 
@@ -197,7 +208,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
       <div className="event-inner">
         <span className="event-title">{event.title}</span>
-        <span className="event-time">{fmtTime(startMs)} &ndash; {fmtTime(endMs)}</span>
+        <span className="event-time">{fmtSpan(startMs, endMs)}</span>
       </div>
 
       {canEdit && w >= 80 && (

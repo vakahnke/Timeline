@@ -9,6 +9,13 @@ function fmtTime(ms) {
   return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+// Sub-day tasks read in clock time; multi-day tasks read in calendar dates.
+function fmtSpan(startMs, endMs) {
+  if ((endMs - startMs) < 86_400_000) return `${fmtTime(startMs)} – ${fmtTime(endMs)}`
+  const d = ms => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return `${d(startMs)} – ${d(endMs)}`
+}
+
 function fmtDateTime(ms) {
   const d = new Date(ms)
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
@@ -659,7 +666,7 @@ const Timeline = forwardRef(function Timeline(
         >
           <div className="tt-title">{tooltip.event.title}</div>
           <div className="tt-time">
-            {fmtTime(new Date(tooltip.event.start).getTime())} &ndash; {fmtTime(new Date(tooltip.event.end).getTime())}
+            {fmtSpan(new Date(tooltip.event.start).getTime(), new Date(tooltip.event.end).getTime())}
           </div>
           {tooltip.event.notes && <div className="tt-notes">{tooltip.event.notes}</div>}
           <div className="tt-track">{tooltip.event.category}</div>
