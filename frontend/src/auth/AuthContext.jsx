@@ -15,8 +15,11 @@ export function AuthProvider({ children }) {
   const [bootstrapping, setBootstrapping] = useState(true)
 
   const logout = useCallback(() => {
-    tokens.clear()
+    const refresh = tokens.refresh
+    tokens.clear()                 // clear locally first -> instant UI logout
     setUser(null)
+    // Best-effort server-side revoke (blacklist the refresh token); never block logout on it.
+    if (refresh) api.auth.logout(refresh).catch(() => {})
   }, [])
 
   // The api interceptor calls this when a refresh fails -> force logout.
@@ -52,8 +55,14 @@ export function AuthProvider({ children }) {
   }, [])
 
   const register = useCallback(async ({ username, email, password }) => {
-    await api.auth.register({ username, email, password })
-    return login(username, password)   // seamless sign-up -> signed in
+    const created = await api.auth.register({ username, email, password })
+    // Accounts are inactive until an admin approves them -> can't sign in yet.
+    // (If approval is disabled server-side, is_active is true -> sign in seamlessly.)
+    if (created?.is_active) {
+      await login(username, password)
+      return { pending: false }
+    }
+    return { pending: true }
   }, [login])
 
   const value = { user, bootstrapping, login, register, logout }

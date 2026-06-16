@@ -23,7 +23,9 @@ critical path, templates, and reusable teams.
   your own reusable template.
 - **Teams** — reusable groups of users; add a whole team to a project at a chosen role in
   one click.
-- **JWT auth**, self-service registration, and a Django **admin** console.
+- **JWT auth** with **admin-approved sign-ups** — new accounts stay inactive until you approve
+  them in Django admin (you're emailed on each registration; the user is emailed when activated).
+  Sign in with **email or username**.
 - **Self-documenting API** — Swagger UI, ReDoc, and an OpenAPI schema generated from the code.
 
 ## Tech stack
@@ -82,7 +84,8 @@ docker compose exec backend python manage.py createsuperuser  # for /admin
 
 A 60-second tour (full details in the [User Guide](docs/USER_GUIDE.md)):
 
-1. **Register** or log in. New accounts land on the projects dashboard.
+1. **Register** (an admin approves new accounts — you'll be emailed when yours is ready) or
+   **log in** with your email or username.
 2. **Create a project** — blank, or **From Template** to get a ready-made plan.
 3. **Open the timeline.** Drag events to move them, drag edges to resize, drag across tracks
    to recategorize. Zoom with **Ctrl/⌘ + scroll** (or pinch) or the toolbar; **pan** by
@@ -100,7 +103,7 @@ Nested, per-project REST API (JWT in the `Authorization` header). Browse it live
 
 | Method | Path | Notes |
 |--------|------|-------|
-| POST | `/api/auth/register/` · `/api/auth/token/` · `/api/auth/token/refresh/` | register · log in · refresh |
+| POST | `/api/auth/register/` · `/api/auth/token/` · `/api/auth/token/refresh/` · `/api/auth/logout/` | register · log in · refresh · revoke refresh |
 | GET | `/api/me/` | current user |
 | GET/POST/PATCH/DELETE | `/api/projects/` · `…/<id>/` | your projects |
 | GET/POST/PATCH/DELETE | `/api/projects/<id>/members/` · `…/<mid>/` | members (owner-only) |

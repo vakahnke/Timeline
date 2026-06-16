@@ -21,7 +21,15 @@ export default function LoginPage() {
       await login(username.trim(), password)
       navigate(from, { replace: true })
     } catch (err) {
-      setError(err.status === 401 ? 'Incorrect username or password.' : 'Could not sign in. Try again.')
+      // Prefer the server's message (e.g. "awaiting approval"); fall back to friendly text.
+      let msg = null
+      try { const d = JSON.parse(err.body); msg = d.detail || Object.values(d).flat()[0] } catch { /* none */ }
+      if (!msg || /no active account/i.test(msg)) {
+        msg = err.status === 401
+          ? 'Incorrect email/username or password.'
+          : 'Could not sign in. Please try again.'
+      }
+      setError(msg)
       setBusy(false)
     }
   }
@@ -34,9 +42,9 @@ export default function LoginPage() {
         <p className="auth-sub">Sign in to plan your projects.</p>
 
         <div className="field">
-          <label>Username</label>
+          <label>Email or username</label>
           <input value={username} onChange={e => setUsername(e.target.value)}
-                 placeholder="you" autoFocus autoComplete="username" />
+                 placeholder="you@example.com" autoFocus autoComplete="username" />
         </div>
         <div className="field">
           <label>Password</label>

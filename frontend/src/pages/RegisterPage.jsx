@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [confirm,  setConfirm]  = useState('')
   const [error,    setError]    = useState('')
   const [busy,     setBusy]     = useState(false)
+  const [pending,  setPending]  = useState(false)
 
   const submit = async (e) => {
     e.preventDefault()
@@ -24,8 +25,9 @@ export default function RegisterPage() {
 
     setBusy(true)
     try {
-      await register({ username: username.trim(), email: email.trim(), password })
-      navigate('/', { replace: true })
+      const { pending } = await register({ username: username.trim(), email: email.trim(), password })
+      if (pending) setPending(true)             // awaiting admin approval
+      else navigate('/', { replace: true })     // approval disabled -> signed straight in
     } catch (err) {
       // DRF returns field errors as JSON; surface the first useful message.
       let msg = 'Could not create the account.'
@@ -36,6 +38,23 @@ export default function RegisterPage() {
       setError(msg)
       setBusy(false)
     }
+  }
+
+  if (pending) {
+    return (
+      <div className="auth-screen scroll-page">
+        <div className="auth-card">
+          <div className="auth-brand">Timeline</div>
+          <div className="auth-check">✓</div>
+          <h1 className="auth-title">Account created</h1>
+          <p className="auth-sub">
+            Your account is awaiting approval by an administrator. We’ve let them know —
+            you’ll get an email at <strong>{email.trim()}</strong> as soon as it’s ready to use.
+          </p>
+          <Link className="btn-primary btn-block" to="/login">Back to sign in</Link>
+        </div>
+      </div>
+    )
   }
 
   return (
