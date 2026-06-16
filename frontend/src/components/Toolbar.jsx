@@ -50,9 +50,9 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       <span className="zoom-label" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
       <button onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
       <button onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
-      <button onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
-      <button onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
-      <button onClick={() => onViewPeriod?.('month')} title="Frame this month">Month</button>
+      <button className="tb-collapsible" onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
+      <button className="tb-collapsible" onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
+      <button className="tb-collapsible" onClick={() => onViewPeriod?.('month')} title="Frame this month">Month</button>
       <div className="toolbar-sep" />
       {projectStart != null && (
         <div className="toolbar-range">
@@ -78,7 +78,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       )}
       {canEdit && (
         <>
-          <button className="btn-save-tpl" onClick={onSaveTemplate} title="Save this project as a reusable template">Save as Template</button>
+          <button className="btn-save-tpl tb-collapsible" onClick={onSaveTemplate} title="Save this project as a reusable template">Save as Template</button>
           <button className="btn-new-cat" onClick={onNewCategory}>+ New Category</button>
           <button className="btn-new" onClick={onNew}>+ New Event</button>
         </>
@@ -120,6 +120,20 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                 <option value={30}>30 min</option>
                 <option value={60}>60 min</option>
               </select>
+            </div>
+
+            {/* On phones the toolbar hides these (tb-collapsible); surface them here instead. */}
+            <div className="settings-mobile">
+              <div className="settings-title">Frame</div>
+              <button className="settings-action" onClick={() => { onViewPeriod?.('day');   setShowSettings(false) }}>Today</button>
+              <button className="settings-action" onClick={() => { onViewPeriod?.('week');  setShowSettings(false) }}>This week</button>
+              <button className="settings-action" onClick={() => { onViewPeriod?.('month'); setShowSettings(false) }}>This month</button>
+              {canEdit && (
+                <>
+                  <div className="settings-title">Project</div>
+                  <button className="settings-action" onClick={() => { onSaveTemplate?.(); setShowSettings(false) }}>Save as Template</button>
+                </>
+              )}
             </div>
           </div>
         )}

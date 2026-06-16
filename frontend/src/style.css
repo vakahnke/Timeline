@@ -199,6 +199,22 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
   cursor: pointer;
 }
 
+/* Toolbar actions tucked into the ⚙ menu on phones (revealed in the mobile query). */
+.settings-mobile { display: none; }
+.settings-action {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text-bright);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  padding: 7px 14px;
+}
+.settings-action:hover { background: rgba(255,255,255,0.06); color: var(--text-bright); border-color: transparent; }
+
 .btn-new-cat {
   background: rgba(52,211,153,0.1);
   border-color: rgba(52,211,153,0.25);
@@ -1254,7 +1270,10 @@ fieldset.modal-body:disabled { opacity: 1; }
   }
   .toolbar button { min-height: 36px; padding: 7px 11px; font-size: 12px; }
   .btn-back, .btn-gear { min-height: 36px; min-width: 36px; }
-  .settings-popover { right: auto; left: 0; }   /* keep the menu on-screen near the gear */
+  .tb-collapsible { display: none; }             /* Today/Week/Month + Save-as-Template move into ⚙ */
+  .settings-mobile { display: block; }
+  /* keep right:0 (base) so the menu opens leftward from the gear and stays on-screen */
+  .settings-popover { max-height: 76vh; overflow-y: auto; max-width: calc(100vw - 24px); }
 
   /* ── More canvas room: slimmer track-header panel + minimap ── */
   .headers-panel { width: 112px; }
