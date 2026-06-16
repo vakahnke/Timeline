@@ -1088,6 +1088,14 @@ fieldset.modal-body:disabled { opacity: 1; }
   cursor: pointer;
   text-transform: capitalize;
 }
+.mp-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
 .members-list { display: flex; flex-direction: column; gap: 2px; }
 .member-row {
   display: flex;

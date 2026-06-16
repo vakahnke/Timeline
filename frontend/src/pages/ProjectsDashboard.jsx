@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../ui/ToastProvider'
 import CreateProjectModal from '../components/CreateProjectModal'
 import TemplateModal from '../components/TemplateModal'
+import MembersPanel from '../components/MembersPanel'
 
 function RoleBadge({ role }) {
   if (!role) return null
@@ -25,6 +26,7 @@ export default function ProjectsDashboard() {
   const [error,      setError]      = useState(null)
   const [creating,   setCreating]   = useState(false)
   const [editing,    setEditing]    = useState(null)
+  const [sharing,    setSharing]    = useState(null)
   const [templating, setTemplating] = useState(false)
 
   const load = useCallback(async () => {
@@ -153,6 +155,9 @@ export default function ProjectsDashboard() {
                   <div className="project-card-foot">
                     <span>{p.event_count} event{p.event_count === 1 ? '' : 's'} · {p.member_count} member{p.member_count === 1 ? '' : 's'} · {p.progress}%</span>
                     <div className="project-card-actions" onClick={e => e.stopPropagation()}>
+                      {isOwner && (
+                        <button className="card-action" title="Manage access — add people & teams" onClick={() => setSharing(p)}>&#128101;</button>
+                      )}
                       {canEdit && (
                         <button className="card-action" title="Edit project" onClick={() => setEditing(p)}>&#9998;</button>
                       )}
@@ -173,6 +178,9 @@ export default function ProjectsDashboard() {
       )}
       {editing && (
         <CreateProjectModal project={editing} onSubmit={handleUpdate} onClose={() => setEditing(null)} />
+      )}
+      {sharing && (
+        <MembersPanel projectId={sharing.id} isOwner onClose={() => { setSharing(null); load() }} />
       )}
       {templating && (
         <TemplateModal onCreated={handleFromTemplate} onClose={() => setTemplating(false)} />

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
 
 const ROLES = ['owner', 'editor', 'viewer']
+// Privilege labels surfaced to users (the API still uses owner/editor/viewer).
+const ROLE_LABELS = { owner: 'Owner — full access', editor: 'Read & edit', viewer: 'Read only' }
 
 export default function MembersPanel({ projectId, isOwner, onClose }) {
   const [members, setMembers] = useState([])
@@ -105,6 +107,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
         </div>
 
         <div className="modal-body">
+          {isOwner && <div className="mp-label">Add a person</div>}
           {isOwner && (
             <form className="invite-row" onSubmit={addMember}>
               <input
@@ -113,7 +116,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
                 placeholder="Email or username"
               />
               <select value={newRole} onChange={e => setNewRole(e.target.value)}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
               <button className="btn-primary" type="submit" disabled={adding}>
                 {adding ? 'Adding…' : 'Add'}
@@ -121,13 +124,14 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
             </form>
           )}
 
+          {isOwner && teams.length > 0 && <div className="mp-label">Add a team</div>}
           {isOwner && teams.length > 0 && (
             <div className="invite-row">
               <select style={{ flex: 1 }} value={selTeam} onChange={e => setSelTeam(e.target.value)}>
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.member_count})</option>)}
               </select>
               <select value={teamRole} onChange={e => setTeamRole(e.target.value)}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
               <button className="btn-template" onClick={addTeam} disabled={addingTeam}>
                 {addingTeam ? 'Adding…' : 'Add team'}
@@ -138,6 +142,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
           {note && <div className="dim" style={{ fontSize: 11, marginTop: -4 }}>{note}</div>}
           {error && <div className="field-error">&#10005; {error}</div>}
 
+          <div className="mp-label">Who has access</div>
           {loading ? (
             <p className="dim">Loading members…</p>
           ) : (
@@ -155,7 +160,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
                         value={m.role}
                         onChange={e => changeRole(m, e.target.value)}
                       >
-                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                        {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
                       <button className="btn-danger btn-sm" onClick={() => removeMember(m)}>Remove</button>
                     </>
