@@ -73,26 +73,31 @@ python -c "import secrets; print(secrets.token_urlsafe(64))"
 
 ## Production
 
-Single-origin topology with **HTTPS**: **nginx** terminates TLS (Let's Encrypt via the
-`certbot` service), serves the built React bundle, and reverse-proxies `/api`, `/admin`,
-`/static`, and `/media` to **gunicorn**. Same origin → no CORS.
+Single-origin topology with **HTTPS**: the app sits behind Cloudflare's proxy, which terminates
+the browser-facing TLS at its edge with a browser-trusted certificate. **nginx** presents a
+**Cloudflare Origin Certificate** so the Cloudflare→origin leg is encrypted and validated
+(Cloudflare SSL/TLS mode **Full (strict)**), serves the built React bundle, and reverse-proxies
+`/api`, `/admin`, `/static`, and `/media` to **gunicorn**. Same origin → no CORS.
 
-`docker-compose.prod.yml` runs db + backend (gunicorn) + nginx (80 + 443) + certbot. It
-expects a domain and a certificate, so the flow is:
+`docker-compose.prod.yml` runs db + backend (gunicorn) + nginx (80 + 443). It expects a domain
+and an origin certificate. Create the cert in the Cloudflare dashboard (**SSL/TLS → Origin
+Server → Create Certificate**) and save the Origin Certificate + Private Key to
+`nginx/certs/origin.pem` and `nginx/certs/origin.key` (mounted read-only into the nginx
+container; both are gitignored). Then:
 
 ```bash
 cp .env.example .env
 # Edit .env: DJANGO_DEBUG=0, a strong DJANGO_SECRET_KEY + POSTGRES_PASSWORD,
-#   DOMAIN=<your domain>, CERTBOT_EMAIL=<you>, RUN_COLLECTSTATIC=1,
+#   DOMAIN=<your domain>, RUN_COLLECTSTATIC=1,
 #   DJANGO_ALLOWED_HOSTS=<your domain>, DJANGO_CSRF_TRUSTED_ORIGINS=https://<your domain>
-./deploy/init-letsencrypt.sh                          # one-time: obtain the certificate
+# Place the Cloudflare Origin Certificate at nginx/certs/origin.pem + origin.key
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 ```
 
 - `migrate` + `collectstatic` run automatically on backend start; the Postgres port is **not**
-  published. Cert renewal is automatic (the `certbot` service). nginx falls back to
-  `index.html` for client-side routing.
+  published. The Cloudflare Origin Certificate is valid for ~15 years, so there's nothing to
+  renew. nginx falls back to `index.html` for client-side routing.
 - **`WEB_CONCURRENCY`** in `.env` sets gunicorn worker count (tune to the instance).
 - **`/api/health/`** is an unauthenticated health probe for monitoring / load balancers.
 
@@ -113,9 +118,11 @@ git pull && docker compose -f docker-compose.prod.yml up -d --build
 
 ### TLS
 
-Terminate TLS in front of nginx (a load balancer, or add a certbot/`443` server block).
-Django honors `X-Forwarded-Proto` via `SECURE_PROXY_SSL_HEADER`, and prod enables HSTS +
-secure cookies when `DJANGO_DEBUG=0`.
+Cloudflare terminates the browser-facing TLS at its edge (Universal SSL). nginx serves a
+**Cloudflare Origin Certificate** on `443` so the Cloudflare→origin leg is encrypted and
+validated, with the zone's SSL/TLS mode set to **Full (strict)**. Django honors
+`X-Forwarded-Proto` via `SECURE_PROXY_SSL_HEADER`, and prod enables HSTS + secure cookies when
+`DJANGO_DEBUG=0`.
 
 ## Account approval & email
 
@@ -129,10 +136,10 @@ By default (`REQUIRE_ACCOUNT_APPROVAL=1`) nobody can use the app until **you** a
    person is automatically emailed that their account is ready.
 4. They sign in with **email or username** + password.
 
-**Email backend** is set by `EMAIL_URL`. In dev it defaults to `consolemail://` (messages print
-to the backend container logs — `docker compose logs backend`), so nothing is actually sent.
-For prod, set the Gmail SMTP credentials — an **App Password** (not your account password;
-requires 2-Step Verification):
+**Email backend** is configured via the `EMAIL_HOST_*` vars. In dev, with no SMTP credentials
+set, it falls back to the console backend (messages print to the backend container logs —
+`docker compose logs backend`), so nothing is actually sent. For prod, set the Gmail SMTP
+credentials — an **App Password** (not your account password; requires 2-Step Verification):
 
 ```bash
 EMAIL_HOST_USER=you@gmail.com
