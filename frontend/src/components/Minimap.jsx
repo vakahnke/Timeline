@@ -1,6 +1,17 @@
 import { useRef, useEffect, useLayoutEffect } from 'react'
 
-const MINI_H = 56  // keep in sync with .minimap height in style.css
+const MINI_H = 64  // fallback only; the canvas sizes to the element's real clientHeight
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2))
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
+}
 
 // A compact overview of the whole project. Events are drawn as small bars (by track,
 // colored by category); a viewport box shows the slice currently on screen. Click or
@@ -19,24 +30,54 @@ export default function Minimap({ scrollRef, range, pxPerHour, events, trackColo
   drawRef.current = () => {
     const canvas = canvasRef.current, wrap = wrapRef.current, el = scrollRef.current
     if (!canvas || !wrap || !el || !range) return
-    const W = wrap.clientWidth, H = MINI_H
+    const W = wrap.clientWidth, H = wrap.clientHeight || MINI_H
     const mainW = el.scrollWidth || 1
     const dpr = window.devicePixelRatio || 1
     canvas.width  = Math.max(1, Math.round(W * dpr))
-    canvas.height = Math.round(H * dpr)
+    canvas.height = Math.max(1, Math.round(H * dpr))
     const ctx = canvas.getContext('2d')
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, W, H)
+
     const nTracks = Math.max(1, trackCount)
-    const pad = 6
-    const bandH = Math.max(2, Math.min(9, (H - pad * 2) / nTracks))
-    const toX = ms => ((((ms - range.start) / 3_600_000) * pxPerHour) / mainW) * W
-    for (const ev of events) {
-      const x1 = toX(new Date(ev.start).getTime())
-      const x2 = toX(new Date(ev.end).getTime())
-      const ti = trackIndexMap[ev.category] ?? 0
-      ctx.fillStyle = trackColorMap[ev.category] || ev.color || '#4a88ff'   // lane is authoritative
-      ctx.fillRect(x1, pad + ti * bandH, Math.max(1.5, x2 - x1), Math.max(2, bandH - 1.5))
+    const padY = 4
+    const rowH = (H - padY * 2) / nTracks
+    const toX  = ms => ((((ms - range.start) / 3_600_000) * pxPerHour) / mainW) * W
+
+    // Faint stripes so the track rows read as distinct lanes (like the timeline above).
+    for (let i = 1; i < nTracks; i += 2) {
+      ctx.fillStyle = 'rgba(255,255,255,0.02)'
+      ctx.fillRect(0, padY + i * rowH, W, rowH)
+    }
+
+    // Group by track, then pack each track's events into sub-lanes so that events
+    // overlapping in time stack vertically instead of hiding each other — every event
+    // gets a visible block.
+    const byTrack = {}
+    for (const ev of events) (byTrack[ev.category] ??= []).push(ev)
+    for (const cat in byTrack) {
+      const ti  = trackIndexMap[cat] ?? 0
+      const evs = byTrack[cat]
+        .map(ev => ({ s: new Date(ev.start).getTime(), e: new Date(ev.end).getTime() }))
+        .sort((a, b) => a.s - b.s)
+      const laneEnd = []                                   // greedy interval packing
+      for (const it of evs) {
+        let lane = laneEnd.findIndex(end => it.s >= end)
+        if (lane < 0) { lane = laneEnd.length; laneEnd.push(0) }
+        laneEnd[lane] = it.e
+        it.lane = lane
+      }
+      const depth  = Math.max(1, laneEnd.length)
+      const subH   = rowH / depth
+      const blockH = Math.max(2, Math.min(subH - 1, 13))
+      ctx.fillStyle = trackColorMap[cat] || '#4a88ff'      // lane is authoritative
+      for (const it of evs) {
+        const x = toX(it.s)
+        const y = padY + ti * rowH + it.lane * subH + (subH - blockH) / 2
+        const w = Math.max(2.5, toX(it.e) - x)
+        roundRectPath(ctx, x, y, w, blockH, Math.min(2, blockH / 2))
+        ctx.fill()
+      }
     }
   }
 
