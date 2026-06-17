@@ -262,6 +262,7 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
   background: var(--bg-mid);
   cursor: pointer;
   user-select: none;
+  margin-left: 170px;   /* align under the scroll content (match .headers-panel width) */
 }
 .minimap-canvas { position: absolute; inset: 0; display: block; }
 .minimap-viewport {
@@ -1278,7 +1279,7 @@ fieldset.modal-body:disabled { opacity: 1; }
   /* ── More canvas room: slimmer track-header panel + minimap ── */
   .headers-panel { width: 112px; }
   .track-header  { padding: 0 9px; gap: 7px; }
-  .minimap       { height: 46px; }
+  .minimap       { height: 46px; margin-left: 112px; }   /* match the slimmer header panel */
 
   /* ── Dashboard ── */
   .dash-header  { height: 52px; padding: 0 14px; gap: 8px; }
