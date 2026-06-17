@@ -27,7 +27,7 @@ function snap(ms, snapMinutes) {
   return Math.round(ms / grid) * grid
 }
 
-function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, canEdit = true, onUpdate, onEdit, onDelete, onTooltip }) {
+function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, onUpdate, onEdit, onDelete, onTooltip }) {
   const blockRef = useRef(null)
 
   // Lane/category is the source of truth for color, so an event can never visually
@@ -104,7 +104,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       const dtMs = (dx / capPx) * 3_600_000
       const newS = snap(s0 + dtMs, capSnap)
       el.style.left = msToX(newS) + 'px'
-      el.style.top  = (8 + dy) + 'px'
+      el.style.top  = (top + dy) + 'px'
       if (timeEl) timeEl.textContent = fmtSpan(newS, newS + dur)
 
       setActiveLane(getLaneAt(e.clientX, e.clientY))
@@ -115,7 +115,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       document.removeEventListener('mouseup', onUp)
       document.removeEventListener('contextmenu', noCtx)
       el.classList.remove('dragging')
-      el.style.top = '8px'
+      el.style.top = top + 'px'
       document.body.style.cursor = ''
       activeLane?.classList.remove('drag-over')
 
@@ -146,7 +146,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
-  }, [event, pxPerHour, rangeStart, trackColorMap, onUpdate, onEdit])
+  }, [event, pxPerHour, rangeStart, trackColorMap, top, onUpdate, onEdit])
 
   // ── Resize handles ────────────────────────────────────────────────────────
   const handleResizeDown = useCallback((e, edge) => {
@@ -213,6 +213,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}`}
       style={{
         left:        x + 'px',
+        top:         top + 'px',
         width:       w + 'px',
         background:  hexToRgba(color, 0.22),
         borderColor: color,
