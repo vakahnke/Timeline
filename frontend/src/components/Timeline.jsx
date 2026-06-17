@@ -113,6 +113,7 @@ const Timeline = forwardRef(function Timeline(
   const headerListRef   = useRef(null)
   const headersRef      = useRef(null)
   const tracksLenRef    = useRef(tracks.length)
+  const tracksRef       = useRef(tracks)
   const pxRef           = useRef(pxPerHour)
   const rangeRef        = useRef(range)
   const zoomAnchorRef   = useRef(null) // { anchorTime, mouseX } pending scroll correction
@@ -123,7 +124,7 @@ const Timeline = forwardRef(function Timeline(
 
   useEffect(() => { pxRef.current      = pxPerHour    }, [pxPerHour])
   useEffect(() => { rangeRef.current   = range        }, [range])
-  useEffect(() => { tracksLenRef.current = tracks.length }, [tracks])
+  useEffect(() => { tracksLenRef.current = tracks.length; tracksRef.current = tracks }, [tracks])
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000)
@@ -297,7 +298,14 @@ const Timeline = forwardRef(function Timeline(
       if (!panel) return
       const rect = panel.getBoundingClientRect()
       const relY  = mv.clientY - rect.top - RULER_HEIGHT + (scrollRef.current?.scrollTop ?? 0)
-      const to    = Math.max(0, Math.min(tracksLenRef.current - 1, Math.floor(relY / TRACK_HEIGHT)))
+      const ts = tracksRef.current, hts = layoutRef.current.heights
+      let acc = 0, to = ts.length - 1
+      for (let i = 0; i < ts.length; i++) {
+        const h = hts[ts[i].name] || TRACK_HEIGHT
+        if (relY < acc + h) { to = i; break }
+        acc += h
+      }
+      to = Math.max(0, Math.min(ts.length - 1, to))
       setDragging(prev => prev ? { ...prev, to } : null)
     }
 
@@ -427,11 +435,39 @@ const Timeline = forwardRef(function Timeline(
     for (const e of events) (m[e.category] ??= []).push(e)
     return m
   }, [events])
+
+  // Stack events that overlap in time within a category into sub-rows (greedy interval
+  // packing), so a lane grows taller instead of drawing overlapping events on top of each
+  // other. Produces each event's sub-row, and each track's pixel offset + height.
+  const layout = useMemo(() => {
+    const rowOf = {}, tops = {}, heights = {}
+    let y = 0
+    for (const t of displayedTracks) {
+      const evs = (eventsByCategory[t.name] || [])
+        .map(e => ({ id: e.id, s: new Date(e.start).getTime(), en: new Date(e.end).getTime() }))
+        .sort((a, b) => a.s - b.s)
+      const laneEnd = []
+      for (const it of evs) {
+        let lane = laneEnd.findIndex(end => it.s >= end)
+        if (lane < 0) { lane = laneEnd.length; laneEnd.push(0) }
+        laneEnd[lane] = it.en
+        rowOf[it.id] = lane
+      }
+      const depth = Math.max(1, laneEnd.length)
+      heights[t.name] = depth * TRACK_HEIGHT
+      tops[t.name] = y
+      y += heights[t.name]
+    }
+    return { rowOf, tops, heights, total: y }
+  }, [displayedTracks, eventsByCategory])
+  const layoutRef = useRef(layout)
+  useEffect(() => { layoutRef.current = layout }, [layout])
+
   const w = totalWidth()
 
   const nowX = range ? ((now - range.start) / 3_600_000) * pxPerHour : null
   const nowInRange = nowX !== null && nowX >= 0 && nowX <= w
-  const svgH = RULER_HEIGHT + displayedTracks.length * TRACK_HEIGHT
+  const svgH = RULER_HEIGHT + layout.total
 
   // ── Critical-path analysis (CPM) — depends ONLY on events' durations & dependencies.
   // Does not recompute while panning / zooming / hovering.
@@ -507,20 +543,18 @@ const Timeline = forwardRef(function Timeline(
     const out = []
     for (const ev of events) {
       if (!ev.depends_on?.length) continue
-      const ti2 = trackIndexMap[ev.category] ?? 0
       const x2  = ((new Date(ev.start).getTime() - range.start) / 3_600_000) * pxPerHour
-      const y2  = RULER_HEIGHT + ti2 * TRACK_HEIGHT + TRACK_HEIGHT / 2
+      const y2  = RULER_HEIGHT + (layout.tops[ev.category] ?? 0) + (layout.rowOf[ev.id] ?? 0) * TRACK_HEIGHT + TRACK_HEIGHT / 2
       for (const depId of ev.depends_on) {
         const dep = byId[depId]
         if (!dep) continue
-        const ti1 = trackIndexMap[dep.category] ?? 0
         const x1  = ((new Date(dep.end).getTime() - range.start) / 3_600_000) * pxPerHour
-        const y1  = RULER_HEIGHT + ti1 * TRACK_HEIGHT + TRACK_HEIGHT / 2
+        const y1  = RULER_HEIGHT + (layout.tops[dep.category] ?? 0) + (layout.rowOf[dep.id] ?? 0) * TRACK_HEIGHT + TRACK_HEIGHT / 2
         out.push({ x1, y1, x2, y2, critical: criticalLinks.has(`${depId}->${ev.id}`) })
       }
     }
     return out
-  }, [events, range, pxPerHour, trackIndexMap, criticalLinks])
+  }, [events, range, pxPerHour, layout, criticalLinks])
 
   return (
     <div className="timeline-main">
@@ -537,6 +571,7 @@ const Timeline = forwardRef(function Timeline(
               <div
                 key={t.name}
                 className={`track-header${isDragging ? ' is-dragging' : ''}${isTarget ? ' is-drop-target' : ''}`}
+                style={{ height: layout.heights[t.name] + 'px' }}
               >
                 <div
                   className="drag-handle"
@@ -633,6 +668,7 @@ const Timeline = forwardRef(function Timeline(
                   key={t.name}
                   className="track-lane"
                   data-category={t.name}
+                  style={{ height: layout.heights[t.name] + 'px' }}
                   onDoubleClick={e => handleLaneClick(e, t.name)}
                 >
                   {trackEvents.map(ev => (
@@ -641,6 +677,7 @@ const Timeline = forwardRef(function Timeline(
                       event={ev}
                       rangeStart={range?.start ?? 0}
                       pxPerHour={pxPerHour}
+                      top={8 + (layout.rowOf[ev.id] ?? 0) * TRACK_HEIGHT}
                       trackColor={trackColorMap[ev.category]}
                       trackColorMap={trackColorMap}
                       isCritical={criticalEventIds.has(ev.id)}
