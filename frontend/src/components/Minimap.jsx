@@ -35,6 +35,8 @@ export default function Minimap({ scrollRef, range, pxPerHour, events, trackColo
     const dpr = window.devicePixelRatio || 1
     canvas.width  = Math.max(1, Math.round(W * dpr))
     canvas.height = Math.max(1, Math.round(H * dpr))
+    canvas.style.width  = W + 'px'   // pin the CSS size to logical px, or on hi-dpi (retina)
+    canvas.style.height = H + 'px'   // the canvas renders at 2× and gets clipped to a corner
     const ctx = canvas.getContext('2d')
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, W, H)
