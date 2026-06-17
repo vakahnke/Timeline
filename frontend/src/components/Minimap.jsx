@@ -35,7 +35,7 @@ export default function Minimap({ scrollRef, range, pxPerHour, events, trackColo
       const x1 = toX(new Date(ev.start).getTime())
       const x2 = toX(new Date(ev.end).getTime())
       const ti = trackIndexMap[ev.category] ?? 0
-      ctx.fillStyle = ev.color || trackColorMap[ev.category] || '#4a88ff'
+      ctx.fillStyle = trackColorMap[ev.category] || ev.color || '#4a88ff'   // lane is authoritative
       ctx.fillRect(x1, pad + ti * bandH, Math.max(1.5, x2 - x1), Math.max(2, bandH - 1.5))
     }
   }

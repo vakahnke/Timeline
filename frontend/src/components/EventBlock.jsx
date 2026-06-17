@@ -30,7 +30,10 @@ function snap(ms, snapMinutes) {
 function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, canEdit = true, onUpdate, onEdit, onDelete, onTooltip }) {
   const blockRef = useRef(null)
 
-  const color   = event.color || trackColor || '#4a88ff'
+  // Lane/category is the source of truth for color, so an event can never visually
+  // drift from its category (a per-event color is only a fallback for the rare event
+  // whose category has no color).
+  const color   = trackColor || event.color || '#4a88ff'
   const startMs = new Date(event.start).getTime()
   const endMs   = new Date(event.end).getTime()
   const x       = ((startMs - rangeStart) / 3_600_000) * pxPerHour
