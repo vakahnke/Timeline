@@ -254,7 +254,7 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
 
 /* ── Minimap / overview strip ─────────────────────────────────────────────── */
 .minimap {
-  height: 56px;
+  height: 64px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -809,15 +809,8 @@ canvas.ruler {
   overflow: visible;
 }
 
-/* ── Critical path highlight ─────────────────────────────────────────────── */
-.event-block.critical-path {
-  border-color: var(--danger) !important;
-  box-shadow:
-    0 0 0 1px rgba(248,113,113,0.35),
-    0 0 10px rgba(248,113,113,0.18),
-    inset 0 1px 0 rgba(255,255,255,0.06);
-}
-.event-block.critical-path .event-title { color: #fca5a5; }
+/* Critical-path events get NO special box styling — they keep their category color
+   exactly like every other event. (The critical path is still conveyed by the arrows.) */
 
 /* Read-only events aren't draggable — don't imply a grab affordance. */
 .event-block.readonly { cursor: default; }
