@@ -1,50 +1,36 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 
-// A panel you can drag (by its header) and resize (bottom-right handle). Layout is
-// persisted to localStorage per `storageKey` so it survives reloads.
-export default function MovablePanel({
-  storageKey, title, actions, children,
-  defaultLayout, minWidth = 320, minHeight = 160, onLayoutChange,
-}) {
-  const [layout, setLayout] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey))
-      if (saved && typeof saved.x === 'number') return saved
-    } catch { /* ignore */ }
-    return defaultLayout
-  })
+const ZOOM_MIN = 0.6, ZOOM_MAX = 1.8, ZOOM_STEP = 0.1
+const clampZoom = z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 10) / 10))
+
+// A controlled panel you can drag (by its header), resize (bottom-right handle), and
+// zoom (content scale). The parent owns `layout` ({ x, y, w, h, zoom }) and persists it.
+export default function MovablePanel({ title, actions, children, layout, onChange, minWidth = 300, minHeight = 180 }) {
   const ref = useRef(null)
+  const zoom = layout.zoom ?? 1
 
-  // Keep the panel inside its container's width on mount (handles narrow screens / saved
-  // layouts wider than the viewport).
+  // Keep the panel within its container's width on mount (narrow screens / stale layouts).
   useEffect(() => {
-    const parent = ref.current?.parentElement
-    if (!parent) return
-    const maxW = parent.clientWidth
-    setLayout(l => {
-      const w = Math.min(l.w, maxW)
-      const x = Math.min(l.x, Math.max(0, maxW - w))
-      return (w === l.w && x === l.x) ? l : { ...l, w, x }
-    })
-  }, [])
-
-  useEffect(() => {
-    try { localStorage.setItem(storageKey, JSON.stringify(layout)) } catch { /* ignore */ }
-    onLayoutChange?.(layout)
-  }, [layout]) // eslint-disable-line react-hooks/exhaustive-deps
+    const maxW = ref.current?.parentElement?.clientWidth
+    if (!maxW) return
+    if (layout.w > maxW || layout.x + layout.w > maxW) {
+      const w = Math.min(layout.w, maxW)
+      onChange({ ...layout, w, x: Math.min(layout.x, Math.max(0, maxW - w)) })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const drag = (e, mode) => {
     if (e.button !== 0) return
     e.preventDefault()
     const sx = e.clientX, sy = e.clientY
-    const { x, y, w, h } = layout
+    const base = layout
     const maxW = ref.current?.parentElement?.clientWidth ?? Infinity
     const onMove = (ev) => {
       const dx = ev.clientX - sx, dy = ev.clientY - sy
       if (mode === 'move') {
-        setLayout(l => ({ ...l, x: Math.max(0, Math.min(x + dx, maxW - l.w)), y: Math.max(0, y + dy) }))
+        onChange({ ...base, x: Math.max(0, Math.min(base.x + dx, maxW - base.w)), y: Math.max(0, base.y + dy) })
       } else {
-        setLayout(l => ({ ...l, w: Math.max(minWidth, Math.min(w + dx, maxW - l.x)), h: Math.max(minHeight, h + dy) }))
+        onChange({ ...base, w: Math.max(minWidth, Math.min(base.w + dx, maxW - base.x)), h: Math.max(minHeight, base.h + dy) })
       }
     }
     const onUp = () => {
@@ -55,13 +41,22 @@ export default function MovablePanel({
     window.addEventListener('pointerup', onUp)
   }
 
+  const setZoom = z => onChange({ ...layout, zoom: clampZoom(z) })
+
   return (
     <section ref={ref} className="mpanel" style={{ left: layout.x, top: layout.y, width: layout.w, height: layout.h }}>
       <header className="mpanel-head" onPointerDown={e => drag(e, 'move')}>
         <span className="mpanel-title">{title}</span>
-        {actions && <div className="mpanel-actions" onPointerDown={e => e.stopPropagation()}>{actions}</div>}
+        <div className="mpanel-actions" onPointerDown={e => e.stopPropagation()}>
+          {actions}
+          <div className="mpanel-zoom" title="Zoom this window">
+            <button type="button" className="btn-icon btn-icon--sm" onClick={() => setZoom(zoom - ZOOM_STEP)} disabled={zoom <= ZOOM_MIN}>&minus;</button>
+            <button type="button" className="btn-icon btn-icon--sm zoom-val" onClick={() => setZoom(1)} title="Reset zoom to 100%">{Math.round(zoom * 100)}%</button>
+            <button type="button" className="btn-icon btn-icon--sm" onClick={() => setZoom(zoom + ZOOM_STEP)} disabled={zoom >= ZOOM_MAX}>+</button>
+          </div>
+        </div>
       </header>
-      <div className="mpanel-body">{children}</div>
+      <div className="mpanel-body" style={{ zoom }}>{children}</div>
       <div className="mpanel-resize" onPointerDown={e => drag(e, 'resize')} title="Drag to resize" />
     </section>
   )

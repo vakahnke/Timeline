@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth/AuthContext'
@@ -20,8 +20,8 @@ function fmtDate(iso) {
 
 // Default window positions: projects on top, my-tasks stacked below.
 const DEFAULT_LAYOUTS = {
-  projects: { x: 0, y: 0,   w: 1000, h: 480 },
-  tasks:    { x: 0, y: 504, w: 1000, h: 400 },
+  projects: { x: 0, y: 0,   w: 1000, h: 480, zoom: 1 },
+  tasks:    { x: 0, y: 504, w: 1000, h: 400, zoom: 1 },
 }
 
 export default function ProjectsDashboard() {
@@ -37,9 +37,13 @@ export default function ProjectsDashboard() {
   const [sharing,    setSharing]    = useState(null)
   const [templating, setTemplating] = useState(false)
 
-  // Track each panel's live layout so the scroll canvas can grow to contain them.
-  const [layouts, setLayouts]       = useState(DEFAULT_LAYOUTS)
-  const [layoutVersion, setLayoutVersion] = useState(0)  // bump to remount panels on reset
+  // The dashboard owns the panel layouts (so it can arrange them) and persists them.
+  const canvasRef = useRef(null)
+  const [layouts, setLayouts] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem('dash.layouts')); if (s?.projects && s?.tasks) return s } catch { /* ignore */ }
+    return DEFAULT_LAYOUTS
+  })
+  useEffect(() => { localStorage.setItem('dash.layouts', JSON.stringify(layouts)) }, [layouts])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -86,12 +90,24 @@ export default function ProjectsDashboard() {
 
   const open = (id) => navigate(`/projects/${id}`)
 
-  const onLayout = (key) => (l) => setLayouts(prev => ({ ...prev, [key]: l }))
-  const resetLayout = () => {
-    localStorage.removeItem('dash.panel.projects')
-    localStorage.removeItem('dash.panel.tasks')
-    setLayouts(DEFAULT_LAYOUTS)
-    setLayoutVersion(v => v + 1)
+  const setPanel = (key) => (l) => setLayouts(prev => ({ ...prev, [key]: l }))
+  const resetLayout = () => { localStorage.removeItem('dash.layouts'); setLayouts(DEFAULT_LAYOUTS) }
+
+  // Arrange both windows: 'side' = half-width next to each other; 'stack' = full-width stacked.
+  const arrange = (mode) => {
+    const avail = canvasRef.current?.clientWidth ?? 1280
+    if (mode === 'side') {
+      const gap = 16, w = Math.floor((avail - gap) / 2)
+      setLayouts(prev => ({
+        projects: { ...prev.projects, x: 0,       y: 0, w, h: Math.max(prev.projects.h, 460) },
+        tasks:    { ...prev.tasks,    x: w + gap, y: 0, w, h: Math.max(prev.tasks.h, 460) },
+      }))
+    } else {
+      setLayouts(prev => ({
+        projects: { ...prev.projects, x: 0, y: 0, w: avail },
+        tasks:    { ...prev.tasks,    x: 0, y: (prev.projects.h || 480) + 24, w: avail },
+      }))
+    }
   }
 
   const canvasMinH = Math.max(560, ...Object.values(layouts).map(l => l.y + l.h + 24))
@@ -183,21 +199,21 @@ export default function ProjectsDashboard() {
       <header className="dash-header">
         <div className="dash-brand">Timeline</div>
         <div className="dash-userbox">
-          <button onClick={resetLayout} title="Reset window positions & sizes">Reset layout</button>
+          <button onClick={() => arrange('side')} title="Place the windows side by side">Side by side</button>
+          <button onClick={() => arrange('stack')} title="Stack the windows">Stack</button>
+          <button onClick={resetLayout} title="Reset window positions, sizes & zoom">Reset</button>
           <button onClick={() => navigate('/teams')}>Teams</button>
           <span className="dash-user">{user?.username}</span>
           <button onClick={logout}>Log out</button>
         </div>
       </header>
 
-      <main className="dash-canvas" style={{ minHeight: canvasMinH }}>
+      <main className="dash-canvas" ref={canvasRef} style={{ minHeight: canvasMinH }}>
         <MovablePanel
-          key={`projects-${layoutVersion}`}
-          storageKey="dash.panel.projects"
           title="Your projects"
-          defaultLayout={DEFAULT_LAYOUTS.projects}
+          layout={layouts.projects}
+          onChange={setPanel('projects')}
           minHeight={220}
-          onLayoutChange={onLayout('projects')}
           actions={
             <>
               <button className="btn-template" onClick={() => setTemplating(true)}>From Template</button>
@@ -209,12 +225,10 @@ export default function ProjectsDashboard() {
         </MovablePanel>
 
         <MovablePanel
-          key={`tasks-${layoutVersion}`}
-          storageKey="dash.panel.tasks"
           title="My tasks"
-          defaultLayout={DEFAULT_LAYOUTS.tasks}
+          layout={layouts.tasks}
+          onChange={setPanel('tasks')}
           minHeight={200}
-          onLayoutChange={onLayout('tasks')}
         >
           <MyTasksPanel />
         </MovablePanel>
