@@ -1436,3 +1436,20 @@ fieldset.modal-body:disabled { opacity: 1; }
   cursor: pointer;
 }
 .btn-manage-tasks:hover { background: rgba(129,140,248,0.18); border-color: rgba(129,140,248,0.5); color: var(--text-bright); }
+
+/* Undo/redo (and close) cluster in a modal header */
+.modal-head-actions { display: flex; align-items: center; gap: 6px; }
+.btn-icon {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-mid);
+  color: var(--text-dim);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.btn-icon:hover:not(:disabled) { background: rgba(255,255,255,0.09); color: var(--text-bright); border-color: var(--border-bright); }
+.btn-icon:disabled { opacity: 0.35; cursor: default; }
