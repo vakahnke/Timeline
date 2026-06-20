@@ -119,6 +119,21 @@ class MyTasksFeedTests(TaskTestBase):
     def test_requires_authentication(self):
         self.assertEqual(self.client.get('/api/me/tasks/').status_code, 401)
 
+    def test_scope_all_returns_whole_team_with_event_times(self):
+        Task.objects.create(event=self.event, title='Mine',   owner=self.owner, assignee=self.viewer)
+        Task.objects.create(event=self.event, title='Editors', owner=self.owner, assignee=self.editor)
+        self.client.force_authenticate(self.viewer)
+
+        mine = self.client.get('/api/me/tasks/')
+        self.assertEqual([t['title'] for t in mine.data], ['Mine'])  # default: only my tasks
+
+        allt = self.client.get('/api/me/tasks/?scope=all')
+        titles = sorted(t['title'] for t in allt.data)
+        self.assertEqual(titles, ['Editors', 'Mine'])               # every member's tasks
+        # Event start/end are included so the client can compute per-member duration.
+        self.assertIn('start', allt.data[0]['event'])
+        self.assertIn('end', allt.data[0]['event'])
+
 
 class TaskEdgeCaseTests(TaskTestBase):
     def setUp(self):

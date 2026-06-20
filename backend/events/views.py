@@ -98,8 +98,9 @@ class TaskViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
 
 
 class MyTasksView(generics.ListAPIView):
-    """GET /api/me/tasks/ — every task assigned to the current user, across all the
-    projects they belong to. Soonest due first; undated tasks last."""
+    """GET /api/me/tasks/ — tasks across all the projects the current user belongs to.
+    By default only the user's own assigned tasks; with ?scope=all, every member's tasks
+    in those projects (so the dashboard can show the team's workload). Soonest due first."""
     permission_classes = [IsAuthenticated]
     serializer_class   = MyTaskSerializer
 
@@ -107,7 +108,9 @@ class MyTasksView(generics.ListAPIView):
         if getattr(self, 'swagger_fake_view', False):
             return Task.objects.none()
         my_projects = ProjectMembership.objects.filter(user=self.request.user).values('project')
-        return (Task.objects
-                .filter(assignee=self.request.user, event__project__in=my_projects)
-                .select_related('event', 'event__project', 'owner', 'assignee')
-                .order_by('due_date', 'id'))
+        qs = (Task.objects
+              .filter(event__project__in=my_projects)
+              .select_related('event', 'event__project', 'owner', 'assignee'))
+        if self.request.query_params.get('scope') != 'all':
+            qs = qs.filter(assignee=self.request.user)
+        return qs.order_by('due_date', 'id')

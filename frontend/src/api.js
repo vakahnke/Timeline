@@ -89,7 +89,7 @@ export const api = {
     login:    (d)       => req('/auth/token/',    { method: 'POST', body: body(d) }, false),
     logout:   (refresh) => req('/auth/logout/',   { method: 'POST', body: body({ refresh }) }, false),
     me:       ()        => req('/me/'),
-    myTasks:  ()        => req(url.myTasks()),
+    myTasks:  (scope)   => req(url.myTasks() + (scope === 'all' ? '?scope=all' : '')),
   },
 
   projects: {
