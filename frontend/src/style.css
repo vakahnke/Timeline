@@ -1512,6 +1512,8 @@ fieldset.modal-body:disabled { opacity: 1; }
   padding: 4px 8px;
   border-radius: 6px;
 }
+/* Native option popup defaults to a white background; force readable colors. */
+.mytasks-sort select option { background: #1a2233; color: #e2e8f0; }
 .mytask-group + .mytask-group { margin-top: 14px; }
 .mytask-group-head {
   font-size: 10.5px;
