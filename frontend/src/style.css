@@ -1548,12 +1548,28 @@ fieldset.modal-body:disabled { opacity: 1; }
   margin-bottom: 14px;
 }
 .workload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
   color: var(--text-dim);
   margin-bottom: 8px;
+}
+.workload-toggle { display: flex; gap: 4px; }
+.workload-toggle button {
+  padding: 2px 9px;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  border-radius: 999px;
+}
+.workload-toggle button.is-active {
+  background: var(--accent-glow);
+  border-color: rgba(129,140,248,0.4);
+  color: var(--accent);
 }
 .workload-row {
   display: flex;

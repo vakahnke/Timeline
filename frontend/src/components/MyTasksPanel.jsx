@@ -57,6 +57,7 @@ export default function MyTasksPanel() {
   const [error, setError] = useState(false)
   const [sort,   setSort]   = useState(() => localStorage.getItem('dash.tasks.sort') || 'date')
   const [filter, setFilter] = useState(() => localStorage.getItem('dash.tasks.filter') || 'me')
+  const [workloadBy, setWorkloadBy] = useState(() => localStorage.getItem('dash.tasks.workloadBy') || 'member')
 
   useEffect(() => {
     let cancelled = false
@@ -68,6 +69,7 @@ export default function MyTasksPanel() {
 
   useEffect(() => { localStorage.setItem('dash.tasks.sort', sort) }, [sort])
   useEffect(() => { localStorage.setItem('dash.tasks.filter', filter) }, [filter])
+  useEffect(() => { localStorage.setItem('dash.tasks.workloadBy', workloadBy) }, [workloadBy])
 
   if (error) return <p className="dim">Couldn’t load tasks.</p>
   if (tasks === null) return <p className="dim">Loading…</p>
@@ -84,6 +86,15 @@ export default function MyTasksPanel() {
     m.ms += eventMs(t)
   }
   const members = Object.values(byMember).sort((a, b) => b.count - a.count)
+
+  // Same breakdown grouped by project, for the "By project" workload toggle.
+  const byProject = {}
+  for (const t of tasks) {
+    const p = (byProject[t.project.id] ??= { id: t.project.id, name: t.project.name, count: 0, ms: 0 })
+    p.count += 1
+    p.ms += eventMs(t)
+  }
+  const projectsWl = Object.values(byProject).sort((a, b) => b.count - a.count)
 
   // Filter the rows shown.
   const shown = filter === 'me'  ? tasks.filter(isMine)
@@ -156,23 +167,33 @@ export default function MyTasksPanel() {
         </div>
       </div>
 
-      {/* Workload breakdown: who holds the tasks, by % (count) and total duration. */}
+      {/* Workload breakdown: share of tasks by % (count) and total duration, by member or project. */}
       {filter !== 'me' && total > 0 && (
         <div className="workload" title="Share of tasks by count, and total duration of those tasks’ events">
-          <div className="workload-head">Workload by member</div>
-          {members.map(m => {
-            const pct = Math.round((m.count / total) * 100)
+          <div className="workload-head">
+            <span>Workload by</span>
+            <div className="workload-toggle">
+              <button type="button" className={workloadBy === 'member' ? 'is-active' : ''} onClick={() => setWorkloadBy('member')}>Member</button>
+              <button type="button" className={workloadBy === 'project' ? 'is-active' : ''} onClick={() => setWorkloadBy('project')}>Project</button>
+            </div>
+          </div>
+          {(workloadBy === 'project' ? projectsWl : members).map(row => {
+            const pct = Math.round((row.count / total) * 100)
+            const isMember = workloadBy === 'member'
+            const active = isMember && filter === row.username
             return (
               <button
                 type="button"
-                key={m.username}
-                className={`workload-row${filter === m.username ? ' is-active' : ''}`}
-                onClick={() => setFilter(filter === m.username ? 'all' : m.username)}
-                title="Click to filter to this member"
+                key={isMember ? row.username : row.id}
+                className={`workload-row${active ? ' is-active' : ''}`}
+                onClick={() => isMember
+                  ? setFilter(filter === row.username ? 'all' : row.username)
+                  : navigate(`/projects/${row.id}`)}
+                title={isMember ? 'Click to filter to this member' : 'Open this project'}
               >
-                <span className="workload-name">{m.username}{m.isMe ? ' (me)' : ''}</span>
+                <span className="workload-name">{isMember ? `${row.username}${row.isMe ? ' (me)' : ''}` : row.name}</span>
                 <span className="workload-bar"><span className="workload-bar-fill" style={{ width: `${pct}%` }} /></span>
-                <span className="workload-stat">{pct}% · {m.count} · {fmtDur(m.ms)}</span>
+                <span className="workload-stat">{pct}% · {row.count} · {fmtDur(row.ms)}</span>
               </button>
             )
           })}
