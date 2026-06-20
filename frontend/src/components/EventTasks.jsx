@@ -98,9 +98,26 @@ export default function EventTasks({ projectId, eventId, members, currentUser, r
     }
   }, [projectId, eventId, flash])
 
+  const total   = tasks.length
+  const done    = tasks.filter(t => t.status === 'done').length
+  const blocked = tasks.filter(t => t.status === 'blocked').length
+  const pct     = total ? Math.round((done / total) * 100) : 0
+
   return (
     <div className="field">
-      <label>Tasks {tasks.length > 0 && <span style={{ color: '#555' }}>({tasks.length})</span>}</label>
+      <label>Tasks</label>
+
+      {!loading && total > 0 && (
+        <div className="task-summary">
+          <div className="task-progress" title={`${pct}% of tasks done`}>
+            <div className="task-progress-bar" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="task-summary-text">
+            {done}/{total} done · {pct}%
+            {blocked > 0 && <span className="task-summary-blocked"> · {blocked} blocked</span>}
+          </span>
+        </div>
+      )}
 
       {loading ? (
         <p className="dim" style={{ fontSize: 12 }}>Loading tasks…</p>
@@ -150,6 +167,8 @@ export default function EventTasks({ projectId, eventId, members, currentUser, r
 
           {!readOnly && (
             <div className="task-row task-row--new">
+              {/* New-row people fields commit live (onChange) so clicking Add never reads
+                  stale state, unlike the blur-committed PeopleInput used for existing rows. */}
               <input
                 className="task-title"
                 value={nTitle}
@@ -157,19 +176,19 @@ export default function EventTasks({ projectId, eventId, members, currentUser, r
                 onChange={e => setNTitle(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTask() } }}
               />
-              <PeopleInput
+              <input
+                className="task-people"
+                list="event-task-people"
                 value={nOwner}
-                members={members}
-                listId="new-owner-list"
                 placeholder="Owner"
-                onCommit={setNOwner}
+                onChange={e => setNOwner(e.target.value)}
               />
-              <PeopleInput
+              <input
+                className="task-people"
+                list="event-task-people"
                 value={nAssignee}
-                members={members}
-                listId="new-assignee-list"
-                placeholder="Assignee (defaults to owner)"
-                onCommit={setNAssignee}
+                placeholder="Assignee (= owner)"
+                onChange={e => setNAssignee(e.target.value)}
               />
               <input
                 className="task-due"
@@ -180,6 +199,9 @@ export default function EventTasks({ projectId, eventId, members, currentUser, r
               <button type="button" className="btn-primary btn-sm" onClick={addTask} disabled={adding}>
                 {adding ? '…' : 'Add'}
               </button>
+              <datalist id="event-task-people">
+                {members.map(m => <option key={m.user.id} value={m.user.username}>{m.user.email}</option>)}
+              </datalist>
             </div>
           )}
         </div>

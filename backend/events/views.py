@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -78,8 +79,8 @@ class TaskViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
     @property
     def event(self):
         if not hasattr(self, '_event'):
-            self._event = Event.objects.get(
-                pk=self.kwargs['event_pk'], project_id=self.kwargs['project_pk'])
+            self._event = get_object_or_404(
+                Event, pk=self.kwargs['event_pk'], project_id=self.kwargs['project_pk'])
         return self._event
 
     def get_serializer_context(self):
