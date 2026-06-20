@@ -19,8 +19,9 @@ critical path, templates, and reusable teams.
   you're a member of. Per-project roles: **owner / editor / viewer**.
 - **Templates** — spin up a fully-formed project (categories + timed, dependency-linked
   tasks) anchored to a start date. Built-ins include *Two-Week Sprint*, *Product Launch*,
-  *Event Plan*, *Custom Shop Build*, and *MTA Rapid Prototyping (OTA)*. Save any project as
-  your own reusable template.
+  *Event Plan*, *Custom Shop Build*, *MTA Rapid Prototyping (OTA)*, *Research Other
+  Transaction (10 USC 4021)*, and *Prototype Other Transaction (10 USC 4022)*. Save any
+  project as your own reusable template.
 - **Teams** — reusable groups of users; add a whole team to a project at a chosen role in
   one click.
 - **JWT auth** with **admin-approved sign-ups** — new accounts stay inactive until you approve
