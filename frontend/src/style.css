@@ -1457,10 +1457,9 @@ fieldset.modal-body:disabled { opacity: 1; }
 /* ── Dashboard movable/resizable panels ─────────────────────────────────── */
 .dash-canvas {
   position: relative;
-  padding: 20px;
-  max-width: 1320px;
-  margin: 0 auto;
   width: 100%;
+  /* Full-bleed horizontally so windows can be dragged/resized to the screen edges. */
+  padding: 16px 0 48px;
 }
 .mpanel {
   position: absolute;
