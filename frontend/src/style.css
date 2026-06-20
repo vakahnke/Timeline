@@ -1397,3 +1397,16 @@ fieldset.modal-body:disabled { opacity: 1; }
   white-space: nowrap;
 }
 .mytask-due--overdue { color: var(--danger); font-weight: 600; }
+
+/* Task progress summary (event modal) */
+.task-summary { display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+.task-progress {
+  flex: 1 1 auto;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.task-progress-bar { height: 100%; background: #34d399; border-radius: 999px; transition: width 0.2s; }
+.task-summary-text { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.task-summary-blocked { color: var(--danger); }

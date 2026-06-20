@@ -120,6 +120,73 @@ class MyTasksFeedTests(TaskTestBase):
         self.assertEqual(self.client.get('/api/me/tasks/').status_code, 401)
 
 
+class TaskEdgeCaseTests(TaskTestBase):
+    def setUp(self):
+        super().setUp()
+        now = timezone.now()
+        self.event2 = Event.objects.create(
+            project=self.project, title='E2', start=now, end=now + timedelta(hours=1))
+
+    def test_update_assignee_by_identifier_leaves_owner(self):
+        t = Task.objects.create(event=self.event, title='T', owner=self.owner, assignee=self.owner)
+        self.client.force_authenticate(self.editor)
+        res = self.client.patch(f'{self.tasks_url()}{t.id}/',
+                                {'assignee_identifier': 'viewer'}, format='json')
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data['assignee']['username'], 'viewer')
+        self.assertEqual(res.data['owner']['username'], 'owner')  # owner untouched
+
+    def test_clear_due_date(self):
+        t = Task.objects.create(event=self.event, title='T', owner=self.owner,
+                                assignee=self.owner, due_date='2026-07-01')
+        self.client.force_authenticate(self.editor)
+        res = self.client.patch(f'{self.tasks_url()}{t.id}/', {'due_date': None}, format='json')
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertIsNone(res.data['due_date'])
+
+    def test_viewer_cannot_patch_or_delete(self):
+        t = Task.objects.create(event=self.event, title='T', owner=self.owner, assignee=self.owner)
+        self.client.force_authenticate(self.viewer)
+        self.assertEqual(self.client.patch(f'{self.tasks_url()}{t.id}/',
+                                           {'status': 'done'}, format='json').status_code, 403)
+        self.assertEqual(self.client.delete(f'{self.tasks_url()}{t.id}/').status_code, 403)
+
+    def test_task_list_is_scoped_to_its_event(self):
+        Task.objects.create(event=self.event,  title='in-ev1', owner=self.owner, assignee=self.owner)
+        Task.objects.create(event=self.event2, title='in-ev2', owner=self.owner, assignee=self.owner)
+        self.client.force_authenticate(self.editor)
+        res = self.client.get(self.tasks_url(self.event2))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual([t['title'] for t in res.data], ['in-ev2'])
+
+    def test_tasks_ordered_by_order_field(self):
+        Task.objects.create(event=self.event, title='second', owner=self.owner, assignee=self.owner, order=2)
+        Task.objects.create(event=self.event, title='first',  owner=self.owner, assignee=self.owner, order=1)
+        self.client.force_authenticate(self.viewer)
+        res = self.client.get(self.tasks_url())
+        self.assertEqual([t['title'] for t in res.data], ['first', 'second'])
+
+    def test_create_under_event_from_another_project_is_404(self):
+        other = Project.objects.create(name='Other', owner=self.outsider)
+        now = timezone.now()
+        foreign = Event.objects.create(project=other, title='F', start=now, end=now + timedelta(hours=1))
+        self.client.force_authenticate(self.editor)  # member of self.project, NOT 'other'
+        url = f'/api/projects/{self.project.id}/events/{foreign.id}/tasks/'
+        self.assertEqual(self.client.post(url, {'title': 'x'}, format='json').status_code, 404)
+
+    def test_list_under_mismatched_event_does_not_leak(self):
+        other = Project.objects.create(name='Other2', owner=self.outsider)
+        now = timezone.now()
+        foreign = Event.objects.create(project=other, title='F2', start=now, end=now + timedelta(hours=1))
+        Task.objects.create(event=foreign, title='secret', owner=self.outsider, assignee=self.outsider)
+        self.client.force_authenticate(self.editor)
+        url = f'/api/projects/{self.project.id}/events/{foreign.id}/tasks/'
+        res = self.client.get(url)
+        # The event doesn't belong to this project -> 404, so the foreign task never leaks.
+        self.assertEqual(res.status_code, 404)
+        self.assertNotIn('secret', res.content.decode())
+
+
 class MembersListAccessTests(TaskTestBase):
     def test_non_owner_member_can_list_members(self):
         # Needed so editors/viewers can populate the task owner/assignee pickers.
