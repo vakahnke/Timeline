@@ -179,6 +179,102 @@ BUILTIN_TEMPLATES = {
             {'title': 'Award follow-on production OT / transition',  'category': 'Transition & Production', 'start_offset_minutes': 49 * MONTH + 15 * DAY, 'duration_minutes': 5 * MONTH, 'notes': 'Sole-source follow-on production OT or transition to the next acquisition pathway.',       'percent_complete': 0, 'depends_on': [22]},
         ],
     },
+    'research_ot': {
+        'name': 'Research Other Transaction (10 USC 4021)',
+        'description': 'A research Other Transaction under 10 U.S.C. 4021 (formerly 10 U.S.C. 2371) for basic, '
+                       'applied, or advanced research — typically with universities, labs, nontraditional '
+                       'performers, or a consortium, and cost-shared. Covers planning and the 4021 eligibility '
+                       'determination (significant nontraditional participation or at least one-third non-Federal '
+                       'cost share), announcement/solicitation, white-paper and proposal evaluation, negotiation '
+                       'and award, milestone-based research execution, reporting, and closeout. (Per the DoD OT '
+                       'Guide / OSD Guide to Research Other Transactions.)',
+        'categories': [
+            {'name': 'Planning & Authority',   'color': '#818cf8'},
+            {'name': 'Solicitation',           'color': '#fbbf24'},
+            {'name': 'Evaluation & Selection', 'color': '#ff8c4a'},
+            {'name': 'Negotiation & Award',    'color': '#4a88ff'},
+            {'name': 'Research Execution',     'color': '#4adcff'},
+            {'name': 'Reporting & Closeout',   'color': '#4aff9e'},
+        ],
+        'tasks': [
+            # ── Planning & Authority ────────────────────────────────────────────
+            {'title': 'Define research objectives & scope',          'category': 'Planning & Authority',   'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Frame the basic/applied/advanced research need and intended outcomes. Research OTs (4021) advance knowledge, not a fieldable prototype.', 'percent_complete': 0, 'depends_on': []},
+            {'title': 'Engage the research community',                'category': 'Planning & Authority',   'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Market research with universities, labs, nontraditional performers, and/or a consortium to gauge approaches and partners.', 'percent_complete': 0, 'depends_on': []},
+            {'title': 'Confirm 4021 eligibility & document it',       'category': 'Planning & Authority',   'start_offset_minutes': 1 * MONTH,          'duration_minutes': 2 * WEEK,  'notes': 'Document the 4021 condition met: significant nontraditional defense contractor participation, OR at least one-third of cost from non-Federal sources.', 'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Develop research OT approach & cost-share plan','category': 'Planning & Authority',  'start_offset_minutes': 1 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Acquisition approach: funding, cost-sharing arrangement, data/IP strategy, and milestone structure.', 'percent_complete': 0, 'depends_on': [0, 1]},
+            {'title': 'Agreements Officer / legal review',           'category': 'Planning & Authority',   'start_offset_minutes': 1 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Agreements Officer and counsel review the approach and authority determination.', 'percent_complete': 0, 'depends_on': [3]},
+            # ── Solicitation ────────────────────────────────────────────────────
+            {'title': 'Develop announcement & evaluation criteria',  'category': 'Solicitation',           'start_offset_minutes': 2 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Draft the announcement/solicitation (e.g., via consortium or competitive announcement) and the technical/cost-share evaluation criteria.', 'percent_complete': 0, 'depends_on': [2, 4]},
+            {'title': 'Publish announcement / Request for White Papers','category': 'Solicitation',         'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Solicit white papers from the research community / consortium members.', 'percent_complete': 0, 'depends_on': [5]},
+            {'title': "Proposers' day / Q&A",                        'category': 'Solicitation',           'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 2 * DAY,  'notes': 'Industry/academia day to clarify the need and answer questions during the open period.', 'percent_complete': 0, 'depends_on': [5]},
+            # ── Evaluation & Selection ──────────────────────────────────────────
+            {'title': 'Evaluate white papers',                       'category': 'Evaluation & Selection', 'start_offset_minutes': 3 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Assess technical merit and proposed cost share; identify the most promising concepts.', 'percent_complete': 0, 'depends_on': [6]},
+            {'title': 'Invite & evaluate full research proposals',    'category': 'Evaluation & Selection', 'start_offset_minutes': 4 * MONTH + 1 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Request and evaluate full proposals from invited performers (technical, cost, and cost-share).', 'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Document selection rationale',                'category': 'Evaluation & Selection', 'start_offset_minutes': 5 * MONTH + 1 * WEEK,'duration_minutes': 1 * WEEK, 'notes': 'Record the selection basis to support the agreement file / agreement analysis.', 'percent_complete': 0, 'depends_on': [9]},
+            # ── Negotiation & Award ─────────────────────────────────────────────
+            {'title': 'Negotiate terms (scope, cost share, IP/data)','category': 'Negotiation & Award',    'start_offset_minutes': 5 * MONTH + 2 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Negotiate statement of work, cost-share, milestones, and data/IP rights with the selected performer(s).', 'percent_complete': 0, 'depends_on': [10]},
+            {'title': 'Agreement analysis & cost reasonableness',    'category': 'Negotiation & Award',    'start_offset_minutes': 6 * MONTH + 2 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Prepare the agreement analysis documenting reasonableness of cost and key terms.', 'percent_complete': 0, 'depends_on': [11]},
+            {'title': 'Award research OT agreement',                 'category': 'Negotiation & Award',    'start_offset_minutes': 7 * MONTH,          'duration_minutes': 3 * DAY,  'notes': 'Agreements Officer signs the 4021 research OT agreement.', 'percent_complete': 0, 'depends_on': [12]},
+            # ── Research Execution ──────────────────────────────────────────────
+            {'title': 'Kickoff & research management plan',          'category': 'Research Execution',     'start_offset_minutes': 7 * MONTH + 1 * WEEK,'duration_minutes': 1 * WEEK, 'notes': 'Align on tasks, schedule, milestones, reporting cadence, and points of contact.', 'percent_complete': 0, 'depends_on': [13]},
+            {'title': 'Execute research — Phase 1',                  'category': 'Research Execution',     'start_offset_minutes': 7 * MONTH + 2 * WEEK,'duration_minutes': 6 * MONTH,'notes': 'Perform the first research phase against payable milestones.', 'percent_complete': 0, 'depends_on': [14]},
+            {'title': 'Payable milestone / progress review',         'category': 'Research Execution',     'start_offset_minutes': 13 * MONTH + 2 * WEEK,'duration_minutes': 3 * DAY, 'notes': 'Verify milestone completion and authorize the associated payment; adjust scope if warranted.', 'percent_complete': 0, 'depends_on': [15]},
+            {'title': 'Execute research — Phase 2',                  'category': 'Research Execution',     'start_offset_minutes': 13 * MONTH + 3 * WEEK,'duration_minutes': 6 * MONTH,'notes': 'Continue the research effort through the remaining milestones.', 'percent_complete': 0, 'depends_on': [16]},
+            # ── Reporting & Closeout ────────────────────────────────────────────
+            {'title': 'Deliver interim reports & data',              'category': 'Reporting & Closeout',   'start_offset_minutes': 13 * MONTH + 2 * WEEK,'duration_minutes': 1 * WEEK,'notes': 'Submit interim technical reports and data deliverables per the agreement.', 'percent_complete': 0, 'depends_on': [15]},
+            {'title': 'Final technical report & results',            'category': 'Reporting & Closeout',   'start_offset_minutes': 19 * MONTH + 3 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Deliver final report and research results; capture lessons and transition opportunities.', 'percent_complete': 0, 'depends_on': [17]},
+            {'title': 'Agreement closeout',                          'category': 'Reporting & Closeout',   'start_offset_minutes': 20 * MONTH + 3 * WEEK,'duration_minutes': 3 * WEEK,'notes': 'Final payments, property/data disposition, and administrative closeout of the agreement.', 'percent_complete': 0, 'depends_on': [19]},
+        ],
+    },
+    'prototype_ot': {
+        'name': 'Prototype Other Transaction (10 USC 4022)',
+        'description': 'A prototype Other Transaction under 10 U.S.C. 4022 (formerly 10 U.S.C. 2371b), executed '
+                       'via a consortium, from need through follow-on production. Covers the 4022 eligibility '
+                       'determination (significant nontraditional participation or at least one-third cost share), '
+                       'market research, the problem statement, the Request for White Papers (RWP) and Request for '
+                       'Prototype Proposals (RPP), evaluation and down-select, negotiation and competitive award, '
+                       'prototype execution against payable milestones, the successful-completion determination, '
+                       'and the sole-source follow-on production OT it enables. (Per the DoD OT Guide.)',
+        'categories': [
+            {'name': 'Planning & Authority',          'color': '#818cf8'},
+            {'name': 'Solicitation (Consortium)',     'color': '#fbbf24'},
+            {'name': 'Evaluation & Down-Select',      'color': '#ff8c4a'},
+            {'name': 'Negotiation & Award',           'color': '#4a88ff'},
+            {'name': 'Prototype Execution',           'color': '#4adcff'},
+            {'name': 'Completion & Production',        'color': '#c44aff'},
+        ],
+        'tasks': [
+            # ── Planning & Authority ────────────────────────────────────────────
+            {'title': 'Define capability need & problem statement',  'category': 'Planning & Authority',      'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Frame the capability gap and the problem the prototype will solve.', 'percent_complete': 0, 'depends_on': []},
+            {'title': 'Market research & engage consortium/industry', 'category': 'Planning & Authority',      'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Survey the market and the consortium membership for viable prototype approaches.', 'percent_complete': 0, 'depends_on': []},
+            {'title': 'Confirm 4022 eligibility & document it',      'category': 'Planning & Authority',      'start_offset_minutes': 1 * MONTH,          'duration_minutes': 2 * WEEK,  'notes': 'Document the 4022 condition met: a nontraditional defense contractor participating to a significant extent; all significant participants small/nontraditional; at least one-third non-Federal cost share; or a senior procurement executive determination.', 'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Develop OT acquisition approach',             'category': 'Planning & Authority',      'start_offset_minutes': 1 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Approach incl. competitive procedures and the intent to enable a sole-source follow-on production OT.', 'percent_complete': 0, 'depends_on': [0, 1]},
+            {'title': 'Funding & payable-milestone strategy',        'category': 'Planning & Authority',      'start_offset_minutes': 1 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Define funding, payable-milestone structure, and data/IP strategy.', 'percent_complete': 0, 'depends_on': [3]},
+            # ── Solicitation (Consortium) ───────────────────────────────────────
+            {'title': 'Problem statement & evaluation criteria',     'category': 'Solicitation (Consortium)', 'start_offset_minutes': 2 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'With the consortium manager, finalize the problem statement and evaluation criteria.', 'percent_complete': 0, 'depends_on': [2, 4]},
+            {'title': 'Issue Request for White Papers (RWP)',        'category': 'Solicitation (Consortium)', 'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 3 * WEEK, 'notes': 'Solicit white papers from consortium members.', 'percent_complete': 0, 'depends_on': [5]},
+            {'title': "Proposers' day / industry Q&A",               'category': 'Solicitation (Consortium)', 'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 2 * DAY,  'notes': 'Clarify the problem statement and answer questions during the open period.', 'percent_complete': 0, 'depends_on': [5]},
+            # ── Evaluation & Down-Select ────────────────────────────────────────
+            {'title': 'Evaluate white papers',                       'category': 'Evaluation & Down-Select',  'start_offset_minutes': 3 * MONTH + 2 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Assess concepts against the criteria.', 'percent_complete': 0, 'depends_on': [6]},
+            {'title': 'Down-select & invite proposals',              'category': 'Evaluation & Down-Select',  'start_offset_minutes': 4 * MONTH,          'duration_minutes': 1 * WEEK,  'notes': 'Invite the strongest offerors to submit prototype proposals.', 'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Issue Request for Prototype Proposals (RPP)', 'category': 'Evaluation & Down-Select',  'start_offset_minutes': 4 * MONTH + 1 * WEEK,'duration_minutes': 3 * WEEK, 'notes': 'Solicit detailed prototype proposals from the down-selected offerors.', 'percent_complete': 0, 'depends_on': [9]},
+            {'title': 'Evaluate prototype proposals',                'category': 'Evaluation & Down-Select',  'start_offset_minutes': 5 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Technical and cost evaluation; recommend the awardee.', 'percent_complete': 0, 'depends_on': [10]},
+            # ── Negotiation & Award ─────────────────────────────────────────────
+            {'title': 'Negotiate agreement (SOW, milestones, IP)',   'category': 'Negotiation & Award',       'start_offset_minutes': 5 * MONTH + 3 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Negotiate statement of work, payable milestones, and data/IP rights.', 'percent_complete': 0, 'depends_on': [11]},
+            {'title': 'Agreement analysis & price reasonableness',   'category': 'Negotiation & Award',       'start_offset_minutes': 6 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Document reasonableness of the negotiated price and key terms.', 'percent_complete': 0, 'depends_on': [12]},
+            {'title': 'Award prototype OT (competitive)',            'category': 'Negotiation & Award',       'start_offset_minutes': 7 * MONTH + 1 * WEEK,'duration_minutes': 3 * DAY,  'notes': 'Competitively awarded prototype OT — a successful prototype enables a sole-source follow-on production OT (4022(f)).', 'percent_complete': 0, 'depends_on': [13]},
+            # ── Prototype Execution ─────────────────────────────────────────────
+            {'title': 'Kickoff & integrated master schedule',        'category': 'Prototype Execution',       'start_offset_minutes': 7 * MONTH + 2 * WEEK,'duration_minutes': 1 * WEEK, 'notes': 'Stand up the effort: schedule, milestones, and management cadence.', 'percent_complete': 0, 'depends_on': [14]},
+            {'title': 'Prototype design & development',              'category': 'Prototype Execution',       'start_offset_minutes': 7 * MONTH + 3 * WEEK,'duration_minutes': 4 * MONTH,'notes': 'Mature the design; define interfaces and the build plan.', 'percent_complete': 0, 'depends_on': [15]},
+            {'title': 'Payable milestone review',                    'category': 'Prototype Execution',       'start_offset_minutes': 9 * MONTH + 3 * WEEK,'duration_minutes': 3 * DAY,  'notes': 'Verify milestone completion and authorize payment; periodic throughout execution.', 'percent_complete': 0, 'depends_on': [15]},
+            {'title': 'Build / fabricate prototype',                 'category': 'Prototype Execution',       'start_offset_minutes': 11 * MONTH + 3 * WEEK,'duration_minutes': 5 * MONTH,'notes': 'Fabricate and integrate the fieldable prototype.', 'percent_complete': 0, 'depends_on': [16]},
+            {'title': 'Prototype test & demonstration',             'category': 'Prototype Execution',       'start_offset_minutes': 16 * MONTH + 3 * WEEK,'duration_minutes': 3 * MONTH,'notes': 'Demonstrate the prototype against the requirement in a relevant environment.', 'percent_complete': 0, 'depends_on': [18]},
+            # ── Completion & Production ──────────────────────────────────────────
+            {'title': 'Document successful completion',              'category': 'Completion & Production',    'start_offset_minutes': 19 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK,'notes': 'Successful-completion determination — the predicate for a sole-source follow-on production OT.', 'percent_complete': 0, 'depends_on': [19]},
+            {'title': 'Production readiness / transition decision',  'category': 'Completion & Production',    'start_offset_minutes': 20 * MONTH + 1 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Decide whether to pursue follow-on production or transition to another pathway.', 'percent_complete': 0, 'depends_on': [20]},
+            {'title': 'Award follow-on production OT / transition',  'category': 'Completion & Production',    'start_offset_minutes': 21 * MONTH + 1 * WEEK,'duration_minutes': 4 * MONTH,'notes': 'Sole-source follow-on production OT (no further competition required) or transition to the next acquisition pathway.', 'percent_complete': 0, 'depends_on': [21]},
+        ],
+    },
     'homebrew': {
         'name': 'Homebrew a Batch of Ale',
         'description': 'End-to-end plan for brewing a 5-gallon all-grain or extract ale, from recipe prep and brew day through fermentation, bottling, and conditioning. Spans roughly 5-6 weeks from brew day to first pour.',
