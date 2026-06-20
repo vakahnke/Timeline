@@ -750,13 +750,23 @@ canvas.ruler {
 
 /* ── Depends-on checkbox list (modal) ─────────────────────────────────────── */
 .depends-list {
-  height: 280px;
-  overflow-y: scroll;
+  max-height: 240px;        /* grows with content, scrolls only when long */
+  overflow-y: auto;
   border: 1px solid var(--border-mid);
   border-radius: 8px;
   background: rgba(255,255,255,0.02);
   padding: 4px 0;
 }
+.dep-toggle {
+  margin-top: 6px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.dep-toggle:hover { background: none; border: none; color: var(--text-bright); text-decoration: underline; }
 .field .depends-item {
   display: flex;
   align-items: center;
@@ -1296,7 +1306,7 @@ fieldset.modal-body:disabled { opacity: 1; }
   }
   .modal-body { flex: 0 0 auto; min-height: auto; overflow: visible; }
   .fields-row { flex-direction: column; gap: 12px; }
-  .depends-list { height: 190px; }   /* don't let the predecessor list dominate a phone modal */
+  .depends-list { max-height: 190px; }   /* don't let the predecessor list dominate a phone modal */
   .invite-row { flex-wrap: wrap; }
   .invite-row input { flex: 1 0 100%; }
   .field input, .field textarea, .field select,
