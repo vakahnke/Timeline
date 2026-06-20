@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import EventTasksSummary from './EventTasksSummary'
+import { useUndoableForm } from '../hooks/useUndoableForm'
 
 function fmtDateTime(dateStr) {
   const d = new Date(dateStr)
@@ -21,37 +22,45 @@ function toLocalISO(dateStr) {
 export default function EventModal({ eventId, defaults, events, tracks, projectId, readOnly = false, escDisabled = false, tasksReloadToken, onManageTasks, onSave, onDelete, onClose }) {
   const existing = eventId ? events.find(e => e.id === eventId) : null
 
-  const [title,     setTitle]     = useState('')
-  const [start,     setStart]     = useState('')
-  const [end,       setEnd]       = useState('')
-  const [track,     setTrack]     = useState('')
-  const [notes,     setNotes]     = useState('')
-  const [pct,       setPct]       = useState(0)
-  const [dependsOn, setDependsOn] = useState([])
+  // Editable fields live in one undoable object so Ctrl+Z / the modal's ↶ ↷ can revert
+  // edits (including predecessor toggles) before you save.
+  const { value: form, set: setForm, reset: resetForm, undo, redo, canUndo, canRedo } = useUndoableForm({
+    title: '', start: '', end: '', track: '', notes: '', pct: 0, dependsOn: [],
+  })
+  const { title, start, end, track, notes, pct, dependsOn } = form
+
   const [showAllDeps, setShowAllDeps] = useState(false)
   const [error,     setError]     = useState('')
   const [saving,    setSaving]    = useState(false)
 
+  // Field setters. `coalesce` keeps a run of edits to one field as a single undo step.
+  const setField = useCallback((key, value, opts) =>
+    setForm(f => ({ ...f, [key]: value }), opts), [setForm])
+
   useEffect(() => {
+    let init
     if (existing) {
-      setTitle(existing.title)
-      setStart(toLocalISO(existing.start))
-      setEnd(toLocalISO(existing.end))
-      setTrack(existing.category)
-      setNotes(existing.notes || '')
-      setPct(existing.percent_complete ?? 0)
-      setDependsOn(existing.depends_on ?? [])
+      init = {
+        title: existing.title,
+        start: toLocalISO(existing.start),
+        end:   toLocalISO(existing.end),
+        track: existing.category,
+        notes: existing.notes || '',
+        pct:   existing.percent_complete ?? 0,
+        dependsOn: existing.depends_on ?? [],
+      }
     } else {
       const now = new Date()
-      setTitle('')
-      setStart(defaults?.start ?? toLocalISO(now))
-      setEnd(defaults?.end ?? toLocalISO(new Date(now.getTime() + 3_600_000)))
-      setTrack(defaults?.category ?? tracks[0]?.name ?? '')
-      setNotes('')
-      setPct(0)
-      setDependsOn([])
+      init = {
+        title: '',
+        start: defaults?.start ?? toLocalISO(now),
+        end:   defaults?.end ?? toLocalISO(new Date(now.getTime() + 3_600_000)),
+        track: defaults?.category ?? tracks[0]?.name ?? '',
+        notes: '', pct: 0, dependsOn: [],
+      }
     }
-    setShowAllDeps(false)  // collapse back to just the selected predecessors
+    resetForm(init)             // also clears undo/redo history for the new event
+    setShowAllDeps(false)       // collapse back to just the selected predecessors
     setError('')
   }, [eventId])
 
@@ -76,7 +85,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
       setError('Save failed: ' + err.message)
       setSaving(false)
     }
-  }, [title, start, end, track, notes, pct, dependsOn, onSave])
+  }, [form, onSave])
 
   const handleDelete = useCallback(async () => {
     const ev = events.find(e => e.id === eventId)
@@ -90,12 +99,17 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
   useEffect(() => {
     const onKey = (e) => {
       if (escDisabled) return  // a task-manager modal is layered on top; let it handle keys
-      if (e.key === 'Escape') onClose()
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleSave()
+      if (e.key === 'Escape') { onClose(); return }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { handleSave(); return }
+      if (readOnly || !(e.ctrlKey || e.metaKey)) return
+      const k = e.key.toLowerCase()
+      // Take over Ctrl/⌘+Z to undo the whole form edit, not just text in one field.
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
+      else if (k === 'z' || k === 'y') { e.preventDefault(); redo() }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, handleSave, escDisabled])
+  }, [onClose, handleSave, escDisabled, readOnly, undo, redo])
 
   const candidateDeps = events.filter(e => e.id !== eventId)
   const selectedDeps  = candidateDeps.filter(e => dependsOn.includes(e.id))
@@ -106,7 +120,15 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
       <div className="modal">
         <div className="modal-head">
           <h2>{readOnly ? 'Event' : existing ? 'Edit Event' : 'New Event'}</h2>
-          <button className="btn-close" onClick={onClose}>&#10005;</button>
+          <div className="modal-head-actions">
+            {!readOnly && (
+              <>
+                <button type="button" className="btn-icon" onClick={undo} disabled={!canUndo} title="Undo  ·  Ctrl/⌘ + Z">↶</button>
+                <button type="button" className="btn-icon" onClick={redo} disabled={!canRedo} title="Redo  ·  Ctrl/⌘ + Shift + Z">↷</button>
+              </>
+            )}
+            <button className="btn-close" onClick={onClose}>&#10005;</button>
+          </div>
         </div>
 
         <fieldset className="modal-body" disabled={readOnly}>
@@ -115,7 +137,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
             <input
               type="text"
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={e => setField('title', e.target.value, { field: 'title', coalesce: true })}
               placeholder="Event title"
               autoFocus={!readOnly}
             />
@@ -124,17 +146,17 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
           <div className="fields-row">
             <div className="field">
               <label>Start</label>
-              <input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} />
+              <input type="datetime-local" value={start} onChange={e => setField('start', e.target.value, { field: 'start', coalesce: true })} />
             </div>
             <div className="field">
               <label>End</label>
-              <input type="datetime-local" value={end} onChange={e => setEnd(e.target.value)} />
+              <input type="datetime-local" value={end} onChange={e => setField('end', e.target.value, { field: 'end', coalesce: true })} />
             </div>
           </div>
 
           <div className="field">
             <label>Category</label>
-            <select value={track} onChange={e => setTrack(e.target.value)}>
+            <select value={track} onChange={e => setField('track', e.target.value)}>
               {tracks.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
             </select>
           </div>
@@ -154,8 +176,11 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
                         type="checkbox"
                         checked={dependsOn.includes(e.id)}
                         onChange={ev => {
-                          if (ev.target.checked) setDependsOn(p => [...p, e.id])
-                          else setDependsOn(p => p.filter(id => id !== e.id))
+                          const checked = ev.target.checked
+                          setForm(f => ({
+                            ...f,
+                            dependsOn: checked ? [...f.dependsOn, e.id] : f.dependsOn.filter(id => id !== e.id),
+                          }))  // discrete: each toggle is its own undo step
                         }}
                       />
                       <span className="dep-swatch" style={{ background: e.color || '#4a88ff' }} />
@@ -185,7 +210,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
                 type="range"
                 min="0" max="100" step="5"
                 value={pct}
-                onChange={e => setPct(Number(e.target.value))}
+                onChange={e => setField('pct', Number(e.target.value), { field: 'pct', coalesce: true })}
               />
               <span className="pct-value">{pct}%</span>
             </div>
@@ -193,7 +218,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
 
           <div className="field">
             <label>Notes</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional notes…" />
+            <textarea value={notes} onChange={e => setField('notes', e.target.value, { field: 'notes', coalesce: true })} placeholder="Optional notes…" />
           </div>
 
           {existing ? (
