@@ -145,7 +145,9 @@ class MyTaskSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_event(obj):
-        return {'id': obj.event_id, 'title': obj.event.title}
+        # start/end let the dashboard attribute each task's event duration to its assignee.
+        return {'id': obj.event_id, 'title': obj.event.title,
+                'start': obj.event.start, 'end': obj.event.end}
 
     @staticmethod
     def get_project(obj):
