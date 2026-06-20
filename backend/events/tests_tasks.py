@@ -202,6 +202,24 @@ class TaskEdgeCaseTests(TaskTestBase):
         self.assertNotIn('secret', res.content.decode())
 
 
+class ProjectTasksViewTests(TaskTestBase):
+    def url(self):
+        return f'/api/projects/{self.project.id}/tasks/'
+
+    def test_member_sees_all_tasks_in_project(self):
+        Task.objects.create(event=self.event, title='A', owner=self.owner, assignee=self.viewer)
+        Task.objects.create(event=self.event, title='B', owner=self.owner, assignee=self.editor)
+        self.client.force_authenticate(self.viewer)
+        res = self.client.get(self.url())
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(sorted(t['title'] for t in res.data), ['A', 'B'])
+        self.assertIn('start', res.data[0]['event'])  # duration data present
+
+    def test_outsider_denied(self):
+        self.client.force_authenticate(self.outsider)
+        self.assertEqual(self.client.get(self.url()).status_code, 403)
+
+
 class MembersListAccessTests(TaskTestBase):
     def test_non_owner_member_can_list_members(self):
         # Needed so editors/viewers can populate the task owner/assignee pickers.

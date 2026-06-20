@@ -10,6 +10,7 @@ import EventModal from '../components/EventModal'
 import TaskManagerModal from '../components/TaskManagerModal'
 import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
+import WorkloadModal from '../components/WorkloadModal'
 
 function buildTracks(events, apiCategories = [], prev = []) {
   const apiMap   = Object.fromEntries(apiCategories.map(c => [c.name, c.color]).filter(([, v]) => v))
@@ -74,6 +75,7 @@ export default function ProjectTimeline() {
   const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task-manager close
   const [catModal,       setCatModal]     = useState(null)
   const [showMembers,    setShowMembers]  = useState(false)
+  const [showWorkloads,  setShowWorkloads] = useState(false)
   const [loading,        setLoading]      = useState(true)
   const [apiError,       setApiError]     = useState(null)
   const [accessError,    setAccessError]  = useState(null)
@@ -385,6 +387,7 @@ export default function ProjectTimeline() {
         canUndo={undoStack.length > 0}
         canRedo={redoStack.length > 0}
         onOpenMembers={() => setShowMembers(true)}
+        onManageWorkloads={() => setShowWorkloads(true)}
         onSaveTemplate={saveAsTemplate}
         pxPerHour={pxPerHour}
         onZoomIn={() => timelineRef.current?.zoomBy(1.6)}
@@ -456,6 +459,15 @@ export default function ProjectTimeline() {
           projectId={projectId}
           isOwner={isOwner}
           onClose={() => setShowMembers(false)}
+        />
+      )}
+      {showWorkloads && (
+        <WorkloadModal
+          projectId={projectId}
+          projectName={project?.name}
+          members={members}
+          canEdit={canEdit}
+          onClose={() => setShowWorkloads(false)}
         />
       )}
     </div>

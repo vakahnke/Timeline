@@ -8,7 +8,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from events.views import CategoryViewSet, EventViewSet, MyTasksView, TaskViewSet
+from events.views import CategoryViewSet, EventViewSet, MyTasksView, ProjectTasksView, TaskViewSet
 
 from .auth import EmailOrUsernameTokenObtainPairView
 from .views import (
@@ -40,6 +40,7 @@ urlpatterns = [
     path('auth/logout/',        LogoutView.as_view(),                         name='logout'),
     path('me/',                 MeView.as_view(),              name='me'),
     path('me/tasks/',           MyTasksView.as_view(),         name='my-tasks'),
+    path('projects/<int:project_pk>/tasks/', ProjectTasksView.as_view(), name='project-tasks'),
     path('health/',             HealthView.as_view(),          name='health'),
 
     # API documentation (OpenAPI schema + Swagger UI + ReDoc).

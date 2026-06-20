@@ -1589,3 +1589,42 @@ fieldset.modal-body:disabled { opacity: 1; }
 .workload-bar { flex: 1 1 auto; height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
 .workload-bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
 .workload-stat { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Manage Workloads modal */
+.btn-workloads { background: rgba(129,140,248,0.08); border-color: rgba(129,140,248,0.25); color: var(--accent); }
+.btn-workloads:hover { background: rgba(129,140,248,0.2); border-color: rgba(129,140,248,0.45); color: #a5b4fc; }
+.wl-listhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.wl-tasks { display: flex; flex-direction: column; gap: 6px; }
+.wl-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+.wl-task-title { flex: 1 1 auto; color: var(--text-bright); font-size: 12px; min-width: 80px; }
+.wl-task-ctx  { flex: 0 1 auto; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.wl-task-due  { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wl-task-assignee {
+  flex: 0 0 130px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-mid);
+  color: var(--text-bright);
+  font-size: 11.5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.wl-task-assignee option { background: #1a2233; color: #e2e8f0; }
+.wl-task-assignee:disabled { opacity: 0.6; }
