@@ -28,6 +28,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
   const [notes,     setNotes]     = useState('')
   const [pct,       setPct]       = useState(0)
   const [dependsOn, setDependsOn] = useState([])
+  const [showAllDeps, setShowAllDeps] = useState(false)
   const [error,     setError]     = useState('')
   const [saving,    setSaving]    = useState(false)
 
@@ -50,6 +51,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
       setPct(0)
       setDependsOn([])
     }
+    setShowAllDeps(false)  // collapse back to just the selected predecessors
     setError('')
   }, [eventId])
 
@@ -94,6 +96,10 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose, handleSave])
 
+  const candidateDeps = events.filter(e => e.id !== eventId)
+  const selectedDeps  = candidateDeps.filter(e => dependsOn.includes(e.id))
+  const shownDeps     = showAllDeps ? candidateDeps : selectedDeps
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -133,26 +139,41 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
           </div>
 
 
-          {events.filter(e => e.id !== eventId).length > 0 && (
+          {candidateDeps.length > 0 && (
             <div className="field">
-              <label>Depends on <span style={{ color: '#555' }}>(predecessors)</span></label>
-              <div className="depends-list">
-                {events.filter(e => e.id !== eventId).map(e => (
-                  <label key={e.id} className="depends-item">
-                    <input
-                      type="checkbox"
-                      checked={dependsOn.includes(e.id)}
-                      onChange={ev => {
-                        if (ev.target.checked) setDependsOn(p => [...p, e.id])
-                        else setDependsOn(p => p.filter(id => id !== e.id))
-                      }}
-                    />
-                    <span className="dep-swatch" style={{ background: e.color || '#4a88ff' }} />
-                    <span className="dep-title">{e.title}</span>
-                    <span className="dep-time">{fmtDateTime(e.start)} – {fmtTime(e.end)}</span>
-                  </label>
-                ))}
-              </div>
+              <label>
+                Depends on <span style={{ color: '#555' }}>(predecessors)</span>
+                {selectedDeps.length > 0 && <span style={{ color: '#555' }}> · {selectedDeps.length} selected</span>}
+              </label>
+              {shownDeps.length > 0 && (
+                <div className="depends-list">
+                  {shownDeps.map(e => (
+                    <label key={e.id} className="depends-item">
+                      <input
+                        type="checkbox"
+                        checked={dependsOn.includes(e.id)}
+                        onChange={ev => {
+                          if (ev.target.checked) setDependsOn(p => [...p, e.id])
+                          else setDependsOn(p => p.filter(id => id !== e.id))
+                        }}
+                      />
+                      <span className="dep-swatch" style={{ background: e.color || '#4a88ff' }} />
+                      <span className="dep-title">{e.title}</span>
+                      <span className="dep-time">{fmtDateTime(e.start)} – {fmtTime(e.end)}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {!showAllDeps && selectedDeps.length === 0 && (
+                <p className="dim" style={{ fontSize: 12, margin: '2px 0' }}>No predecessors selected.</p>
+              )}
+              {!readOnly && (
+                <button type="button" className="dep-toggle" onClick={() => setShowAllDeps(v => !v)}>
+                  {showAllDeps
+                    ? '▲ Show selected only'
+                    : `▾ Add predecessor (${candidateDeps.length - selectedDeps.length} available)`}
+                </button>
+              )}
             </div>
           )}
 
