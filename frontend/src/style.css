@@ -1522,3 +1522,8 @@ fieldset.modal-body:disabled { opacity: 1; }
   color: var(--text-dim);
   margin: 0 0 6px;
 }
+
+/* Per-panel zoom controls */
+.mpanel-zoom { display: flex; align-items: center; gap: 2px; margin-left: 2px; }
+.btn-icon--sm { width: 22px; height: 22px; font-size: 12px; }
+.btn-icon--sm.zoom-val { width: auto; min-width: 38px; padding: 0 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
