@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import EventTasks from './EventTasks'
+import EventTasksSummary from './EventTasksSummary'
 
 function fmtDateTime(dateStr) {
   const d = new Date(dateStr)
@@ -18,7 +18,7 @@ function toLocalISO(dateStr) {
   return new Date(d - off).toISOString().slice(0, 16)
 }
 
-export default function EventModal({ eventId, defaults, events, tracks, projectId, members = [], currentUser, readOnly = false, onSave, onDelete, onClose }) {
+export default function EventModal({ eventId, defaults, events, tracks, projectId, readOnly = false, escDisabled = false, tasksReloadToken, onManageTasks, onSave, onDelete, onClose }) {
   const existing = eventId ? events.find(e => e.id === eventId) : null
 
   const [title,     setTitle]     = useState('')
@@ -89,12 +89,13 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
   // Keyboard shortcut
   useEffect(() => {
     const onKey = (e) => {
+      if (escDisabled) return  // a task-manager modal is layered on top; let it handle keys
       if (e.key === 'Escape') onClose()
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleSave()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, handleSave])
+  }, [onClose, handleSave, escDisabled])
 
   const candidateDeps = events.filter(e => e.id !== eventId)
   const selectedDeps  = candidateDeps.filter(e => dependsOn.includes(e.id))
@@ -196,12 +197,12 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
           </div>
 
           {existing ? (
-            <EventTasks
+            <EventTasksSummary
               projectId={projectId}
               eventId={eventId}
-              members={members}
-              currentUser={currentUser}
+              reloadToken={tasksReloadToken}
               readOnly={readOnly}
+              onManage={() => onManageTasks?.(eventId)}
             />
           ) : !readOnly && (
             <div className="field">
