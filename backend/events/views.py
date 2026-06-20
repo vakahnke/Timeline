@@ -97,6 +97,21 @@ class TaskViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
                 .select_related('event', 'owner', 'assignee'))
 
 
+class ProjectTasksView(generics.ListAPIView):
+    """GET /api/projects/<project_pk>/tasks/ — every task in one project (all events,
+    all assignees), for the workload manager. Any project member may read."""
+    permission_classes = [IsAuthenticated, IsProjectMember]
+    serializer_class   = MyTaskSerializer
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Task.objects.none()
+        return (Task.objects
+                .filter(event__project_id=self.kwargs['project_pk'])
+                .select_related('event', 'event__project', 'owner', 'assignee')
+                .order_by('event__start', 'order', 'id'))
+
+
 class MyTasksView(generics.ListAPIView):
     """GET /api/me/tasks/ — tasks across all the projects the current user belongs to.
     By default only the user's own assigned tasks; with ?scope=all, every member's tasks

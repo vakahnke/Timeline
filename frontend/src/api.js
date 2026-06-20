@@ -13,6 +13,7 @@ const url = {
   category:   (pid, id) => `/projects/${pid}/categories/${id}/`,
   tasks:      (pid, eid)      => `/projects/${pid}/events/${eid}/tasks/`,
   task:       (pid, eid, tid) => `/projects/${pid}/events/${eid}/tasks/${tid}/`,
+  projectTasks: (pid)        => `/projects/${pid}/tasks/`,
   myTasks:    ()        => '/me/tasks/',
   members:    (pid)     => `/projects/${pid}/members/`,
   member:     (pid, id) => `/projects/${pid}/members/${id}/`,
@@ -142,9 +143,10 @@ export const api = {
   },
 
   tasks: {
-    list:   (pid, eid)        => req(url.tasks(pid, eid)),
-    create: (pid, eid, d)     => req(url.tasks(pid, eid),     { method: 'POST',  body: body(d) }),
-    update: (pid, eid, id, d) => req(url.task(pid, eid, id),  { method: 'PATCH', body: body(d) }),
-    remove: (pid, eid, id)    => req(url.task(pid, eid, id),  { method: 'DELETE' }),
+    list:      (pid, eid)        => req(url.tasks(pid, eid)),
+    create:    (pid, eid, d)     => req(url.tasks(pid, eid),     { method: 'POST',  body: body(d) }),
+    update:    (pid, eid, id, d) => req(url.task(pid, eid, id),  { method: 'PATCH', body: body(d) }),
+    remove:    (pid, eid, id)    => req(url.task(pid, eid, id),  { method: 'DELETE' }),
+    byProject: (pid)             => req(url.projectTasks(pid)),
   },
 }
