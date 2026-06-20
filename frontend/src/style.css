@@ -1420,3 +1420,19 @@ fieldset.modal-body:disabled { opacity: 1; }
 .task-progress-bar { height: 100%; background: #34d399; border-radius: 999px; transition: width 0.2s; }
 .task-summary-text { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .task-summary-blocked { color: var(--danger); }
+
+/* Dedicated task-manager modal + the button into it from the event modal */
+.modal.modal--wide { width: 760px; }
+.tm-event { color: var(--text-bright); }
+.btn-manage-tasks {
+  margin-top: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(129,140,248,0.10);
+  border: 1px solid rgba(129,140,248,0.30);
+  color: var(--accent);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-manage-tasks:hover { background: rgba(129,140,248,0.18); border-color: rgba(129,140,248,0.5); color: var(--text-bright); }
