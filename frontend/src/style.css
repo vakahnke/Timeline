@@ -750,13 +750,23 @@ canvas.ruler {
 
 /* ── Depends-on checkbox list (modal) ─────────────────────────────────────── */
 .depends-list {
-  height: 280px;
-  overflow-y: scroll;
+  max-height: 240px;        /* grows with content, scrolls only when long */
+  overflow-y: auto;
   border: 1px solid var(--border-mid);
   border-radius: 8px;
   background: rgba(255,255,255,0.02);
   padding: 4px 0;
 }
+.dep-toggle {
+  margin-top: 6px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.dep-toggle:hover { background: none; border: none; color: var(--text-bright); text-decoration: underline; }
 .field .depends-item {
   display: flex;
   align-items: center;
@@ -1296,7 +1306,7 @@ fieldset.modal-body:disabled { opacity: 1; }
   }
   .modal-body { flex: 0 0 auto; min-height: auto; overflow: visible; }
   .fields-row { flex-direction: column; gap: 12px; }
-  .depends-list { height: 190px; }   /* don't let the predecessor list dominate a phone modal */
+  .depends-list { max-height: 190px; }   /* don't let the predecessor list dominate a phone modal */
   .invite-row { flex-wrap: wrap; }
   .invite-row input { flex: 1 0 100%; }
   .field input, .field textarea, .field select,
@@ -1312,3 +1322,309 @@ fieldset.modal-body:disabled { opacity: 1; }
   .auth-card   { padding: 24px 18px; }
   .dash-header { padding: 0 12px; }
 }
+
+/* ── Tasks inside an event ──────────────────────────────────────────────── */
+.task-list { display: flex; flex-direction: column; gap: 6px; }
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.02);
+}
+.task-row--new { background: rgba(129,140,248,0.05); border-style: dashed; }
+.task-row--done .task-title { text-decoration: line-through; color: var(--text-dim); }
+.task-row--blocked { border-color: rgba(248,113,113,0.35); }
+
+/* Override the .field input width:100% so children share the row. */
+.task-row input,
+.task-row select { width: auto; padding: 5px 8px; font-size: 11.5px; }
+.task-row .task-title  { flex: 1 1 auto; min-width: 80px; }
+.task-row .task-status { flex: 0 0 92px; }
+.task-row .task-people { flex: 0 0 110px; }
+.task-row .task-due    { flex: 0 0 130px; }
+
+.task-del {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.task-del:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); background: var(--danger-glow); }
+
+/* Status badges (dashboard + reuse) */
+.task-status-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border-mid);
+  white-space: nowrap;
+}
+.task-status-badge--todo        { color: var(--text-dim);  background: rgba(255,255,255,0.04); }
+.task-status-badge--in_progress { color: var(--accent);    background: var(--accent-glow);   border-color: rgba(129,140,248,0.3); }
+.task-status-badge--blocked     { color: var(--danger);    background: var(--danger-glow);   border-color: rgba(248,113,113,0.3); }
+.task-status-badge--done        { color: #34d399;          background: rgba(52,211,153,0.16); border-color: rgba(52,211,153,0.35); }
+
+/* ── "My tasks" dashboard panel ─────────────────────────────────────────── */
+.mytasks { margin-bottom: 28px; }
+.mytasks-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border-radius: 999px;
+  padding: 1px 9px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.mytasks-list { display: flex; flex-direction: column; gap: 6px; }
+.mytask-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-panel);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.mytask-row:hover { background: var(--bg-hover); border-color: var(--border-mid); }
+.mytask-title { color: var(--text-bright); font-weight: 500; }
+.mytask-ctx { flex: 1 1 auto; font-size: 11.5px; }
+.mytask-due {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mytask-due--overdue { color: var(--danger); font-weight: 600; }
+
+/* Task progress summary (event modal) */
+.task-summary { display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+.task-progress {
+  flex: 1 1 auto;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.task-progress-bar { height: 100%; background: #34d399; border-radius: 999px; transition: width 0.2s; }
+.task-summary-text { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.task-summary-blocked { color: var(--danger); }
+
+/* Dedicated task-manager modal + the button into it from the event modal */
+.modal.modal--wide { width: 760px; }
+.tm-event { color: var(--text-bright); }
+.btn-manage-tasks {
+  margin-top: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(129,140,248,0.10);
+  border: 1px solid rgba(129,140,248,0.30);
+  color: var(--accent);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-manage-tasks:hover { background: rgba(129,140,248,0.18); border-color: rgba(129,140,248,0.5); color: var(--text-bright); }
+
+/* Undo/redo (and close) cluster in a modal header */
+.modal-head-actions { display: flex; align-items: center; gap: 6px; }
+.btn-icon {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-mid);
+  color: var(--text-dim);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.btn-icon:hover:not(:disabled) { background: rgba(255,255,255,0.09); color: var(--text-bright); border-color: var(--border-bright); }
+.btn-icon:disabled { opacity: 0.35; cursor: default; }
+
+/* ── Dashboard movable/resizable panels ─────────────────────────────────── */
+.dash-canvas {
+  position: relative;
+  width: 100%;
+  /* Full-bleed horizontally so windows can be dragged/resized to the screen edges. */
+  padding: 16px 0 48px;
+}
+.mpanel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-mid);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+}
+.mpanel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-mid);
+  cursor: move;
+  user-select: none;
+  flex: 0 0 auto;
+}
+.mpanel-title { font-size: 13px; font-weight: 600; color: var(--text-bright); letter-spacing: -0.2px; }
+.mpanel-actions { display: flex; align-items: center; gap: 8px; }
+.mpanel-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 16px; }
+.mpanel-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  border-right: 2px solid var(--border-bright);
+  border-bottom: 2px solid var(--border-bright);
+  border-bottom-right-radius: 8px;
+  opacity: 0.5;
+}
+.mpanel-resize:hover { opacity: 1; }
+
+/* My-tasks panel internals */
+.mytasks { margin: 0; }
+.mytasks-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 12px; }
+.mytasks-sort { display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
+.mytasks-sort select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-mid);
+  color: var(--text-bright);
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+/* Native option popup defaults to a white background; force readable colors. */
+.mytasks-sort select option { background: #1a2233; color: #e2e8f0; }
+.mytask-group + .mytask-group { margin-top: 14px; }
+.mytask-group-head {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 0 0 6px;
+}
+
+/* Per-panel zoom controls */
+.mpanel-zoom { display: flex; align-items: center; gap: 2px; margin-left: 2px; }
+.btn-icon--sm { width: 22px; height: 22px; font-size: 12px; }
+.btn-icon--sm.zoom-val { width: auto; min-width: 38px; padding: 0 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* My-tasks: filter/sort controls, assignee chip, and workload breakdown */
+.mytasks-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mytask-who {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.workload {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgba(255,255,255,0.02);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.workload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.workload-toggle { display: flex; gap: 4px; }
+.workload-toggle button {
+  padding: 2px 9px;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  border-radius: 999px;
+}
+.workload-toggle button.is-active {
+  background: var(--accent-glow);
+  border-color: rgba(129,140,248,0.4);
+  color: var(--accent);
+}
+.workload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+.workload-row:hover { background: var(--bg-hover); }
+.workload-row.is-active { background: var(--accent-glow); }
+.workload-name { flex: 0 0 130px; color: var(--text-bright); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.workload-bar { flex: 1 1 auto; height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+.workload-bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.workload-stat { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Manage Workloads modal */
+.btn-workloads { background: rgba(129,140,248,0.08); border-color: rgba(129,140,248,0.25); color: var(--accent); }
+.btn-workloads:hover { background: rgba(129,140,248,0.2); border-color: rgba(129,140,248,0.45); color: #a5b4fc; }
+.wl-listhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.wl-tasks { display: flex; flex-direction: column; gap: 6px; }
+.wl-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+}
+.wl-task-title { flex: 1 1 auto; color: var(--text-bright); font-size: 12px; min-width: 80px; }
+.wl-task-ctx  { flex: 0 1 auto; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.wl-task-due  { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wl-task-assignee {
+  flex: 0 0 130px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-mid);
+  color: var(--text-bright);
+  font-size: 11.5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.wl-task-assignee option { background: #1a2233; color: #e2e8f0; }
+.wl-task-assignee:disabled { opacity: 0.6; }

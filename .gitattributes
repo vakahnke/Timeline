@@ -1,0 +1,14 @@
+# Normalize line endings so a Windows checkout doesn't break Linux containers.
+#
+# Let Git auto-detect text vs binary and store text as LF in the repo. On Windows
+# with core.autocrlf=true the working tree may still get CRLF for ordinary files
+# (harmless for .py/.jsx/.css), but the overrides below force LF where it matters.
+* text=auto
+
+# Files executed inside containers via a #!/bin/sh shebang MUST be LF on every
+# platform — a CRLF shebang ("/bin/sh\r") makes the kernel fail to find the
+# interpreter (env: 'sh\r': No such file or directory) and the container dies.
+*.sh        text eol=lf
+entrypoint.sh text eol=lf
+Dockerfile  text eol=lf
+*.conf      text eol=lf

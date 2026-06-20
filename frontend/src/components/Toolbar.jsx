@@ -18,7 +18,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onOpenMembers, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -53,6 +53,13 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       <button className="tb-collapsible" onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
       <button className="tb-collapsible" onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
       <button className="tb-collapsible" onClick={() => onViewPeriod?.('month')} title="Frame this month">Month</button>
+      {canEdit && (
+        <>
+          <div className="toolbar-sep" />
+          <button onClick={onUndo} disabled={!canUndo} title="Undo  ·  Ctrl/⌘ + Z">↶</button>
+          <button onClick={onRedo} disabled={!canRedo} title="Redo  ·  Ctrl/⌘ + Shift + Z">↷</button>
+        </>
+      )}
       <div className="toolbar-sep" />
       {projectStart != null && (
         <div className="toolbar-range">
@@ -76,6 +83,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       {isOwner && (
         <button className="btn-members" onClick={onOpenMembers} title="Manage members">Members</button>
       )}
+      <button className="btn-workloads" onClick={onManageWorkloads} title="View workload by member and reassign tasks">Manage Workloads</button>
       {canEdit && (
         <>
           <button className="btn-save-tpl tb-collapsible" onClick={onSaveTemplate} title="Save this project as a reusable template">Save as Template</button>

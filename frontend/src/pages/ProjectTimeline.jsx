@@ -1,13 +1,16 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api'
+import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../ui/ToastProvider'
 import { PALETTE, MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 import Toolbar from '../components/Toolbar'
 import Timeline from '../components/Timeline'
 import EventModal from '../components/EventModal'
+import TaskManagerModal from '../components/TaskManagerModal'
 import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
+import WorkloadModal from '../components/WorkloadModal'
 
 function buildTracks(events, apiCategories = [], prev = []) {
   const apiMap   = Object.fromEntries(apiCategories.map(c => [c.name, c.color]).filter(([, v]) => v))
@@ -57,8 +60,10 @@ export default function ProjectTimeline() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const { flash } = useToast()
+  const { user } = useAuth()
 
   const [project,        setProject]      = useState(null)
+  const [members,        setMembers]      = useState([])
   const [events,         setEvents]       = useState([])
   const [apiCategories,  setApiCategories]= useState([])
   const [tracks,         setTracks]       = useState([])
@@ -66,8 +71,11 @@ export default function ProjectTimeline() {
   const [pxPerHour,      setPxPerHour]    = useState(120)
   const [settings,       setSettings]     = useState({ showArrows: true, showOnlyCritical: false, snapMinutes: 15 })
   const [modal,          setModal]        = useState(null)
+  const [taskModal,      setTaskModal]    = useState(null)  // event id whose tasks are open
+  const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task-manager close
   const [catModal,       setCatModal]     = useState(null)
   const [showMembers,    setShowMembers]  = useState(false)
+  const [showWorkloads,  setShowWorkloads] = useState(false)
   const [loading,        setLoading]      = useState(true)
   const [apiError,       setApiError]     = useState(null)
   const [accessError,    setAccessError]  = useState(null)
@@ -121,6 +129,16 @@ export default function ProjectTimeline() {
     setTracks(prev => buildTracks(events, apiCategories, prev))
   }, [events, apiCategories])
 
+  // Member list powers the task owner/assignee pickers. Non-fatal: a failure just
+  // leaves the suggestion list empty (you can still type any email/username).
+  useEffect(() => {
+    let cancelled = false
+    api.projects.members.list(projectId)
+      .then(m => { if (!cancelled) setMembers(m) })
+      .catch(() => { if (!cancelled) setMembers([]) })
+    return () => { cancelled = true }
+  }, [projectId])
+
   // Auto-fit the zoom once on first load so events are visible regardless of span.
   useEffect(() => {
     if (loading || !range || didFitRef.current) return
@@ -162,18 +180,85 @@ export default function ProjectTimeline() {
     return () => cancelAnimationFrame(id)
   }, [range])
 
+  // Undo/redo for event edits. Each entry captures the changed fields before/after a
+  // PATCH; undo/redo replay the inverse/forward patch via applyUpdate (no re-recording).
+  const eventsRef = useRef(events)
+  useEffect(() => { eventsRef.current = events }, [events])
+  const [undoStack, setUndoStack] = useState([])
+  const [redoStack, setRedoStack] = useState([])
+  useEffect(() => { setUndoStack([]); setRedoStack([]) }, [projectId])
+
+  const applyUpdate = useCallback(async (id, patch) => {
+    const updated = await api.events.update(projectId, id, patch)
+    setEvents(prev => prev.map(e => e.id === id ? updated : e))
+    return updated
+  }, [projectId])
+
   const updateEvent = useCallback(async (id, patch) => {
+    const cur = eventsRef.current.find(e => e.id === id)
+    // Snapshot only the fields this patch changes, so undo restores exactly those.
+    const before = cur ? Object.fromEntries(Object.keys(patch).map(k => [k, cur[k]])) : null
     flash('Saving…', 'saving')
     try {
-      const updated = await api.events.update(projectId, id, patch)
-      setEvents(prev => prev.map(e => e.id === id ? updated : e))
+      const updated = await applyUpdate(id, patch)
+      if (before) {
+        setUndoStack(s => [...s, { id, before, after: patch }])
+        setRedoStack([])  // a fresh edit invalidates the redo branch
+      }
       flash('Saved', 'saved')
       return updated
     } catch (err) {
       flash(err.status === 403 ? 'You don’t have edit access.' : 'Save failed.', 'error')
       throw err
     }
-  }, [projectId, flash])
+  }, [applyUpdate, flash])
+
+  const undo = useCallback(async () => {
+    const entry = undoStack[undoStack.length - 1]
+    if (!entry) return
+    flash('Undoing…', 'saving')
+    try {
+      await applyUpdate(entry.id, entry.before)
+      setUndoStack(s => s.slice(0, -1))
+      setRedoStack(s => [...s, entry])
+      flash('Undone', 'saved')
+    } catch (err) {
+      flash(err.status === 403 ? 'You don’t have edit access.'
+            : err.status === 404 ? 'That event no longer exists.' : 'Undo failed.', 'error')
+    }
+  }, [undoStack, applyUpdate, flash])
+
+  const redo = useCallback(async () => {
+    const entry = redoStack[redoStack.length - 1]
+    if (!entry) return
+    flash('Redoing…', 'saving')
+    try {
+      await applyUpdate(entry.id, entry.after)
+      setRedoStack(s => s.slice(0, -1))
+      setUndoStack(s => [...s, entry])
+      flash('Redone', 'saved')
+    } catch (err) {
+      flash(err.status === 403 ? 'You don’t have edit access.'
+            : err.status === 404 ? 'That event no longer exists.' : 'Redo failed.', 'error')
+    }
+  }, [redoStack, applyUpdate, flash])
+
+  // Ctrl/⌘+Z = undo, Ctrl/⌘+Shift+Z or Ctrl/⌘+Y = redo. Stay out of the way when a
+  // modal is open or a form field is focused (let native text undo work there).
+  useEffect(() => {
+    if (!canEdit) return
+    const onKey = (e) => {
+      if (modal || catModal || showMembers) return
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (!(e.ctrlKey || e.metaKey)) return
+      const k = e.key.toLowerCase()
+      if (k === 'z' && !e.shiftKey)      { e.preventDefault(); undo() }
+      else if (k === 'z' || k === 'y')   { e.preventDefault(); redo() }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [canEdit, modal, catModal, showMembers, undo, redo])
 
   const createEvent = useCallback(async (data) => {
     flash('Saving…', 'saving')
@@ -195,6 +280,9 @@ export default function ProjectTimeline() {
       if (next.length) setRange(buildRange(next))
       return next
     })
+    // Drop history that points at the now-deleted event so undo can't 404.
+    setUndoStack(s => s.filter(h => h.id !== id))
+    setRedoStack(s => s.filter(h => h.id !== id))
     flash('Deleted', 'saved')
   }, [projectId, flash])
 
@@ -294,7 +382,12 @@ export default function ProjectTimeline() {
         onBack={() => navigate('/')}
         canEdit={canEdit}
         isOwner={isOwner}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={undoStack.length > 0}
+        canRedo={redoStack.length > 0}
         onOpenMembers={() => setShowMembers(true)}
+        onManageWorkloads={() => setShowWorkloads(true)}
         onSaveTemplate={saveAsTemplate}
         pxPerHour={pxPerHour}
         onZoomIn={() => timelineRef.current?.zoomBy(1.6)}
@@ -340,10 +433,25 @@ export default function ProjectTimeline() {
           defaults={modal.defaults}
           events={events}
           tracks={tracks}
+          projectId={projectId}
           readOnly={!canEdit}
+          escDisabled={taskModal != null}
+          tasksReloadToken={tasksReload}
+          onManageTasks={(id) => setTaskModal(id)}
           onSave={handleSave}
           onDelete={modal.id && canEdit ? handleDelete : null}
           onClose={closeModal}
+        />
+      )}
+      {taskModal != null && (
+        <TaskManagerModal
+          projectId={projectId}
+          eventId={taskModal}
+          eventTitle={events.find(e => e.id === taskModal)?.title || 'Event'}
+          members={members}
+          currentUser={user}
+          readOnly={!canEdit}
+          onClose={() => { setTaskModal(null); setTasksReload(n => n + 1) }}
         />
       )}
       {showMembers && (
@@ -351,6 +459,15 @@ export default function ProjectTimeline() {
           projectId={projectId}
           isOwner={isOwner}
           onClose={() => setShowMembers(false)}
+        />
+      )}
+      {showWorkloads && (
+        <WorkloadModal
+          projectId={projectId}
+          projectName={project?.name}
+          members={members}
+          canEdit={canEdit}
+          onClose={() => setShowWorkloads(false)}
         />
       )}
     </div>

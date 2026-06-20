@@ -8,7 +8,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from events.views import CategoryViewSet, EventViewSet
+from events.views import CategoryViewSet, EventViewSet, MyTasksView, ProjectTasksView, TaskViewSet
 
 from .auth import EmailOrUsernameTokenObtainPairView
 from .views import (
@@ -30,12 +30,17 @@ projects_nested = NestedDefaultRouter(router, r'projects', lookup='project')
 projects_nested.register(r'events',     EventViewSet,    basename='project-events')
 projects_nested.register(r'categories', CategoryViewSet, basename='project-categories')
 
+events_nested = NestedDefaultRouter(projects_nested, r'events', lookup='event')
+events_nested.register(r'tasks', TaskViewSet, basename='event-tasks')
+
 urlpatterns = [
     path('auth/register/',      RegisterView.as_view(),                       name='register'),
     path('auth/token/',         EmailOrUsernameTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(),                   name='token_refresh'),
     path('auth/logout/',        LogoutView.as_view(),                         name='logout'),
     path('me/',                 MeView.as_view(),              name='me'),
+    path('me/tasks/',           MyTasksView.as_view(),         name='my-tasks'),
+    path('projects/<int:project_pk>/tasks/', ProjectTasksView.as_view(), name='project-tasks'),
     path('health/',             HealthView.as_view(),          name='health'),
 
     # API documentation (OpenAPI schema + Swagger UI + ReDoc).
@@ -45,4 +50,5 @@ urlpatterns = [
 
     path('', include(router.urls)),
     path('', include(projects_nested.urls)),
+    path('', include(events_nested.urls)),
 ]

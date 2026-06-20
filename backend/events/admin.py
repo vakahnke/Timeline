@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Event
+from .models import Category, Event, Task
 
 
 @admin.register(Category)
@@ -16,3 +16,11 @@ class EventAdmin(admin.ModelAdmin):
     list_filter   = ['project', 'category']
     search_fields = ['title', 'category', 'project__name']
     ordering      = ['start']
+
+
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display  = ['title', 'event', 'status', 'owner', 'assignee', 'due_date']
+    list_filter   = ['status', 'due_date']
+    search_fields = ['title', 'event__title', 'owner__username', 'assignee__username']
+    ordering      = ['order', 'id']
