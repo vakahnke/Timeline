@@ -6,6 +6,7 @@ import { useToast } from '../ui/ToastProvider'
 import CreateProjectModal from '../components/CreateProjectModal'
 import TemplateModal from '../components/TemplateModal'
 import MembersPanel from '../components/MembersPanel'
+import MyTasksPanel from '../components/MyTasksPanel'
 
 function RoleBadge({ role }) {
   if (!role) return null
@@ -86,6 +87,8 @@ export default function ProjectsDashboard() {
       </header>
 
       <main className="dash-main">
+        <MyTasksPanel />
+
         <div className="dash-titlebar">
           <h1>Your projects</h1>
           <div className="dash-actions">

@@ -1312,3 +1312,88 @@ fieldset.modal-body:disabled { opacity: 1; }
   .auth-card   { padding: 24px 18px; }
   .dash-header { padding: 0 12px; }
 }
+
+/* ── Tasks inside an event ──────────────────────────────────────────────── */
+.task-list { display: flex; flex-direction: column; gap: 6px; }
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgba(255,255,255,0.02);
+}
+.task-row--new { background: rgba(129,140,248,0.05); border-style: dashed; }
+.task-row--done .task-title { text-decoration: line-through; color: var(--text-dim); }
+.task-row--blocked { border-color: rgba(248,113,113,0.35); }
+
+/* Override the .field input width:100% so children share the row. */
+.task-row input,
+.task-row select { width: auto; padding: 5px 8px; font-size: 11.5px; }
+.task-row .task-title  { flex: 1 1 auto; min-width: 80px; }
+.task-row .task-status { flex: 0 0 92px; }
+.task-row .task-people { flex: 0 0 110px; }
+.task-row .task-due    { flex: 0 0 130px; }
+
+.task-del {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.task-del:hover { color: var(--danger); border-color: rgba(248,113,113,0.4); background: var(--danger-glow); }
+
+/* Status badges (dashboard + reuse) */
+.task-status-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border-mid);
+  white-space: nowrap;
+}
+.task-status-badge--todo        { color: var(--text-dim);  background: rgba(255,255,255,0.04); }
+.task-status-badge--in_progress { color: var(--accent);    background: var(--accent-glow);   border-color: rgba(129,140,248,0.3); }
+.task-status-badge--blocked     { color: var(--danger);    background: var(--danger-glow);   border-color: rgba(248,113,113,0.3); }
+.task-status-badge--done        { color: #34d399;          background: rgba(52,211,153,0.16); border-color: rgba(52,211,153,0.35); }
+
+/* ── "My tasks" dashboard panel ─────────────────────────────────────────── */
+.mytasks { margin-bottom: 28px; }
+.mytasks-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-glow);
+  border-radius: 999px;
+  padding: 1px 9px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.mytasks-list { display: flex; flex-direction: column; gap: 6px; }
+.mytask-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-panel);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.mytask-row:hover { background: var(--bg-hover); border-color: var(--border-mid); }
+.mytask-title { color: var(--text-bright); font-weight: 500; }
+.mytask-ctx { flex: 1 1 auto; font-size: 11.5px; }
+.mytask-due {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mytask-due--overdue { color: var(--danger); font-weight: 600; }
