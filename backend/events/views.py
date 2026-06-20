@@ -1,14 +1,19 @@
 from django.db import transaction
-from rest_framework import status, viewsets
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from projects.models import Project
+from projects.models import Project, ProjectMembership
 from projects.permissions import IsProjectMember
 
-from .models import Category, Event
-from .serializers import CategorySerializer, EventSerializer
+from .models import Category, Event, Task
+from .serializers import (
+    CategorySerializer,
+    EventSerializer,
+    MyTaskSerializer,
+    TaskSerializer,
+)
 
 
 class _ProjectScopedMixin:
@@ -63,3 +68,45 @@ class EventViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
         with transaction.atomic():
             serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class TaskViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
+    """Tasks nested under an event: /api/projects/<project_pk>/events/<event_pk>/tasks/"""
+    serializer_class = TaskSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    @property
+    def event(self):
+        if not hasattr(self, '_event'):
+            self._event = Event.objects.get(
+                pk=self.kwargs['event_pk'], project_id=self.kwargs['project_pk'])
+        return self._event
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['event'] = self.event
+        return ctx
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Task.objects.none()  # no kwargs during schema generation
+        return (Task.objects
+                .filter(event_id=self.kwargs['event_pk'],
+                        event__project_id=self.kwargs['project_pk'])
+                .select_related('event', 'owner', 'assignee'))
+
+
+class MyTasksView(generics.ListAPIView):
+    """GET /api/me/tasks/ — every task assigned to the current user, across all the
+    projects they belong to. Soonest due first; undated tasks last."""
+    permission_classes = [IsAuthenticated]
+    serializer_class   = MyTaskSerializer
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Task.objects.none()
+        my_projects = ProjectMembership.objects.filter(user=self.request.user).values('project')
+        return (Task.objects
+                .filter(assignee=self.request.user, event__project__in=my_projects)
+                .select_related('event', 'event__project', 'owner', 'assignee')
+                .order_by('due_date', 'id'))

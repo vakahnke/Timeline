@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api'
+import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../ui/ToastProvider'
 import { PALETTE, MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 import Toolbar from '../components/Toolbar'
@@ -57,8 +58,10 @@ export default function ProjectTimeline() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const { flash } = useToast()
+  const { user } = useAuth()
 
   const [project,        setProject]      = useState(null)
+  const [members,        setMembers]      = useState([])
   const [events,         setEvents]       = useState([])
   const [apiCategories,  setApiCategories]= useState([])
   const [tracks,         setTracks]       = useState([])
@@ -120,6 +123,16 @@ export default function ProjectTimeline() {
   useEffect(() => {
     setTracks(prev => buildTracks(events, apiCategories, prev))
   }, [events, apiCategories])
+
+  // Member list powers the task owner/assignee pickers. Non-fatal: a failure just
+  // leaves the suggestion list empty (you can still type any email/username).
+  useEffect(() => {
+    let cancelled = false
+    api.projects.members.list(projectId)
+      .then(m => { if (!cancelled) setMembers(m) })
+      .catch(() => { if (!cancelled) setMembers([]) })
+    return () => { cancelled = true }
+  }, [projectId])
 
   // Auto-fit the zoom once on first load so events are visible regardless of span.
   useEffect(() => {
@@ -340,6 +353,9 @@ export default function ProjectTimeline() {
           defaults={modal.defaults}
           events={events}
           tracks={tracks}
+          projectId={projectId}
+          members={members}
+          currentUser={user}
           readOnly={!canEdit}
           onSave={handleSave}
           onDelete={modal.id && canEdit ? handleDelete : null}

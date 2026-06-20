@@ -11,6 +11,9 @@ const url = {
   bulkEvents: (pid)     => `/projects/${pid}/events/bulk/`,
   categories: (pid)     => `/projects/${pid}/categories/`,
   category:   (pid, id) => `/projects/${pid}/categories/${id}/`,
+  tasks:      (pid, eid)      => `/projects/${pid}/events/${eid}/tasks/`,
+  task:       (pid, eid, tid) => `/projects/${pid}/events/${eid}/tasks/${tid}/`,
+  myTasks:    ()        => '/me/tasks/',
   members:    (pid)     => `/projects/${pid}/members/`,
   member:     (pid, id) => `/projects/${pid}/members/${id}/`,
   templates:  ()        => '/templates/',
@@ -86,6 +89,7 @@ export const api = {
     login:    (d)       => req('/auth/token/',    { method: 'POST', body: body(d) }, false),
     logout:   (refresh) => req('/auth/logout/',   { method: 'POST', body: body({ refresh }) }, false),
     me:       ()        => req('/me/'),
+    myTasks:  ()        => req(url.myTasks()),
   },
 
   projects: {
@@ -135,5 +139,12 @@ export const api = {
     create: (pid, d)     => req(url.categories(pid),   { method: 'POST',  body: body(d) }),
     update: (pid, id, d) => req(url.category(pid, id), { method: 'PATCH', body: body(d) }),
     remove: (pid, id)    => req(url.category(pid, id), { method: 'DELETE' }),
+  },
+
+  tasks: {
+    list:   (pid, eid)        => req(url.tasks(pid, eid)),
+    create: (pid, eid, d)     => req(url.tasks(pid, eid),     { method: 'POST',  body: body(d) }),
+    update: (pid, eid, id, d) => req(url.task(pid, eid, id),  { method: 'PATCH', body: body(d) }),
+    remove: (pid, eid, id)    => req(url.task(pid, eid, id),  { method: 'DELETE' }),
   },
 }

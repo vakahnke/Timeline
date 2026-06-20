@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import EventTasks from './EventTasks'
 
 function fmtDateTime(dateStr) {
   const d = new Date(dateStr)
@@ -17,7 +18,7 @@ function toLocalISO(dateStr) {
   return new Date(d - off).toISOString().slice(0, 16)
 }
 
-export default function EventModal({ eventId, defaults, events, tracks, readOnly = false, onSave, onDelete, onClose }) {
+export default function EventModal({ eventId, defaults, events, tracks, projectId, members = [], currentUser, readOnly = false, onSave, onDelete, onClose }) {
   const existing = eventId ? events.find(e => e.id === eventId) : null
 
   const [title,     setTitle]     = useState('')
@@ -172,6 +173,23 @@ export default function EventModal({ eventId, defaults, events, tracks, readOnly
             <label>Notes</label>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional notes…" />
           </div>
+
+          {existing ? (
+            <EventTasks
+              projectId={projectId}
+              eventId={eventId}
+              members={members}
+              currentUser={currentUser}
+              readOnly={readOnly}
+            />
+          ) : !readOnly && (
+            <div className="field">
+              <label>Tasks</label>
+              <p className="dim" style={{ fontSize: 12, margin: '2px 0' }}>
+                Save the event first, then reopen it to add tasks.
+              </p>
+            </div>
+          )}
 
           {error && <div className="field-error">&#10005; {error}</div>}
         </fieldset>

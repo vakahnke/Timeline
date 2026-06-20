@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from projects.models import Project
@@ -42,3 +43,47 @@ class Event(models.Model):
 
     def __str__(self):
         return f'{self.title} ({self.category})'
+
+
+class Task(models.Model):
+    """A unit of work inside an Event. Owned by one person and assigned to one person
+    for action (assignee defaults to the owner)."""
+
+    class Status(models.TextChoices):
+        TODO        = 'todo',        'To do'
+        IN_PROGRESS = 'in_progress', 'In progress'
+        BLOCKED     = 'blocked',     'Blocked'
+        DONE        = 'done',        'Done'
+
+    event    = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='tasks',
+    )
+    title    = models.CharField(max_length=200)
+    status   = models.CharField(max_length=20, choices=Status.choices, default=Status.TODO)
+    owner    = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='owned_tasks',
+    )
+    assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='assigned_tasks',
+    )
+    due_date   = models.DateField(null=True, blank=True)
+    order      = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f'{self.title} [{self.status}]'
+
+    @property
+    def project_id(self):
+        # Lets IsProjectMember (which expects obj.project_id) authorize tasks via their
+        # event's project. Free when the queryset select_related's 'event'.
+        return self.event.project_id

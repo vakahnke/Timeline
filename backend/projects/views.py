@@ -122,7 +122,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     # Owner-only actions. NOTE: get_permissions overrides any permission_classes set on
     # the @action decorators, so owner-only actions must be enumerated here.
-    OWNER_ONLY_ACTIONS = {'destroy', 'members', 'member_detail', 'add_team'}
+    OWNER_ONLY_ACTIONS = {'destroy', 'member_detail', 'add_team'}
 
     def get_permissions(self):
         # Writes to events/categories are handled by their own viewsets; project metadata
@@ -146,13 +146,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
             project=project, user=self.request.user, role=Role.OWNER,
         )
 
-    # ── Member management (Owner only) ──────────────────────────────────────
-    @action(detail=True, methods=['get', 'post'], url_path='members')  # owner-only via get_permissions
+    # ── Member management ───────────────────────────────────────────────────
+    # GET: any project member (needed to populate task owner/assignee pickers).
+    # POST (add member): owner only — enforced inline below.
+    @action(detail=True, methods=['get', 'post'], url_path='members')
     def members(self, request, pk=None):
-        project = self.get_object()
+        project = self.get_object()  # get_queryset is membership-scoped -> non-members 404
         if request.method == 'GET':
             qs = project.memberships.select_related('user')
             return Response(ProjectMembershipSerializer(qs, many=True).data)
+
+        if get_role(request.user, project.id) != Role.OWNER:
+            return Response({'detail': 'Owner role required.'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = AddMemberSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
