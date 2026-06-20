@@ -39,11 +39,27 @@ export default function ProjectsDashboard() {
 
   // The dashboard owns the panel layouts (so it can arrange them) and persists them.
   const canvasRef = useRef(null)
+  const hadSaved  = useRef(!!localStorage.getItem('dash.layouts'))  // captured before the persist effect runs
   const [layouts, setLayouts] = useState(() => {
     try { const s = JSON.parse(localStorage.getItem('dash.layouts')); if (s?.projects && s?.tasks) return s } catch { /* ignore */ }
     return DEFAULT_LAYOUTS
   })
   useEffect(() => { localStorage.setItem('dash.layouts', JSON.stringify(layouts)) }, [layouts])
+
+  // Default layouts (DEFAULT_LAYOUTS) horizontally centered for the current canvas width.
+  const centeredDefaults = useCallback(() => {
+    const avail = canvasRef.current?.clientWidth ?? 1280
+    const cx = (w) => Math.max(0, Math.round((avail - w) / 2))
+    return {
+      projects: { ...DEFAULT_LAYOUTS.projects, x: cx(DEFAULT_LAYOUTS.projects.w) },
+      tasks:    { ...DEFAULT_LAYOUTS.tasks,    x: cx(DEFAULT_LAYOUTS.tasks.w) },
+    }
+  }, [])
+
+  // First visit (no saved layout): start the windows centered. They stay free to move anywhere.
+  useEffect(() => {
+    if (!hadSaved.current) setLayouts(centeredDefaults())
+  }, [centeredDefaults])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -91,7 +107,7 @@ export default function ProjectsDashboard() {
   const open = (id) => navigate(`/projects/${id}`)
 
   const setPanel = (key) => (l) => setLayouts(prev => ({ ...prev, [key]: l }))
-  const resetLayout = () => { localStorage.removeItem('dash.layouts'); setLayouts(DEFAULT_LAYOUTS) }
+  const resetLayout = () => { localStorage.removeItem('dash.layouts'); setLayouts(centeredDefaults()) }
 
   // Arrange both windows: 'side' = half-width next to each other; 'stack' = full-width stacked.
   const arrange = (mode) => {
