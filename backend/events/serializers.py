@@ -42,11 +42,23 @@ class EventSerializer(serializers.ModelSerializer):
         queryset=Event.objects.none(),  # scoped to the project in __init__
         required=False,
     )
+    # Read-only task rollup. The list/detail querysets annotate these (no N+1); on a
+    # freshly created/updated instance the annotation is absent, so fall back to a count.
+    task_count = serializers.SerializerMethodField()
+    tasks_done = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
         fields = ['id', 'title', 'start', 'end', 'category', 'color',
-                  'notes', 'percent_complete', 'depends_on']
+                  'notes', 'percent_complete', 'depends_on', 'task_count', 'tasks_done']
+
+    def get_task_count(self, obj):
+        val = getattr(obj, 'task_count', None)
+        return val if val is not None else obj.tasks.count()
+
+    def get_tasks_done(self, obj):
+        val = getattr(obj, 'tasks_done', None)
+        return val if val is not None else obj.tasks.filter(status=Task.Status.DONE).count()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

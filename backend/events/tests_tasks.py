@@ -34,6 +34,52 @@ class TaskTestBase(APITestCase):
         return f'/api/projects/{self.project.id}/events/{ev.id}/tasks/'
 
 
+class EventTaskRollupTests(TaskTestBase):
+    """The event payload carries task_count / tasks_done for the timeline badge + tooltip."""
+
+    def events_url(self):
+        return f'/api/projects/{self.project.id}/events/'
+
+    def test_event_list_includes_task_counts(self):
+        Task.objects.create(event=self.event, title='a', owner=self.owner, assignee=self.owner, status='todo')
+        Task.objects.create(event=self.event, title='b', owner=self.owner, assignee=self.owner, status='done')
+        Task.objects.create(event=self.event, title='c', owner=self.owner, assignee=self.owner, status='done')
+
+        self.client.force_authenticate(self.owner)
+        res = self.client.get(self.events_url())
+        self.assertEqual(res.status_code, 200)
+        row = next(e for e in res.data if e['id'] == self.event.id)
+        self.assertEqual(row['task_count'], 3)
+        self.assertEqual(row['tasks_done'], 2)
+
+    def test_counts_are_zero_with_no_tasks(self):
+        self.client.force_authenticate(self.owner)
+        row = next(e for e in self.client.get(self.events_url()).data if e['id'] == self.event.id)
+        self.assertEqual(row['task_count'], 0)
+        self.assertEqual(row['tasks_done'], 0)
+
+    def test_counts_are_per_event_not_leaked(self):
+        now = timezone.now()
+        other = Event.objects.create(project=self.project, title='E2', start=now, end=now + timedelta(hours=1))
+        Task.objects.create(event=self.event, title='only-here', owner=self.owner, assignee=self.owner)
+
+        self.client.force_authenticate(self.owner)
+        data = {e['id']: e for e in self.client.get(self.events_url()).data}
+        self.assertEqual(data[self.event.id]['task_count'], 1)
+        self.assertEqual(data[other.id]['task_count'], 0)
+
+    def test_freshly_created_event_reports_zero_counts(self):
+        # Create path has no annotation -> serializer falls back to a count without erroring.
+        self.client.force_authenticate(self.owner)
+        now = timezone.now()
+        res = self.client.post(self.events_url(),
+                               {'title': 'New', 'start': now.isoformat(), 'end': (now + timedelta(hours=2)).isoformat()},
+                               format='json')
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.data['task_count'], 0)
+        self.assertEqual(res.data['tasks_done'], 0)
+
+
 class TaskCrudTests(TaskTestBase):
     def test_owner_defaults_to_creator_and_assignee_defaults_to_owner(self):
         self.client.force_authenticate(self.editor)

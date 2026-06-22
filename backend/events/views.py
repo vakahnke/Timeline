@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
@@ -52,6 +53,10 @@ class EventViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
             return Event.objects.none()  # no project_pk during schema generation
         qs = (Event.objects
               .filter(project_id=self.kwargs['project_pk'])
+              .annotate(
+                  task_count=Count('tasks', distinct=True),
+                  tasks_done=Count('tasks', filter=Q(tasks__status='done'), distinct=True),
+              )
               .prefetch_related('depends_on'))
         category = self.request.query_params.get('category')
         if category:

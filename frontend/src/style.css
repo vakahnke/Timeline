@@ -1437,6 +1437,108 @@ fieldset.modal-body:disabled { opacity: 1; }
 }
 .btn-manage-tasks:hover { background: rgba(129,140,248,0.18); border-color: rgba(129,140,248,0.5); color: var(--text-bright); }
 
+/* ── Task count badge on an event block ───────────────────────────────────── */
+.event-block.has-tasks .event-inner { padding-right: 30px; }   /* reserve room for the badge */
+.event-tasks-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;            /* actions sit top-right, so bottom-right never collides */
+  height: 17px;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: rgba(9,9,15,0.62);
+  border: 1px solid rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.82);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 4;
+  backdrop-filter: blur(4px);
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.event-tasks-badge:hover { background: rgba(129,140,248,0.32); border-color: rgba(129,140,248,0.55); color: #c7d2fe; }
+.event-tasks-badge.all-done { background: rgba(52,211,153,0.22); border-color: rgba(52,211,153,0.45); color: #6ee7b7; }
+.event-actions .btn-tasks:hover { background: rgba(129,140,248,0.25); border-color: rgba(129,140,248,0.45); color: #a5b4fc; }
+
+/* ── Tooltip task line ────────────────────────────────────────────────────── */
+.tt-tasks {
+  color: var(--accent);
+  font-size: 10px;
+  margin-bottom: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.tt-tasks--none { color: var(--text-dim); }
+
+/* ── Docked task panel (drawer) ───────────────────────────────────────────── */
+.task-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  max-width: 92vw;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-mid);
+  box-shadow: -14px 0 44px rgba(0,0,0,0.5);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  animation: task-panel-in 0.16s ease-out;
+}
+@keyframes task-panel-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.task-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-mid);
+}
+.task-panel-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.task-panel-kicker {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+.task-panel-event {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-panel-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.task-panel-body { padding: 12px 16px 24px; overflow-y: auto; flex: 1; }
+.task-panel-body > .field > label { display: none; }   /* the panel header already says "Tasks" */
+
+/* The shared task rows are built for a wide modal; wrap them to fit the narrow drawer:
+   title on its own line, then status / assignee / due flow below. */
+.task-panel .task-row { flex-wrap: wrap; gap: 6px; padding: 8px; }
+.task-panel .task-row .task-title  { flex: 1 1 100%; min-width: 0; }
+.task-panel .task-row .task-status { flex: 1 1 84px; }
+.task-panel .task-row .task-people { flex: 1 1 120px; }
+.task-panel .task-row .task-due    { flex: 1 1 120px; }
+.task-panel .task-row .task-del    { flex: 0 0 auto; margin-left: auto; }
+
 /* Undo/redo (and close) cluster in a modal header */
 .modal-head-actions { display: flex; align-items: center; gap: 6px; }
 .btn-icon {

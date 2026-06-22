@@ -105,7 +105,7 @@ function applyDrag(arr, from, to) {
 }
 
 const Timeline = forwardRef(function Timeline(
-  { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, loading, apiError },
+  { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, onOpenTasks, loading, apiError },
   ref
 ) {
   const scrollRef       = useRef(null)
@@ -687,6 +687,7 @@ const Timeline = forwardRef(function Timeline(
                       onEdit={onOpenEdit}
                       onDelete={handleDeleteEvent}
                       onTooltip={handleTooltip}
+                      onOpenTasks={onOpenTasks}
                     />
                   ))}
                 </div>
@@ -722,6 +723,11 @@ const Timeline = forwardRef(function Timeline(
           <div className="tt-title">{tooltip.event.title}</div>
           <div className="tt-time">
             {fmtSpan(new Date(tooltip.event.start).getTime(), new Date(tooltip.event.end).getTime())}
+          </div>
+          <div className={`tt-tasks${tooltip.event.task_count > 0 ? '' : ' tt-tasks--none'}`}>
+            {tooltip.event.task_count > 0
+              ? `${tooltip.event.task_count} task${tooltip.event.task_count === 1 ? '' : 's'} · ${tooltip.event.tasks_done || 0} done`
+              : 'No tasks'}
           </div>
           {tooltip.event.notes && <div className="tt-notes">{tooltip.event.notes}</div>}
           <div className="tt-track">{tooltip.event.category}</div>

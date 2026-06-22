@@ -38,7 +38,7 @@ function PeopleInput({ value, onCommit, members, listId, placeholder, disabled }
   )
 }
 
-export default function EventTasks({ projectId, eventId, members, currentUser, readOnly }) {
+export default function EventTasks({ projectId, eventId, members, currentUser, readOnly, onSummaryChange }) {
   const { flash } = useToast()
   const [tasks,   setTasks]   = useState([])
   const [loading, setLoading] = useState(true)
@@ -102,6 +102,14 @@ export default function EventTasks({ projectId, eventId, members, currentUser, r
   const done    = tasks.filter(t => t.status === 'done').length
   const blocked = tasks.filter(t => t.status === 'blocked').length
   const pct     = total ? Math.round((done / total) * 100) : 0
+
+  // Report the rollup up so callers (e.g. the timeline badge/tooltip) stay in sync as
+  // tasks are added, edited, or deleted. Only after the initial load so we never clobber
+  // a real count with a transient 0.
+  useEffect(() => {
+    if (loading) return
+    onSummaryChange?.({ total, done, blocked })
+  }, [loading, total, done, blocked, onSummaryChange])
 
   return (
     <div className="field">

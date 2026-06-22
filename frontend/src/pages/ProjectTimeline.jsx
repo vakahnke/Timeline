@@ -7,7 +7,7 @@ import { PALETTE, MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 import Toolbar from '../components/Toolbar'
 import Timeline from '../components/Timeline'
 import EventModal from '../components/EventModal'
-import TaskManagerModal from '../components/TaskManagerModal'
+import EventTaskPanel from '../components/EventTaskPanel'
 import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
 import WorkloadModal from '../components/WorkloadModal'
@@ -71,8 +71,8 @@ export default function ProjectTimeline() {
   const [pxPerHour,      setPxPerHour]    = useState(120)
   const [settings,       setSettings]     = useState({ showArrows: true, showOnlyCritical: false, snapMinutes: 15 })
   const [modal,          setModal]        = useState(null)
-  const [taskModal,      setTaskModal]    = useState(null)  // event id whose tasks are open
-  const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task-manager close
+  const [taskPanelId,    setTaskPanelId]  = useState(null)  // event id whose task panel is open
+  const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task panel close
   const [catModal,       setCatModal]     = useState(null)
   const [showMembers,    setShowMembers]  = useState(false)
   const [showWorkloads,  setShowWorkloads] = useState(false)
@@ -86,6 +86,17 @@ export default function ProjectTimeline() {
   const role    = project?.my_role
   const canEdit = role === 'owner' || role === 'editor'
   const isOwner = role === 'owner'
+
+  // Keep an event's task rollup (badge + tooltip) live as the panel edits tasks, without
+  // refetching the event list. Returns the same array when nothing changed so the panel's
+  // summary effect can't drive a render loop.
+  const applyTaskSummary = useCallback((id, { total, done }) => {
+    setEvents(prev => {
+      const cur = prev.find(e => e.id === id)
+      if (!cur || (cur.task_count === total && (cur.tasks_done || 0) === done)) return prev
+      return prev.map(e => e.id === id ? { ...e, task_count: total, tasks_done: done } : e)
+    })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -416,6 +427,7 @@ export default function ProjectTimeline() {
         onOpenEdit={openEdit}
         onOpenNew={openNew}
         onDeleteEvent={deleteEvent}
+        onOpenTasks={(id) => setTaskPanelId(id)}
         loading={loading}
         apiError={apiError}
       />
@@ -435,23 +447,22 @@ export default function ProjectTimeline() {
           tracks={tracks}
           projectId={projectId}
           readOnly={!canEdit}
-          escDisabled={taskModal != null}
           tasksReloadToken={tasksReload}
-          onManageTasks={(id) => setTaskModal(id)}
+          onManageTasks={(id) => { closeModal(); setTaskPanelId(id) }}
           onSave={handleSave}
           onDelete={modal.id && canEdit ? handleDelete : null}
           onClose={closeModal}
         />
       )}
-      {taskModal != null && (
-        <TaskManagerModal
+      {taskPanelId != null && events.find(e => e.id === taskPanelId) && (
+        <EventTaskPanel
           projectId={projectId}
-          eventId={taskModal}
-          eventTitle={events.find(e => e.id === taskModal)?.title || 'Event'}
+          event={events.find(e => e.id === taskPanelId)}
           members={members}
           currentUser={user}
           readOnly={!canEdit}
-          onClose={() => { setTaskModal(null); setTasksReload(n => n + 1) }}
+          onSummaryChange={applyTaskSummary}
+          onClose={() => { setTaskPanelId(null); setTasksReload(n => n + 1) }}
         />
       )}
       {showMembers && (

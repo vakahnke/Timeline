@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 
 // Read-only progress glance for the event modal. The full add/edit/delete UI lives in
-// TaskManagerModal, reached via the button. `reloadToken` changes after the manager
-// closes so the summary reflects edits.
+// the docked EventTaskPanel, opened via the button (which closes this modal).
+// `reloadToken` changes after the panel closes so the summary reflects edits.
 export default function EventTasksSummary({ projectId, eventId, reloadToken, readOnly, onManage }) {
   const [tasks, setTasks] = useState(null)
 

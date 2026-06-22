@@ -27,7 +27,7 @@ function snap(ms, snapMinutes) {
   return Math.round(ms / grid) * grid
 }
 
-function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, onUpdate, onEdit, onDelete, onTooltip }) {
+function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
   const blockRef = useRef(null)
 
   // Lane/category is the source of truth for color, so an event can never visually
@@ -43,7 +43,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
   const handleMoveDown = useCallback((e) => {
     if (!canEdit) return
     if (e.button !== 0) return
-    if (e.target.closest('.resize-handle') || e.target.closest('.event-actions')) return
+    if (e.target.closest('.resize-handle') || e.target.closest('.event-actions') || e.target.closest('.event-tasks-badge')) return
 
     // Events are "sticky": without a modifier, a plain drag pans the timeline (handled by
     // the scroll container — we don't stopPropagation) and a clean click opens the editor.
@@ -210,7 +210,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
   return (
     <div
       ref={blockRef}
-      className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}`}
+      className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}${event.task_count > 0 ? ' has-tasks' : ''}`}
       style={{
         left:        x + 'px',
         top:         top + 'px',
@@ -234,8 +234,23 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         <span className="event-time">{fmtSpan(startMs, endMs)}</span>
       </div>
 
+      {event.task_count > 0 && onOpenTasks && (
+        <button
+          type="button"
+          className={`event-tasks-badge${event.tasks_done === event.task_count ? ' all-done' : ''}`}
+          title={`${event.tasks_done || 0}/${event.task_count} tasks done — click to open`}
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); onOpenTasks(event.id) }}
+        >
+          &#9776; {event.task_count}
+        </button>
+      )}
+
       {canEdit && w >= 80 && (
         <div className="event-actions">
+          {onOpenTasks && (
+            <button className="btn-tasks" title="Tasks" onClick={e => { e.stopPropagation(); onOpenTasks(event.id) }}>&#9776;</button>
+          )}
           <button className="btn-edit" title="Edit" onClick={e => { e.stopPropagation(); onEdit(event.id) }}>&#9998;</button>
           <button className="btn-del"  title="Delete" onClick={e => { e.stopPropagation(); onDelete(event.id) }}>&#10005;</button>
         </div>
