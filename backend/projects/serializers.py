@@ -16,6 +16,15 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class MeSerializer(serializers.ModelSerializer):
+    """The signed-in user's own profile. Unlike UserSerializer (used for other people, e.g.
+    task owner/assignee), this exposes `is_staff` so the UI can show admin-only controls."""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'is_staff']
+        read_only_fields = fields
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     email    = serializers.EmailField(required=True)

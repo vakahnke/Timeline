@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
+import { useAuth } from '../auth/AuthContext'
 
 function defaultStart() {
   const d = new Date()
@@ -10,6 +11,7 @@ function defaultStart() {
 }
 
 export default function TemplateModal({ onCreated, onClose }) {
+  const { user } = useAuth()
   const [templates, setTemplates] = useState([])
   const [loading,   setLoading]   = useState(true)
   const [selected,  setSelected]  = useState(null)   // template key
@@ -39,11 +41,21 @@ export default function TemplateModal({ onCreated, onClose }) {
 
   const pick = (t) => { setSelected(t.key); setName(t.name) }
 
-  const deleteSaved = async (t, e) => {
+  const isBuiltin = (t) => t.source === 'builtin'
+  // Saved templates: anyone can delete their own. Built-ins are shared/global, so only
+  // admins can retire them — and doing so removes them for everyone.
+  const canDelete = (t) => (t.source === 'saved') || (isBuiltin(t) && user?.is_staff)
+
+  const deleteTemplate = async (t, e) => {
     e.stopPropagation()
-    if (!confirm(`Delete template "${t.name}"?`)) return
+    const msg = isBuiltin(t)
+      ? `Delete the built-in template "${t.name}" for everyone? An admin can restore it later.`
+      : `Delete template "${t.name}"?`
+    if (!confirm(msg)) return
+    // Built-ins are addressed by slug (from the "builtin:<slug>" key); saved ones by id.
+    const idOrSlug = isBuiltin(t) ? t.key.split(':')[1] : t.id
     try {
-      await api.templates.remove(t.id)
+      await api.templates.remove(idOrSlug)
       setTemplates(prev => prev.filter(x => x.key !== t.key))
       if (selected === t.key) setSelected(null)
     } catch { setError('Could not delete template.') }
@@ -99,9 +111,10 @@ export default function TemplateModal({ onCreated, onClose }) {
                       <p className="template-desc">{t.description}</p>
                       <span className="template-meta">{t.task_count} tasks · {t.category_count} categories</span>
                     </div>
-                    {t.source === 'saved' && (
-                      <button className="template-del" title="Delete template"
-                              onClick={e => deleteSaved(t, e)}>&#10005;</button>
+                    {canDelete(t) && (
+                      <button className="template-del"
+                              title={isBuiltin(t) ? 'Delete built-in template (admin · removes it for everyone)' : 'Delete template'}
+                              onClick={e => deleteTemplate(t, e)}>&#10005;</button>
                     )}
                   </div>
                 ))}

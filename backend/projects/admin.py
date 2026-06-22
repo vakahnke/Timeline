@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
 from .emails import notify_user_account_activated
-from .models import Project, ProjectMembership, ProjectTemplate, Team
+from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTemplate, Team
 
 User = get_user_model()
 
@@ -68,3 +68,10 @@ class TeamAdmin(admin.ModelAdmin):
     list_display       = ['name', 'owner', 'created_at']
     search_fields      = ['name', 'owner__username']
     filter_horizontal  = ['members']
+
+
+@admin.register(HiddenBuiltinTemplate)
+class HiddenBuiltinTemplateAdmin(admin.ModelAdmin):
+    # A row here = a retired built-in template. Delete the row to restore the built-in.
+    list_display  = ['slug', 'hidden_by', 'created_at']
+    search_fields = ['slug']

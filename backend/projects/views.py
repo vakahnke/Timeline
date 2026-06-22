@@ -12,7 +12,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .emails import notify_admin_new_registration
-from .models import Project, ProjectMembership, ProjectTemplate, Role, Team
+from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTemplate, Role, Team
 from .permissions import IsProjectMember, IsProjectOwner, get_role
 from .serializers import (
     AddMemberSerializer,
@@ -21,6 +21,7 @@ from .serializers import (
     IdentifierSerializer,
     InstantiateTemplateSerializer,
     LogoutSerializer,
+    MeSerializer,
     ProjectMembershipSerializer,
     ProjectSerializer,
     RegisterSerializer,
@@ -56,7 +57,7 @@ class RegisterView(generics.CreateAPIView):
 
 class MeView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
-    serializer_class   = UserSerializer
+    serializer_class   = MeSerializer
 
     def get_object(self):
         return self.request.user
@@ -228,7 +229,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         )
 
 
+def _hidden_builtin_slugs():
+    return set(HiddenBuiltinTemplate.objects.values_list('slug', flat=True))
+
+
 def _builtin_items():
+    hidden = _hidden_builtin_slugs()
     return [{
         'key': f'builtin:{slug}',
         'source': 'builtin',
@@ -236,7 +242,7 @@ def _builtin_items():
         'description': spec['description'],
         'category_count': len(spec['categories']),
         'task_count': len(spec['tasks']),
-    } for slug, spec in BUILTIN_TEMPLATES.items()]
+    } for slug, spec in BUILTIN_TEMPLATES.items() if slug not in hidden]
 
 
 def _saved_items(user):
@@ -254,7 +260,10 @@ def _saved_items(user):
 def _resolve_template(key, user):
     """Return (spec, default_name, default_description) for a template key, or None."""
     if key.startswith('builtin:'):
-        spec = builtin_spec(key.split(':', 1)[1])
+        slug = key.split(':', 1)[1]
+        if slug in _hidden_builtin_slugs():     # retired by an admin -> no longer usable
+            return None
+        spec = builtin_spec(slug)
         return (spec, spec['name'], spec['description']) if spec else None
     if key.startswith('saved:'):
         try:
@@ -295,13 +304,31 @@ class TemplateViewSet(viewsets.ViewSet):
         }, status=status.HTTP_201_CREATED)
 
     @extend_schema(responses=None, parameters=[
-        OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH),
+        OpenApiParameter('id', OpenApiTypes.STR, OpenApiParameter.PATH,
+                         description='Saved template id (numeric), or built-in slug (admins only).'),
     ])
     def destroy(self, request, pk=None):
-        """Delete one of your saved templates."""
-        deleted, _ = ProjectTemplate.objects.filter(pk=pk, owner=request.user).delete()
+        """Delete a template. A numeric `pk` deletes one of your own saved templates; a
+        built-in slug retires that built-in globally (admins only)."""
+        try:
+            saved_pk = int(pk)
+        except (TypeError, ValueError):
+            return self._retire_builtin(request, pk)
+
+        deleted, _ = ProjectTemplate.objects.filter(pk=saved_pk, owner=request.user).delete()
         if not deleted:
             return Response({'detail': 'Template not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _retire_builtin(self, request, slug):
+        """Hide a built-in template for everyone. Restricted to admin (staff) accounts."""
+        if not request.user.is_staff:
+            return Response({'detail': 'Only admins can delete built-in templates.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        if slug not in BUILTIN_TEMPLATES:
+            return Response({'detail': 'Template not found.'}, status=status.HTTP_404_NOT_FOUND)
+        HiddenBuiltinTemplate.objects.get_or_create(
+            slug=slug, defaults={'hidden_by': request.user})
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(request=InstantiateTemplateSerializer, responses=ProjectSerializer)

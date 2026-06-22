@@ -59,6 +59,26 @@ class ProjectTemplate(models.Model):
         return self.name
 
 
+class HiddenBuiltinTemplate(models.Model):
+    """A built-in template (from templates_builtin.py) that an admin has retired.
+
+    Built-in templates live in code, not the database, so there's no row to delete — an
+    admin "deletes" one by recording its slug here, which hides it globally for everyone.
+    Reversible: delete this row (e.g. via the Django admin) to restore the built-in.
+    """
+    slug       = models.CharField(max_length=100, unique=True)
+    hidden_by  = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.slug
+
+
 class Team(models.Model):
     """A user-owned, reusable group of people. Adding a team to a project expands its
     current members into individual project memberships (a one-time snapshot)."""
