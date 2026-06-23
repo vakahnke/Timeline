@@ -6,6 +6,7 @@ import { useToast } from '../ui/ToastProvider'
 import { PALETTE, MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 import Toolbar from '../components/Toolbar'
 import Timeline from '../components/Timeline'
+import EventList from '../components/EventList'
 import EventModal from '../components/EventModal'
 import EventTaskPanel from '../components/EventTaskPanel'
 import CategoryModal from '../components/CategoryModal'
@@ -73,6 +74,12 @@ export default function ProjectTimeline() {
   const [modal,          setModal]        = useState(null)
   const [taskPanelId,    setTaskPanelId]  = useState(null)  // event id whose task panel is open
   const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task panel close
+  // 'timeline' (pan/zoom) vs 'list' (mobile-friendly agenda). Defaults to list on a
+  // phone-sized viewport; remembered per browser.
+  const [view,           setView]         = useState(() => {
+    try { const v = localStorage.getItem('timeline:view'); if (v === 'list' || v === 'timeline') return v } catch { /* ignore */ }
+    return (typeof window !== 'undefined' && window.innerWidth <= 720) ? 'list' : 'timeline'
+  })
   const [catModal,       setCatModal]     = useState(null)
   const [showMembers,    setShowMembers]  = useState(false)
   const [showWorkloads,  setShowWorkloads] = useState(false)
@@ -90,6 +97,11 @@ export default function ProjectTimeline() {
   // Keep an event's task rollup (badge + tooltip) live as the panel edits tasks, without
   // refetching the event list. Returns the same array when nothing changed so the panel's
   // summary effect can't drive a render loop.
+  const changeView = useCallback((v) => {
+    setView(v)
+    try { localStorage.setItem('timeline:view', v) } catch { /* ignore */ }
+  }, [])
+
   const applyTaskSummary = useCallback((id, { total, done }) => {
     setEvents(prev => {
       const cur = prev.find(e => e.id === id)
@@ -393,6 +405,8 @@ export default function ProjectTimeline() {
         onBack={() => navigate('/')}
         canEdit={canEdit}
         isOwner={isOwner}
+        view={view}
+        onViewChange={changeView}
         onUndo={undo}
         onRedo={redo}
         canUndo={undoStack.length > 0}
@@ -412,25 +426,38 @@ export default function ProjectTimeline() {
         projectStart={events.length ? Math.min(...events.map(e => new Date(e.start).getTime())) : null}
         projectEnd={events.length   ? Math.max(...events.map(e => new Date(e.end).getTime()))   : null}
       />
-      <Timeline
-        ref={timelineRef}
-        events={events}
-        tracks={tracks}
-        range={range}
-        pxPerHour={pxPerHour}
-        setPxPerHour={setPxPerHour}
-        settings={settings}
-        canEdit={canEdit}
-        onReorderTracks={reorderTracks}
-        onEditCategory={openEditCategory}
-        onUpdateEvent={updateEvent}
-        onOpenEdit={openEdit}
-        onOpenNew={openNew}
-        onDeleteEvent={deleteEvent}
-        onOpenTasks={(id) => setTaskPanelId(id)}
-        loading={loading}
-        apiError={apiError}
-      />
+      {view === 'list' ? (
+        <EventList
+          projectId={projectId}
+          events={events}
+          tracks={tracks}
+          canEdit={canEdit}
+          reloadToken={tasksReload}
+          onOpenEdit={openEdit}
+          onOpenTasks={(id) => setTaskPanelId(id)}
+          onOpenNew={openNew}
+        />
+      ) : (
+        <Timeline
+          ref={timelineRef}
+          events={events}
+          tracks={tracks}
+          range={range}
+          pxPerHour={pxPerHour}
+          setPxPerHour={setPxPerHour}
+          settings={settings}
+          canEdit={canEdit}
+          onReorderTracks={reorderTracks}
+          onEditCategory={openEditCategory}
+          onUpdateEvent={updateEvent}
+          onOpenEdit={openEdit}
+          onOpenNew={openNew}
+          onDeleteEvent={deleteEvent}
+          onOpenTasks={(id) => setTaskPanelId(id)}
+          loading={loading}
+          apiError={apiError}
+        />
+      )}
       {catModal && (
         <CategoryModal
           track={catModal.track}

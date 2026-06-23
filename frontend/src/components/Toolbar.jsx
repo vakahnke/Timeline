@@ -18,7 +18,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -45,14 +45,24 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       <button className="btn-back" onClick={onBack} title="Back to projects">←</button>
       <h1>{projectName || 'Timeline'}</h1>
       {!canEdit && <span className="ro-badge" title="You have view-only access">View only</span>}
-      <div className="toolbar-sep" />
-      <button onClick={onZoomOut} title="Zoom out  ·  −  or  Ctrl/⌘ + scroll">−</button>
-      <span className="zoom-label" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
-      <button onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
-      <button onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
-      <button className="tb-collapsible" onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
-      <button className="tb-collapsible" onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
-      <button className="tb-collapsible" onClick={() => onViewPeriod?.('month')} title="Frame this month">Month</button>
+      <div className="view-toggle" role="group" aria-label="View mode">
+        <button className={`view-toggle-btn${view === 'timeline' ? ' active' : ''}`}
+                onClick={() => onViewChange?.('timeline')} title="Timeline view">Timeline</button>
+        <button className={`view-toggle-btn${view === 'list' ? ' active' : ''}`}
+                onClick={() => onViewChange?.('list')} title="List view (best on phones)">List</button>
+      </div>
+      {view === 'timeline' && (
+        <>
+          <div className="toolbar-sep" />
+          <button onClick={onZoomOut} title="Zoom out  ·  −  or  Ctrl/⌘ + scroll">−</button>
+          <span className="zoom-label" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
+          <button onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
+          <button onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
+          <button className="tb-collapsible" onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
+          <button className="tb-collapsible" onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
+          <button className="tb-collapsible" onClick={() => onViewPeriod?.('month')} title="Frame this month">Month</button>
+        </>
+      )}
       {canEdit && (
         <>
           <div className="toolbar-sep" />
@@ -132,10 +142,14 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
 
             {/* On phones the toolbar hides these (tb-collapsible); surface them here instead. */}
             <div className="settings-mobile">
-              <div className="settings-title">Frame</div>
-              <button className="settings-action" onClick={() => { onViewPeriod?.('day');   setShowSettings(false) }}>Today</button>
-              <button className="settings-action" onClick={() => { onViewPeriod?.('week');  setShowSettings(false) }}>This week</button>
-              <button className="settings-action" onClick={() => { onViewPeriod?.('month'); setShowSettings(false) }}>This month</button>
+              {view === 'timeline' && (
+                <>
+                  <div className="settings-title">Frame</div>
+                  <button className="settings-action" onClick={() => { onViewPeriod?.('day');   setShowSettings(false) }}>Today</button>
+                  <button className="settings-action" onClick={() => { onViewPeriod?.('week');  setShowSettings(false) }}>This week</button>
+                  <button className="settings-action" onClick={() => { onViewPeriod?.('month'); setShowSettings(false) }}>This month</button>
+                </>
+              )}
               {canEdit && (
                 <>
                   <div className="settings-title">Project</div>
