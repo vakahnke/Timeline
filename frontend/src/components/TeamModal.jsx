@@ -4,6 +4,7 @@ import { api } from '../api'
 // team === null  -> create mode;  team set -> manage mode (members + rename + delete)
 export default function TeamModal({ team, onClose, onChanged }) {
   const creating = !team
+  const canManage = creating || !!team?.is_owner   // members see a read-only view
   const [name,        setName]        = useState(team?.name || '')
   const [description, setDescription] = useState(team?.description || '')
   const [members,     setMembers]     = useState(team?.members || [])
@@ -61,26 +62,30 @@ export default function TeamModal({ team, onClose, onChanged }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-head">
-          <h2>{creating ? 'New Team' : 'Manage Team'}</h2>
+          <h2>{creating ? 'New Team' : (canManage ? 'Manage Team' : 'Team')}</h2>
           <button className="btn-close" onClick={onClose}>&#10005;</button>
         </div>
 
         <div className="modal-body">
           <div className="field">
             <label>Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Design Squad" autoFocus />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Design Squad" autoFocus disabled={!canManage} />
           </div>
           <div className="field">
             <label>Description</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional" />
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional" disabled={!canManage} />
           </div>
 
           {!creating && (
             <>
-              <form className="invite-row" onSubmit={addMember}>
-                <input value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="Add member by email or username" />
-                <button className="btn-primary" type="submit">Add</button>
-              </form>
+              {canManage ? (
+                <form className="invite-row" onSubmit={addMember}>
+                  <input value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="Add member by email or username" />
+                  <button className="btn-primary" type="submit">Add</button>
+                </form>
+              ) : (
+                <p className="dim" style={{ margin: '2px 0 8px' }}>You're a member of this team. Only the owner can change it.</p>
+              )}
               <div className="members-list">
                 {members.map(u => (
                   <div key={u.id} className="member-row">
@@ -88,10 +93,10 @@ export default function TeamModal({ team, onClose, onChanged }) {
                       <span className="member-name">{u.username}</span>
                       <span className="member-email">{u.email}</span>
                     </div>
-                    <button className="btn-danger btn-sm" onClick={() => removeMember(u)}>Remove</button>
+                    {canManage && <button className="btn-danger btn-sm" onClick={() => removeMember(u)}>Remove</button>}
                   </div>
                 ))}
-                {!members.length && <p className="dim">No members yet — add people above.</p>}
+                {!members.length && <p className="dim">No members yet{canManage ? ' — add people above.' : '.'}</p>}
               </div>
             </>
           )}
@@ -100,11 +105,10 @@ export default function TeamModal({ team, onClose, onChanged }) {
         </div>
 
         <div className="modal-foot">
-          {!creating && <button className="btn-danger" onClick={deleteTeam} disabled={busy}>Delete team</button>}
+          {!creating && canManage && <button className="btn-danger" onClick={deleteTeam} disabled={busy}>Delete team</button>}
           <button onClick={onClose} disabled={busy}>Close</button>
-          {creating
-            ? <button className="btn-primary" onClick={createTeam} disabled={busy}>{busy ? 'Creating…' : 'Create team'}</button>
-            : <button className="btn-primary" onClick={saveMeta} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>}
+          {creating && <button className="btn-primary" onClick={createTeam} disabled={busy}>{busy ? 'Creating…' : 'Create team'}</button>}
+          {!creating && canManage && <button className="btn-primary" onClick={saveMeta} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>}
         </div>
       </div>
     </div>

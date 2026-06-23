@@ -1527,7 +1527,7 @@ fieldset.modal-body:disabled { opacity: 1; }
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
 }
-.task-panel-body { padding: 12px 16px 24px; overflow-y: auto; flex: 1; }
+.task-panel-body { padding: 12px 16px 24px; overflow-y: auto; flex: 1; min-height: 0; }   /* min-height:0 lets the body scroll in the flex column so the Add-task row is always reachable */
 .task-panel-body > .field > label { display: none; }   /* the panel header already says "Tasks" */
 
 /* The shared task rows are built for a wide modal; wrap them to fit the narrow drawer:

@@ -74,3 +74,12 @@ class IsProjectOwner(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return get_role(request.user, self._project_id(view, obj)) == Role.OWNER
+
+
+class IsTeamOwnerOrReadOnly(BasePermission):
+    """Anyone on a team may read it; only its owner may rename, delete, or change members."""
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        return obj.owner_id == request.user.id

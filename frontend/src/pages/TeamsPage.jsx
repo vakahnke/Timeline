@@ -61,7 +61,10 @@ export default function TeamsPage() {
               <button key={t.id} className="project-card" onClick={() => setModal(t)}>
                 <div className="project-card-top"><h3>{t.name}</h3></div>
                 <p className="project-card-desc">{t.description || 'No description'}</p>
-                <div className="project-card-foot">{t.member_count} member{t.member_count === 1 ? '' : 's'}</div>
+                <div className="project-card-foot">
+                  {t.member_count} member{t.member_count === 1 ? '' : 's'}
+                  {!t.is_owner && <span className="dim"> · shared with you</span>}
+                </div>
               </button>
             ))}
           </div>

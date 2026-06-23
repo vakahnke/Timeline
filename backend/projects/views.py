@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.db.models import Avg, Count, Max, Min
+from django.db.models import Avg, Count, Max, Min, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status, viewsets
@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .emails import notify_admin_new_registration
 from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTemplate, Role, Team
-from .permissions import IsProjectMember, IsProjectOwner, get_role, is_org_admin
+from .permissions import IsProjectMember, IsProjectOwner, IsTeamOwnerOrReadOnly, get_role, is_org_admin
 from .serializers import (
     AddMemberSerializer,
     AddTeamResultSerializer,
@@ -371,14 +371,19 @@ class TemplateViewSet(viewsets.ViewSet):
 
 
 class TeamViewSet(viewsets.ModelViewSet):
-    """User-owned, reusable groups of people. Private to their creator."""
+    """Reusable groups of people. Visible to the owner and to every member; only the owner
+    may rename it, delete it, or change its membership."""
     serializer_class   = TeamSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsTeamOwnerOrReadOnly]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Team.objects.none()
-        return Team.objects.filter(owner=self.request.user).prefetch_related('members')
+        user = self.request.user
+        return (Team.objects
+                .filter(Q(owner=user) | Q(members=user))
+                .distinct()
+                .prefetch_related('members'))
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -393,7 +398,7 @@ class TeamViewSet(viewsets.ModelViewSet):
             return Response({'identifier': 'No user found with that email or username.'},
                             status=status.HTTP_400_BAD_REQUEST)
         team.members.add(user)
-        return Response(TeamSerializer(team).data)
+        return Response(self.get_serializer(team).data)
 
     @extend_schema(responses=TeamSerializer, parameters=[
         OpenApiParameter('user_id', OpenApiTypes.INT, OpenApiParameter.PATH),
@@ -403,4 +408,4 @@ class TeamViewSet(viewsets.ModelViewSet):
         """Remove a user from this team."""
         team = self.get_object()
         team.members.remove(user_id)
-        return Response(TeamSerializer(team).data)
+        return Response(self.get_serializer(team).data)

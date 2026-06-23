@@ -162,15 +162,22 @@ class AddMemberSerializer(serializers.Serializer):
 class TeamSerializer(serializers.ModelSerializer):
     members      = UserSerializer(many=True, read_only=True)
     member_count = serializers.SerializerMethodField()
+    is_owner     = serializers.SerializerMethodField()
 
     class Meta:
         model  = Team
-        fields = ['id', 'name', 'description', 'members', 'member_count', 'created_at']
-        read_only_fields = ['id', 'members', 'member_count', 'created_at']
+        fields = ['id', 'name', 'description', 'members', 'member_count', 'is_owner', 'created_at']
+        read_only_fields = ['id', 'members', 'member_count', 'is_owner', 'created_at']
 
     @extend_schema_field(serializers.IntegerField())
     def get_member_count(self, obj):
         return len(obj.members.all())  # uses the prefetch cache
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_owner(self, obj):
+        # Lets the UI show edit controls only to the owner; members get a read-only view.
+        request = self.context.get('request')
+        return bool(request and obj.owner_id == request.user.id)
 
 
 class IdentifierSerializer(serializers.Serializer):
