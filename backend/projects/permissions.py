@@ -5,10 +5,22 @@ from .models import ProjectMembership, Role
 ROLE_RANK = {Role.VIEWER: 1, Role.EDITOR: 2, Role.OWNER: 3}
 
 
+def is_org_admin(user):
+    """Org-admins manage every project. Currently any staff account is an org-admin —
+    change this one predicate to move org-admin onto a dedicated flag later."""
+    return bool(getattr(user, 'is_authenticated', False) and user.is_staff)
+
+
 def get_role(user, project_id):
-    """Return the user's role string for the project, or None if not a member."""
+    """Return the user's effective role string for the project, or None if no access.
+
+    Org-admins (staff) are treated as Owner on every project — this single chokepoint
+    is what gives them full read/write, member management, and delete everywhere.
+    """
     if not user or not user.is_authenticated or project_id is None:
         return None
+    if is_org_admin(user):
+        return Role.OWNER
     membership = (ProjectMembership.objects
                   .filter(user=user, project_id=project_id)
                   .only('role')

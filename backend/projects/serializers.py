@@ -5,6 +5,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Project, ProjectMembership, Role, Team
+from .permissions import is_org_admin
 
 User = get_user_model()
 
@@ -114,6 +115,8 @@ class ProjectSerializer(serializers.ModelSerializer):
         if not request:
             return None
         user = request.user
+        if is_org_admin(user):              # org-admins act as Owner on every project
+            return Role.OWNER
         membership = next((m for m in obj.memberships.all() if m.user_id == user.id), None)
         return membership.role if membership else None
 

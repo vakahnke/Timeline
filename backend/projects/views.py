@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .emails import notify_admin_new_registration
 from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTemplate, Role, Team
-from .permissions import IsProjectMember, IsProjectOwner, get_role
+from .permissions import IsProjectMember, IsProjectOwner, get_role, is_org_admin
 from .serializers import (
     AddMemberSerializer,
     AddTeamResultSerializer,
@@ -108,18 +108,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Project.objects.none()  # schema generation has no authenticated user
-        # Membership filter via subquery (not a join) so the event aggregates below aren't
+        qs = (Project.objects
+              .annotate(
+                  ev_start=Min('events__start'),
+                  ev_end=Max('events__end'),
+                  avg_progress=Avg('events__percent_complete'),
+                  ev_count=Count('events'),
+              )
+              .prefetch_related('memberships'))   # members listed via the dedicated endpoint
+        if is_org_admin(self.request.user):
+            return qs                              # org-admins manage every project
+        # Membership filter via subquery (not a join) so the event aggregates above aren't
         # multiplied by the number of memberships.
         my_ids = ProjectMembership.objects.filter(user=self.request.user).values('project')
-        return (Project.objects
-                .filter(id__in=my_ids)
-                .annotate(
-                    ev_start=Min('events__start'),
-                    ev_end=Max('events__end'),
-                    avg_progress=Avg('events__percent_complete'),
-                    ev_count=Count('events'),
-                )
-                .prefetch_related('memberships'))   # members listed via the dedicated endpoint
+        return qs.filter(id__in=my_ids)
 
     # Owner-only actions. NOTE: get_permissions overrides any permission_classes set on
     # the @action decorators, so owner-only actions must be enumerated here.
