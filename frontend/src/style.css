@@ -620,6 +620,7 @@ canvas.ruler {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;   /* scroll the whole modal when content exceeds max-height — robust vs a <fieldset> body that won't shrink/scroll on short screens */
   box-shadow:
     0 32px 80px rgba(0,0,0,0.85),
     0 0 0 1px rgba(255,255,255,0.025);
@@ -632,6 +633,10 @@ canvas.ruler {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   border-radius: 14px 14px 0 0;
+  position: sticky;          /* stay pinned while the modal body scrolls */
+  top: 0;
+  z-index: 2;
+  background: var(--bg-elevated);
 }
 .modal-head h2 {
   font-size: 13px;
@@ -661,9 +666,8 @@ canvas.ruler {
   padding: 20px;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;       /* let the body actually scroll inside the flex column (don't shove the footer) */
-  overflow-y: auto;
+  flex: 0 0 auto;      /* natural height; the .modal scrolls (a <fieldset> body won't shrink/scroll reliably) */
+  overflow: visible;
   gap: 14px;
 }
 
@@ -674,6 +678,10 @@ canvas.ruler {
   padding: 14px 20px;
   border-top: 1px solid var(--border);
   border-radius: 0 0 14px 14px;
+  position: sticky;          /* keep Save/Cancel reachable while the body scrolls */
+  bottom: 0;
+  z-index: 2;
+  background: var(--bg-elevated);
 }
 .modal-foot .btn-danger { margin-right: auto; }
 
