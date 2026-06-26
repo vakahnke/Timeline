@@ -105,7 +105,7 @@ function applyDrag(arr, from, to) {
 }
 
 const Timeline = forwardRef(function Timeline(
-  { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, onOpenTasks, loading, apiError },
+  { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, onOpenTasks, onMoveEvents, loading, apiError },
   ref
 ) {
   const scrollRef       = useRef(null)
@@ -121,6 +121,32 @@ const Timeline = forwardRef(function Timeline(
   const [tooltip, setTooltip] = useState(null)   // { event, x, y }
   const cursorLabelRef = useRef(null)  // updated imperatively on mouse-move (no re-render)
   const [now, setNow] = useState(Date.now())
+
+  // Multi-select: Shift-click events into a set; Ctrl/⌘-drag any of them moves the group.
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const toggleSelect = useCallback((id) => {
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }, [])
+  const clearSelection = useCallback(() => setSelectedIds(prev => (prev.size ? new Set() : prev)), [])
+  const lanesDownRef = useRef(null)   // distinguishes a clean empty-space click (clears selection) from a pan
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') clearSelection() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [clearSelection])
+  // Bridge a group drag (a single time delta) to the project's bulk move (one undo step).
+  const handleGroupMove = useCallback((deltaMs) => {
+    const updates = events
+      .filter(ev => selectedIds.has(ev.id))
+      .map(ev => ({
+        id: ev.id,
+        patch: {
+          start: new Date(new Date(ev.start).getTime() + deltaMs).toISOString(),
+          end:   new Date(new Date(ev.end).getTime() + deltaMs).toISOString(),
+        },
+      }))
+    return onMoveEvents?.(updates)
+  }, [events, selectedIds, onMoveEvents])
 
   useEffect(() => { pxRef.current      = pxPerHour    }, [pxPerHour])
   useEffect(() => { rangeRef.current   = range        }, [range])
@@ -641,7 +667,14 @@ const Timeline = forwardRef(function Timeline(
             )
           })()}
 
-          <div className="track-lanes">
+          <div
+            className="track-lanes"
+            onMouseDown={e => { lanesDownRef.current = { x: e.clientX, y: e.clientY } }}
+            onClick={e => {
+              const d = lanesDownRef.current
+              if (d && Math.abs(e.clientX - d.x) < 5 && Math.abs(e.clientY - d.y) < 5 && !e.target.closest('.event-block')) clearSelection()
+            }}
+          >
             {loading && (
               <div className="empty-state">
                 <div className="icon">⏳</div>
@@ -689,6 +722,10 @@ const Timeline = forwardRef(function Timeline(
                       onDelete={handleDeleteEvent}
                       onTooltip={handleTooltip}
                       onOpenTasks={onOpenTasks}
+                      selected={selectedIds.has(ev.id)}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelect}
+                      onGroupMove={handleGroupMove}
                     />
                   ))}
                 </div>

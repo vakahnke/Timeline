@@ -247,12 +247,32 @@ export default function ProjectTimeline() {
     }
   }, [applyUpdate, flash])
 
+  // Move several events as one undoable step (used by the multi-select group drag).
+  // updates: [{ id, patch }].
+  const moveEvents = useCallback(async (updates) => {
+    if (!updates || !updates.length) return
+    const group = updates.map(({ id, patch }) => {
+      const cur = eventsRef.current.find(e => e.id === id)
+      return cur ? { id, before: Object.fromEntries(Object.keys(patch).map(k => [k, cur[k]])), after: patch } : null
+    }).filter(Boolean)
+    flash('Saving…', 'saving')
+    try {
+      await Promise.all(updates.map(({ id, patch }) => applyUpdate(id, patch)))
+      if (group.length) { setUndoStack(s => [...s, { group }]); setRedoStack([]) }
+      flash('Saved', 'saved')
+    } catch (err) {
+      flash(err.status === 403 ? 'You don’t have edit access.' : 'Save failed.', 'error')
+      throw err
+    }
+  }, [applyUpdate, flash])
+
   const undo = useCallback(async () => {
     const entry = undoStack[undoStack.length - 1]
     if (!entry) return
     flash('Undoing…', 'saving')
     try {
-      await applyUpdate(entry.id, entry.before)
+      if (entry.group) await Promise.all(entry.group.map(g => applyUpdate(g.id, g.before)))
+      else await applyUpdate(entry.id, entry.before)
       setUndoStack(s => s.slice(0, -1))
       setRedoStack(s => [...s, entry])
       flash('Undone', 'saved')
@@ -267,7 +287,8 @@ export default function ProjectTimeline() {
     if (!entry) return
     flash('Redoing…', 'saving')
     try {
-      await applyUpdate(entry.id, entry.after)
+      if (entry.group) await Promise.all(entry.group.map(g => applyUpdate(g.id, g.after)))
+      else await applyUpdate(entry.id, entry.after)
       setRedoStack(s => s.slice(0, -1))
       setUndoStack(s => [...s, entry])
       flash('Redone', 'saved')
@@ -315,8 +336,9 @@ export default function ProjectTimeline() {
       return next
     })
     // Drop history that points at the now-deleted event so undo can't 404.
-    setUndoStack(s => s.filter(h => h.id !== id))
-    setRedoStack(s => s.filter(h => h.id !== id))
+    const refsDeleted = (h) => h.group ? h.group.some(g => g.id === id) : h.id === id
+    setUndoStack(s => s.filter(h => !refsDeleted(h)))
+    setRedoStack(s => s.filter(h => !refsDeleted(h)))
     flash('Deleted', 'saved')
   }, [projectId, flash])
 
@@ -470,6 +492,7 @@ export default function ProjectTimeline() {
           onOpenNew={openNew}
           onDeleteEvent={deleteEvent}
           onOpenTasks={(id) => setTaskPanelId(id)}
+          onMoveEvents={moveEvents}
           loading={loading}
           apiError={apiError}
         />

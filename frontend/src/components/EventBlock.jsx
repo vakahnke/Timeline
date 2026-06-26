@@ -27,7 +27,7 @@ function snap(ms, snapMinutes) {
   return Math.round(ms / grid) * grid
 }
 
-function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
+function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, selected = false, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
   const blockRef = useRef(null)
 
   // Lane/category is the source of truth for color, so an event can never visually
@@ -44,6 +44,19 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     if (!canEdit) return
     if (e.button !== 0) return
     if (e.target.closest('.resize-handle') || e.target.closest('.event-actions') || e.target.closest('.event-tasks-badge')) return
+
+    // Shift-click toggles this event in/out of the multi-selection (no move, no pan).
+    if (e.shiftKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      const cx = e.clientX, cy = e.clientY
+      const selUp = (u) => {
+        document.removeEventListener('mouseup', selUp)
+        if (Math.abs(u.clientX - cx) < 5 && Math.abs(u.clientY - cy) < 5) onToggleSelect?.(event.id)
+      }
+      document.addEventListener('mouseup', selUp)
+      return
+    }
 
     // Events are "sticky": without a modifier, a plain drag pans the timeline (handled by
     // the scroll container — we don't stopPropagation) and a clean click opens the editor.
@@ -76,11 +89,22 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     const timeEl = el.querySelector('.event-time')
     const scroller = el.closest('.timeline-scroll')   // auto-pan target so an event can be dragged past the visible range
     const scroll0  = scroller ? scroller.scrollLeft : 0
+
+    // Group move: Ctrl/⌘-dragging one of several selected events shifts them all by the
+    // same amount (horizontal only — each keeps its own track).
+    const groupMode = !!(selectedIds && selectedIds.has(event.id) && selectedIds.size > 1)
+    const moveNodes = (groupMode && scroller)
+      ? [...scroller.querySelectorAll('.event-block')].filter(n => selectedIds.has(Number(n.dataset.eventId)))
+      : [el]
+    const orig = moveNodes.map(n => ({
+      n, left: parseFloat(n.style.left) || 0, top: n.style.top,
+      w: n.offsetWidth, h: n.offsetHeight, color: n.style.borderColor || color,
+    }))
+
     let moved = false
     let activeLane = null
     let lastX = e.clientX, lastY = e.clientY
-    const left0 = el.style.left, top0 = el.style.top, w0 = el.offsetWidth, h0 = el.offsetHeight
-    let ghost = null   // faded placeholder left at the start position so the move is easy to eyeball / undo
+    let ghosts = []   // faded placeholders left at each start position so the move is easy to eyeball / undo
 
     el.classList.add('dragging')
     document.body.style.cursor = 'grabbing'
@@ -100,16 +124,21 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       activeLane = lane
     }
 
-    // Position the block under the cursor, accounting for any auto-pan since drag start.
-    // Unsnapped while dragging (smooth); the snap is applied once on release (onUp).
+    // Position under the cursor, accounting for any auto-pan since drag start. Unsnapped
+    // while dragging (smooth); snapped once on release. Group mode shifts every selected
+    // block by the same pixels — horizontal only, no track change.
     const place = (clientX, clientY) => {
       const scrollDelta = scroller ? scroller.scrollLeft - scroll0 : 0
       const dx = (clientX - mouseX0) + scrollDelta
       const newS = s0 + (dx / capPx) * 3_600_000
-      el.style.left = msToX(newS) + 'px'
-      el.style.top  = (top + (clientY - mouseY0)) + 'px'
+      if (groupMode) {
+        for (const o of orig) o.n.style.left = (o.left + dx) + 'px'
+      } else {
+        el.style.left = msToX(newS) + 'px'
+        el.style.top  = (top + (clientY - mouseY0)) + 'px'
+        setActiveLane(getLaneAt(clientX, clientY))
+      }
       if (timeEl) timeEl.textContent = fmtSpan(newS, newS + dur)
-      setActiveLane(getLaneAt(clientX, clientY))
       return newS
     }
 
@@ -141,12 +170,15 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       if (!moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return
       if (!moved) {
         moved = true
-        ghost = document.createElement('div')
-        ghost.className = 'event-ghost'
-        ghost.style.left = left0; ghost.style.top = top0
-        ghost.style.width = w0 + 'px'; ghost.style.height = h0 + 'px'
-        ghost.style.borderColor = color; ghost.style.background = hexToRgba(color, 0.10)
-        el.parentNode.appendChild(ghost)
+        ghosts = orig.map(o => {
+          const g = document.createElement('div')
+          g.className = 'event-ghost'
+          g.style.left = o.left + 'px'; g.style.top = o.top
+          g.style.width = o.w + 'px'; g.style.height = o.h + 'px'
+          g.style.borderColor = o.color
+          o.n.parentNode.appendChild(g)
+          return g
+        })
       }
       lastX = e.clientX; lastY = e.clientY
       place(e.clientX, e.clientY)
@@ -159,7 +191,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       document.removeEventListener('contextmenu', noCtx)
       autoVel = 0
       if (raf) cancelAnimationFrame(raf)
-      if (ghost) ghost.remove()
+      ghosts.forEach(g => g.remove())
       el.classList.remove('dragging')
       el.style.top = top + 'px'
       document.body.style.cursor = ''
@@ -171,7 +203,14 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
       const scrollDelta = scroller ? scroller.scrollLeft - scroll0 : 0
       const dx = (e.clientX - mouseX0) + scrollDelta
-      const newS = snap(s0 + (dx / capPx) * 3_600_000, capSnap)
+      // Snap the dragged (anchor) event to the grid; the whole group shifts by that delta.
+      const snappedStart = snap(s0 + (dx / capPx) * 3_600_000, capSnap)
+
+      if (groupMode) {
+        try { await onGroupMove?.(snappedStart - s0) }
+        catch { for (const o of orig) o.n.style.left = o.left + 'px' }   // restore on failure
+        return
+      }
 
       const targetLane = getLaneAt(e.clientX, e.clientY)
       const newTrack = targetLane?.dataset.category ?? event.category
@@ -179,8 +218,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
       try {
         await onUpdate(event.id, {
-          start: new Date(newS).toISOString(),
-          end:   new Date(newS + dur).toISOString(),
+          start: new Date(snappedStart).toISOString(),
+          end:   new Date(snappedStart + dur).toISOString(),
           category: newTrack,
           color: newColor,
         })
@@ -192,7 +231,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
-  }, [event, pxPerHour, rangeStart, trackColorMap, top, snapMinutes, autoPanSpeed, onUpdate, onEdit])
+  }, [event, pxPerHour, rangeStart, trackColorMap, top, snapMinutes, autoPanSpeed, color, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit])
 
   // ── Resize handles ────────────────────────────────────────────────────────
   const handleResizeDown = useCallback((e, edge) => {
@@ -256,7 +295,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
   return (
     <div
       ref={blockRef}
-      className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}${event.task_count > 0 ? ' has-tasks' : ''}`}
+      data-event-id={event.id}
+      className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}${event.task_count > 0 ? ' has-tasks' : ''}${selected ? ' selected' : ''}`}
       style={{
         left:        x + 'px',
         top:         top + 'px',
