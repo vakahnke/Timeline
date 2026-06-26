@@ -99,10 +99,11 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     }
 
     // Position the block under the cursor, accounting for any auto-pan since drag start.
+    // Unsnapped while dragging (smooth); the snap is applied once on release (onUp).
     const place = (clientX, clientY) => {
       const scrollDelta = scroller ? scroller.scrollLeft - scroll0 : 0
       const dx = (clientX - mouseX0) + scrollDelta
-      const newS = snap(s0 + (dx / capPx) * 3_600_000, capSnap)
+      const newS = s0 + (dx / capPx) * 3_600_000
       el.style.left = msToX(newS) + 'px'
       el.style.top  = (top + (clientY - mouseY0)) + 'px'
       if (timeEl) timeEl.textContent = fmtSpan(newS, newS + dur)
