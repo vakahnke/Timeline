@@ -112,7 +112,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     // Edge auto-scroll: nearing the viewport edge pans the timeline so an event can be
     // dragged far past the current view (e.g. from the project's end to its beginning).
-    const EDGE = 60, MAX_SPEED = 22
+    const EDGE = 70, MIN_SPEED = 12, MAX_SPEED = 64   // px/frame; floored so it never crawls, ramps up toward the edge
     let autoVel = 0, raf = 0
     const tick = () => {
       if (autoVel !== 0 && scroller) {
@@ -122,12 +122,13 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       }
       raf = autoVel !== 0 ? requestAnimationFrame(tick) : 0
     }
+    const speedFor = (depth) => MIN_SPEED + (MAX_SPEED - MIN_SPEED) * Math.min(1, depth / EDGE)
     const updateAutoScroll = (clientX) => {
       if (!scroller) return
       const r = scroller.getBoundingClientRect()
       autoVel =
-        clientX < r.left + EDGE  ? -MAX_SPEED * Math.min(1, (r.left + EDGE - clientX) / EDGE) :
-        clientX > r.right - EDGE ?  MAX_SPEED * Math.min(1, (clientX - (r.right - EDGE)) / EDGE) : 0
+        clientX < r.left + EDGE  ? -speedFor(r.left + EDGE - clientX) :
+        clientX > r.right - EDGE ?  speedFor(clientX - (r.right - EDGE)) : 0
       if (autoVel !== 0 && !raf) raf = requestAnimationFrame(tick)
     }
 
