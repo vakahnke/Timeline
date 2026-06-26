@@ -74,8 +74,11 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     const dur = e0 - s0
     const msToX = ms => ((ms - capStart) / 3_600_000) * capPx
     const timeEl = el.querySelector('.event-time')
+    const scroller = el.closest('.timeline-scroll')   // auto-pan target so an event can be dragged past the visible range
+    const scroll0  = scroller ? scroller.scrollLeft : 0
     let moved = false
     let activeLane = null
+    let lastX = e.clientX, lastY = e.clientY
 
     el.classList.add('dragging')
     document.body.style.cursor = 'grabbing'
@@ -95,25 +98,55 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       activeLane = lane
     }
 
+    // Position the block under the cursor, accounting for any auto-pan since drag start.
+    const place = (clientX, clientY) => {
+      const scrollDelta = scroller ? scroller.scrollLeft - scroll0 : 0
+      const dx = (clientX - mouseX0) + scrollDelta
+      const newS = snap(s0 + (dx / capPx) * 3_600_000, capSnap)
+      el.style.left = msToX(newS) + 'px'
+      el.style.top  = (top + (clientY - mouseY0)) + 'px'
+      if (timeEl) timeEl.textContent = fmtSpan(newS, newS + dur)
+      setActiveLane(getLaneAt(clientX, clientY))
+      return newS
+    }
+
+    // Edge auto-scroll: nearing the viewport edge pans the timeline so an event can be
+    // dragged far past the current view (e.g. from the project's end to its beginning).
+    const EDGE = 60, MAX_SPEED = 22
+    let autoVel = 0, raf = 0
+    const tick = () => {
+      if (autoVel !== 0 && scroller) {
+        const before = scroller.scrollLeft
+        scroller.scrollLeft += autoVel
+        if (scroller.scrollLeft !== before) place(lastX, lastY)   // re-place only if the pan actually moved
+      }
+      raf = autoVel !== 0 ? requestAnimationFrame(tick) : 0
+    }
+    const updateAutoScroll = (clientX) => {
+      if (!scroller) return
+      const r = scroller.getBoundingClientRect()
+      autoVel =
+        clientX < r.left + EDGE  ? -MAX_SPEED * Math.min(1, (r.left + EDGE - clientX) / EDGE) :
+        clientX > r.right - EDGE ?  MAX_SPEED * Math.min(1, (clientX - (r.right - EDGE)) / EDGE) : 0
+      if (autoVel !== 0 && !raf) raf = requestAnimationFrame(tick)
+    }
+
     const onMove = (e) => {
       const dx = e.clientX - mouseX0
       const dy = e.clientY - mouseY0
       if (!moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return
       moved = true
-
-      const dtMs = (dx / capPx) * 3_600_000
-      const newS = snap(s0 + dtMs, capSnap)
-      el.style.left = msToX(newS) + 'px'
-      el.style.top  = (top + dy) + 'px'
-      if (timeEl) timeEl.textContent = fmtSpan(newS, newS + dur)
-
-      setActiveLane(getLaneAt(e.clientX, e.clientY))
+      lastX = e.clientX; lastY = e.clientY
+      place(e.clientX, e.clientY)
+      updateAutoScroll(e.clientX)
     }
 
     const onUp = async (e) => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       document.removeEventListener('contextmenu', noCtx)
+      autoVel = 0
+      if (raf) cancelAnimationFrame(raf)
       el.classList.remove('dragging')
       el.style.top = top + 'px'
       document.body.style.cursor = ''
@@ -123,9 +156,9 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       // without having to hit the small action button.
       if (!moved) { onEdit(event.id); return }
 
-      const dx = e.clientX - mouseX0
-      const dtMs = (dx / capPx) * 3_600_000
-      const newS = snap(s0 + dtMs, capSnap)
+      const scrollDelta = scroller ? scroller.scrollLeft - scroll0 : 0
+      const dx = (e.clientX - mouseX0) + scrollDelta
+      const newS = snap(s0 + (dx / capPx) * 3_600_000, capSnap)
 
       const targetLane = getLaneAt(e.clientX, e.clientY)
       const newTrack = targetLane?.dataset.category ?? event.category
