@@ -70,7 +70,12 @@ export default function ProjectTimeline() {
   const [tracks,         setTracks]       = useState([])
   const [range,          setRange]        = useState(null)
   const [pxPerHour,      setPxPerHour]    = useState(120)
-  const [settings,       setSettings]     = useState({ showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 })
+  const [settings,       setSettings]     = useState(() => {
+    // Persisted per browser; merge over defaults so new keys still get a default.
+    const defaults = { showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 }
+    try { return { ...defaults, ...JSON.parse(localStorage.getItem('timeline:settings') || '{}') } }
+    catch { return defaults }
+  })
   const [modal,          setModal]        = useState(null)
   const [taskPanelId,    setTaskPanelId]  = useState(null)  // event id whose task panel is open
   const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task panel close
@@ -422,7 +427,11 @@ export default function ProjectTimeline() {
         onNew={() => openNew()}
         onNewCategory={openNewCategory}
         settings={settings}
-        onSettingsChange={s => setSettings(prev => ({ ...prev, ...s }))}
+        onSettingsChange={s => setSettings(prev => {
+          const next = { ...prev, ...s }
+          try { localStorage.setItem('timeline:settings', JSON.stringify(next)) } catch { /* ignore */ }
+          return next
+        })}
         projectStart={events.length ? Math.min(...events.map(e => new Date(e.start).getTime())) : null}
         projectEnd={events.length   ? Math.max(...events.map(e => new Date(e.end).getTime()))   : null}
       />
