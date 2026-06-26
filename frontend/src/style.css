@@ -189,6 +189,8 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
 .settings-row:hover { background: rgba(255,255,255,0.04); }
 .settings-row input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 .settings-range { width: 120px; accent-color: var(--accent); cursor: pointer; }
+.settings-reset { width: 100%; margin-top: 8px; padding: 7px; font-size: 11px; color: var(--text-dim); background: transparent; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.settings-reset:hover { color: var(--text-bright); border-color: var(--border-bright); background: rgba(255,255,255,0.04); }
 .settings-row-select { cursor: default; justify-content: space-between; }
 .settings-row-select select {
   background: #1a2233;

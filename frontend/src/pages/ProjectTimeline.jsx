@@ -13,6 +13,8 @@ import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
 import WorkloadModal from '../components/WorkloadModal'
 
+const DEFAULT_SETTINGS = { showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 }
+
 function buildTracks(events, apiCategories = [], prev = []) {
   const apiMap   = Object.fromEntries(apiCategories.map(c => [c.name, c.color]).filter(([, v]) => v))
   const apiIdMap = Object.fromEntries(apiCategories.map(c => [c.name, c.id]))
@@ -72,9 +74,8 @@ export default function ProjectTimeline() {
   const [pxPerHour,      setPxPerHour]    = useState(120)
   const [settings,       setSettings]     = useState(() => {
     // Persisted per browser; merge over defaults so new keys still get a default.
-    const defaults = { showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 }
-    try { return { ...defaults, ...JSON.parse(localStorage.getItem('timeline:settings') || '{}') } }
-    catch { return defaults }
+    try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('timeline:settings') || '{}') } }
+    catch { return { ...DEFAULT_SETTINGS } }
   })
   const [modal,          setModal]        = useState(null)
   const [taskPanelId,    setTaskPanelId]  = useState(null)  // event id whose task panel is open
@@ -105,6 +106,11 @@ export default function ProjectTimeline() {
   const changeView = useCallback((v) => {
     setView(v)
     try { localStorage.setItem('timeline:view', v) } catch { /* ignore */ }
+  }, [])
+
+  const resetSettings = useCallback(() => {
+    try { localStorage.setItem('timeline:settings', JSON.stringify(DEFAULT_SETTINGS)) } catch { /* ignore */ }
+    setSettings({ ...DEFAULT_SETTINGS })
   }, [])
 
   const applyTaskSummary = useCallback((id, { total, done }) => {
@@ -432,6 +438,7 @@ export default function ProjectTimeline() {
           try { localStorage.setItem('timeline:settings', JSON.stringify(next)) } catch { /* ignore */ }
           return next
         })}
+        onResetSettings={resetSettings}
         projectStart={events.length ? Math.min(...events.map(e => new Date(e.start).getTime())) : null}
         projectEnd={events.length   ? Math.max(...events.map(e => new Date(e.end).getTime()))   : null}
       />

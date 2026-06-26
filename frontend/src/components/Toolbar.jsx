@@ -18,7 +18,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, onResetSettings, projectStart, projectEnd }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -168,6 +168,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                 </>
               )}
             </div>
+            <button className="settings-reset" onClick={() => onResetSettings?.()}>Reset to defaults</button>
           </div>
         )}
       </div>
