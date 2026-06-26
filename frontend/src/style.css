@@ -458,6 +458,17 @@ canvas.ruler {
   transition: none;
 }
 
+/* Faded "left-behind" placeholder shown at an event's start position while it's dragged. */
+.event-ghost {
+  position: absolute;
+  border-radius: 8px;
+  border: 1.5px dashed rgba(255,255,255,0.4);
+  border-left-width: 3px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.65;
+}
+
 .event-inner {
   display: flex;
   flex-direction: column;

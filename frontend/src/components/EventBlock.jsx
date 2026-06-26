@@ -79,6 +79,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     let moved = false
     let activeLane = null
     let lastX = e.clientX, lastY = e.clientY
+    const left0 = el.style.left, top0 = el.style.top, w0 = el.offsetWidth, h0 = el.offsetHeight
+    let ghost = null   // faded placeholder left at the start position so the move is easy to eyeball / undo
 
     el.classList.add('dragging')
     document.body.style.cursor = 'grabbing'
@@ -137,7 +139,15 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       const dx = e.clientX - mouseX0
       const dy = e.clientY - mouseY0
       if (!moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return
-      moved = true
+      if (!moved) {
+        moved = true
+        ghost = document.createElement('div')
+        ghost.className = 'event-ghost'
+        ghost.style.left = left0; ghost.style.top = top0
+        ghost.style.width = w0 + 'px'; ghost.style.height = h0 + 'px'
+        ghost.style.borderColor = color; ghost.style.background = hexToRgba(color, 0.10)
+        el.parentNode.appendChild(ghost)
+      }
       lastX = e.clientX; lastY = e.clientY
       place(e.clientX, e.clientY)
       updateAutoScroll(e.clientX)
@@ -149,6 +159,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       document.removeEventListener('contextmenu', noCtx)
       autoVel = 0
       if (raf) cancelAnimationFrame(raf)
+      if (ghost) ghost.remove()
       el.classList.remove('dragging')
       el.style.top = top + 'px'
       document.body.style.cursor = ''
