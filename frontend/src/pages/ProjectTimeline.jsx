@@ -70,7 +70,7 @@ export default function ProjectTimeline() {
   const [tracks,         setTracks]       = useState([])
   const [range,          setRange]        = useState(null)
   const [pxPerHour,      setPxPerHour]    = useState(120)
-  const [settings,       setSettings]     = useState({ showArrows: true, showOnlyCritical: false, snapMinutes: 15 })
+  const [settings,       setSettings]     = useState({ showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 })
   const [modal,          setModal]        = useState(null)
   const [taskPanelId,    setTaskPanelId]  = useState(null)  // event id whose task panel is open
   const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task panel close

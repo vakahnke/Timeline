@@ -27,7 +27,7 @@ function snap(ms, snapMinutes) {
   return Math.round(ms / grid) * grid
 }
 
-function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
+function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
   const blockRef = useRef(null)
 
   // Lane/category is the source of truth for color, so an event can never visually
@@ -112,7 +112,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     // Edge auto-scroll: nearing the viewport edge pans the timeline so an event can be
     // dragged far past the current view (e.g. from the project's end to its beginning).
-    const EDGE = 70, MIN_SPEED = 12, MAX_SPEED = 64   // px/frame; floored so it never crawls, ramps up toward the edge
+    const EDGE = 70, MAX_SPEED = autoPanSpeed, MIN_SPEED = Math.min(12, autoPanSpeed)   // px/frame; floored so it never crawls, ramps up toward the edge
     let autoVel = 0, raf = 0
     const tick = () => {
       if (autoVel !== 0 && scroller) {
@@ -180,7 +180,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
-  }, [event, pxPerHour, rangeStart, trackColorMap, top, onUpdate, onEdit])
+  }, [event, pxPerHour, rangeStart, trackColorMap, top, snapMinutes, autoPanSpeed, onUpdate, onEdit])
 
   // ── Resize handles ────────────────────────────────────────────────────────
   const handleResizeDown = useCallback((e, edge) => {
@@ -239,7 +239,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
-  }, [event, pxPerHour, rangeStart, onUpdate])
+  }, [event, pxPerHour, rangeStart, snapMinutes, onUpdate])
 
   return (
     <div

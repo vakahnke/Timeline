@@ -139,6 +139,17 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                 <option value={60}>60 min</option>
               </select>
             </div>
+            <div className="settings-row settings-row-select">
+              <span>Drag pan speed</span>
+              <input
+                type="range"
+                className="settings-range"
+                min="20" max="200" step="4"
+                value={settings.autoPanSpeed ?? 64}
+                onChange={e => onSettingsChange({ autoPanSpeed: Number(e.target.value) })}
+                title={`Auto-pan speed when dragging an event to the edge: ${settings.autoPanSpeed ?? 64} px/frame`}
+              />
+            </div>
 
             {/* On phones the toolbar hides these (tb-collapsible); surface them here instead. */}
             <div className="settings-mobile">

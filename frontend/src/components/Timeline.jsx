@@ -682,6 +682,7 @@ const Timeline = forwardRef(function Timeline(
                       trackColorMap={trackColorMap}
                       isCritical={criticalEventIds.has(ev.id)}
                       snapMinutes={settings?.snapMinutes ?? 0}
+                      autoPanSpeed={settings?.autoPanSpeed ?? 64}
                       canEdit={canEdit}
                       onUpdate={onUpdateEvent}
                       onEdit={onOpenEdit}
