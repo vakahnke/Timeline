@@ -27,7 +27,7 @@ function snap(ms, snapMinutes) {
   return Math.round(ms / grid) * grid
 }
 
-function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, labelMaxWidth = Infinity, selected = false, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
+function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, labelMaxWidth = Infinity, labelSide = 'above', selected = false, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
   const blockRef = useRef(null)
 
   // Lane/category is the source of truth for color, so an event can never visually
@@ -349,7 +349,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     {!nameFits && labelMaxWidth >= 24 && (
       <div
         className="event-label-above"
-        style={{ left: x + 'px', top: (top - 12) + 'px', color, maxWidth: Number.isFinite(labelMaxWidth) ? labelMaxWidth + 'px' : undefined }}
+        style={{ left: x + 'px', top: (labelSide === 'below' ? top + 48 : top - 12) + 'px', color, maxWidth: Number.isFinite(labelMaxWidth) ? labelMaxWidth + 'px' : undefined }}
       >{event.title}</div>
     )}
     </>

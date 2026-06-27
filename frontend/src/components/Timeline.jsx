@@ -489,9 +489,10 @@ const Timeline = forwardRef(function Timeline(
   const layoutRef = useRef(layout)
   useEffect(() => { layoutRef.current = layout }, [layout])
 
-  // Cap each above-the-bar name label at the gap to the next event on its row, so a label
-  // never overprints another event (Infinity = last on its row → no cap).
-  const labelMaxMap = useMemo(() => {
+  // Per-event name-label placement: alternate above/below within each row so adjacent
+  // labels never collide, and cap each at the gap to the NEXT same-side event (~two over) —
+  // which roughly doubles the room vs. putting every label on one side.
+  const labelInfo = useMemo(() => {
     const start = range?.start ?? 0
     const xOf = ms => ((ms - start) / 3_600_000) * pxPerHour
     const byRow = {}
@@ -502,10 +503,13 @@ const Timeline = forwardRef(function Timeline(
     const m = {}
     for (const key in byRow) {
       const arr = byRow[key].slice().sort((a, b) => new Date(a.start) - new Date(b.start))
+      const xs = arr.map(e => xOf(new Date(e.start).getTime()))
       for (let i = 0; i < arr.length; i++) {
-        const x = xOf(new Date(arr[i].start).getTime())
-        const next = arr[i + 1]
-        m[arr[i].id] = next ? Math.max(0, xOf(new Date(next.start).getTime()) - x - 6) : Infinity
+        const sameSide = arr[i + 2]   // the next label on this event's side is two over
+        m[arr[i].id] = {
+          side: i % 2 === 0 ? 'above' : 'below',
+          max: sameSide ? Math.max(0, xs[i + 2] - xs[i] - 6) : Infinity,
+        }
       }
     }
     return m
@@ -769,7 +773,8 @@ const Timeline = forwardRef(function Timeline(
                       rangeStart={range?.start ?? 0}
                       pxPerHour={pxPerHour}
                       top={8 + (layout.rowOf[ev.id] ?? 0) * TRACK_HEIGHT}
-                      labelMaxWidth={labelMaxMap[ev.id]}
+                      labelMaxWidth={labelInfo[ev.id]?.max}
+                      labelSide={labelInfo[ev.id]?.side}
                       trackColor={trackColorMap[ev.category]}
                       trackColorMap={trackColorMap}
                       isCritical={criticalEventIds.has(ev.id)}
