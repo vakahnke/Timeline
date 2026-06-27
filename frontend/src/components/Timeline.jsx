@@ -515,39 +515,41 @@ const Timeline = forwardRef(function Timeline(
     return m
   }, [events, layout, range, pxPerHour])
 
-  // Keep a long event's name visible: when its bar is wider than the viewport and its
-  // start has scrolled off-screen, slide the inner label right so it stays at the left
-  // edge (clamped to the bar). Only bars wider than the viewport are touched, so it's cheap.
+  // Keep an event's name visible whenever its bar's start has scrolled off the left edge
+  // while the bar is still on screen: slide the inner label right so it stays at the left
+  // edge (clamped to the bar). Geometry is computed in JS (no per-scroll reflow), and only
+  // the few bars currently crossing the left edge get a DOM write.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const vw = el.clientWidth
-    const wide = events
-      .filter(e => ((new Date(e.end) - new Date(e.start)) / 3_600_000) * pxPerHour > vw)
-      .map(e => e.id)
-    if (!wide.length) return
+    const start = range?.start ?? 0
+    const xOf = ms => ((ms - start) / 3_600_000) * pxPerHour
+    const bars = events.map(e => {
+      const left  = xOf(new Date(e.start).getTime())
+      const width = Math.max(4, xOf(new Date(e.end).getTime()) - left)
+      return { id: e.id, left, width, labelW: (e.title?.length || 0) * 6.5 + 28 }
+    })
+    const innerOf = (id) => el.querySelector(`.event-block[data-event-id="${id}"] .event-inner`)
+    const stuck = new Set()
     const update = () => {
       const sl = el.scrollLeft
-      for (const id of wide) {
-        const block = el.querySelector(`.event-block[data-event-id="${id}"]`)
-        const inner = block && block.querySelector('.event-inner')
-        if (!inner) continue
-        const left  = parseFloat(block.style.left)  || 0
-        const width = parseFloat(block.style.width) || 0
-        const titleEl = block.querySelector('.event-title')
-        const labelW = (titleEl ? titleEl.offsetWidth : 80) + 24   // keep the label fully on the bar
-        const offset = Math.max(0, Math.min(sl - left, Math.max(0, width - labelW)))
-        inner.style.transform = offset ? `translateX(${offset}px)` : ''
+      const now = new Set()
+      for (const b of bars) {
+        // start off-screen-left, bar still visible, and wide enough to hold its name inside
+        if (b.left < sl && b.left + b.width > sl + 4 && b.width > b.labelW + 8) {
+          now.add(b.id)
+          const inner = innerOf(b.id)
+          if (inner) inner.style.transform = `translateX(${Math.max(0, Math.min(sl - b.left, b.width - b.labelW))}px)`
+        }
       }
+      for (const id of stuck) if (!now.has(id)) { const i = innerOf(id); if (i) i.style.transform = '' }
+      stuck.clear(); now.forEach(id => stuck.add(id))
     }
     update()
     el.addEventListener('scroll', update, { passive: true })
     return () => {
       el.removeEventListener('scroll', update)
-      for (const id of wide) {
-        const inner = el.querySelector(`.event-block[data-event-id="${id}"] .event-inner`)
-        if (inner) inner.style.transform = ''
-      }
+      for (const id of stuck) { const i = innerOf(id); if (i) i.style.transform = '' }
     }
   }, [events, pxPerHour, range])
 
