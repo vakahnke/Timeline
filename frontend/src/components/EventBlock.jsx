@@ -38,6 +38,9 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
   const endMs   = new Date(event.end).getTime()
   const x       = ((startMs - rangeStart) / 3_600_000) * pxPerHour
   const w       = Math.max(4, ((endMs - startMs) / 3_600_000) * pxPerHour)
+  // Too narrow to hold the name? Show it floating just above the bar instead (rough
+  // text-width estimate for the 11px label).
+  const nameFits = w >= event.title.length * 6.5 + 14
 
   // ── Drag to move (horizontal + vertical track switching) ──────────────────
   const handleMoveDown = useCallback((e) => {
@@ -293,6 +296,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
   }, [event, pxPerHour, rangeStart, snapMinutes, onUpdate])
 
   return (
+    <>
     <div
       ref={blockRef}
       data-event-id={event.id}
@@ -316,7 +320,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       )}
 
       <div className="event-inner">
-        <span className="event-title">{event.title}</span>
+        {nameFits && <span className="event-title">{event.title}</span>}
         <span className="event-time">{fmtSpan(startMs, endMs)}</span>
       </div>
 
@@ -342,6 +346,10 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         </div>
       )}
     </div>
+    {!nameFits && (
+      <div className="event-label-above" style={{ left: x + 'px', top: (top - 12) + 'px', color }}>{event.title}</div>
+    )}
+    </>
   )
 }
 
