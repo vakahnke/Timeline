@@ -129,6 +129,7 @@ const Timeline = forwardRef(function Timeline(
   }, [])
   const clearSelection = useCallback(() => setSelectedIds(prev => (prev.size ? new Set() : prev)), [])
   const lanesDownRef = useRef(null)   // distinguishes a clean empty-space click (clears selection) from a pan
+  const [marquee, setMarquee] = useState(null)   // {left,top,width,height} screen rect while shift-dragging a box
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') clearSelection() }
     document.addEventListener('keydown', onKey)
@@ -350,11 +351,47 @@ const Timeline = forwardRef(function Timeline(
 
   // Drag any empty part of the timeline (ruler or lanes) to pan — works with mouse,
   // trackpad, or touch. Event blocks keep their own move/resize drag.
+  // Shift-drag on empty timeline space draws a box; every event it touches is added to the
+  // selection on release. Plain drag still pans.
+  const startMarquee = useCallback((e) => {
+    const el = scrollRef.current
+    if (!el) return
+    e.preventDefault()
+    const rect = el.getBoundingClientRect()
+    const clampX = x => Math.max(rect.left, Math.min(rect.right, x))
+    const clampY = y => Math.max(rect.top, Math.min(rect.bottom, y))
+    const x0 = clampX(e.clientX), y0 = clampY(e.clientY)
+    let active = false
+    const onMove = (mv) => {
+      if (!active && Math.abs(mv.clientX - e.clientX) < 4 && Math.abs(mv.clientY - e.clientY) < 4) return
+      active = true
+      const x1 = clampX(mv.clientX), y1 = clampY(mv.clientY)
+      setMarquee({ left: Math.min(x0, x1), top: Math.min(y0, y1), width: Math.abs(x1 - x0), height: Math.abs(y1 - y0) })
+    }
+    const onUp = (up) => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      setMarquee(null)
+      if (!active) return
+      const x1 = clampX(up.clientX), y1 = clampY(up.clientY)
+      const minX = Math.min(x0, x1), maxX = Math.max(x0, x1), minY = Math.min(y0, y1), maxY = Math.max(y0, y1)
+      const hit = new Set()
+      el.querySelectorAll('.event-block').forEach(b => {
+        const r = b.getBoundingClientRect()
+        if (r.left < maxX && r.right > minX && r.top < maxY && r.bottom > minY) hit.add(Number(b.dataset.eventId))
+      })
+      if (hit.size) setSelectedIds(prev => { const n = new Set(prev); hit.forEach(id => n.add(id)); return n })
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
+
   const handlePanStart = useCallback((e) => {
     if (e.button !== 0) return
     // Pan even when the drag starts over an event (events only move with Ctrl/⌘, which
     // stops propagation before this runs). Only the action buttons opt out.
     if (e.target.closest('.event-actions')) return
+    if (e.shiftKey && !e.target.closest('.event-block')) { startMarquee(e); return }   // shift-drag = marquee select
     const el = scrollRef.current
     if (!el) return
     e.preventDefault()
@@ -372,7 +409,7 @@ const Timeline = forwardRef(function Timeline(
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup',   onUp)
-  }, [])
+  }, [startMarquee])
 
   // Keyboard navigation (ignored while typing in a field or when a modal is open).
   useEffect(() => {
@@ -736,7 +773,7 @@ const Timeline = forwardRef(function Timeline(
             onMouseDown={e => { lanesDownRef.current = { x: e.clientX, y: e.clientY } }}
             onClick={e => {
               const d = lanesDownRef.current
-              if (d && Math.abs(e.clientX - d.x) < 5 && Math.abs(e.clientY - d.y) < 5 && !e.target.closest('.event-block')) clearSelection()
+              if (d && !e.shiftKey && Math.abs(e.clientX - d.x) < 5 && Math.abs(e.clientY - d.y) < 5 && !e.target.closest('.event-block')) clearSelection()
             }}
           >
             {loading && (
@@ -814,6 +851,11 @@ const Timeline = forwardRef(function Timeline(
 
       {/* Cursor label — updated imperatively in handleMouseMove to avoid a re-render per move */}
       <div className="cursor-label" ref={cursorLabelRef} style={{ display: 'none' }} />
+
+      {/* Marquee selection box (shift-drag) */}
+      {marquee && (
+        <div className="marquee" style={{ left: marquee.left + 'px', top: marquee.top + 'px', width: marquee.width + 'px', height: marquee.height + 'px' }} />
+      )}
 
       {/* Tooltip */}
       {tooltip && (

@@ -856,6 +856,16 @@ canvas.ruler {
   letter-spacing: 0.3px;
 }
 
+/* Shift-drag marquee selection box. */
+.marquee {
+  position: fixed;
+  border: 1px solid var(--accent);
+  background: var(--accent-glow);
+  pointer-events: none;
+  z-index: 50;
+  border-radius: 2px;
+}
+
 /* ── Dependency arrows (SVG overlay) ─────────────────────────────────────── */
 .dep-arrows {
   position: absolute;
