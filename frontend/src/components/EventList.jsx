@@ -24,11 +24,21 @@ function fmtDue(d) {
   if (!d) return ''
   return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
+function fmtNow(ms) {
+  const d = new Date(ms)
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' +
+         d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+}
 
 export default function EventList({ projectId, events, tracks, canEdit, reloadToken, onOpenEdit, onOpenTasks, onOpenNew }) {
   const { flash } = useToast()
   const [tasksByEvent, setTasksByEvent] = useState({})
   const [loading, setLoading] = useState(true)
+  const [nowTs, setNowTs] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNowTs(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const colorOf = useMemo(() => {
     const map = Object.fromEntries((tracks || []).map(t => [t.name, t.color]))
@@ -83,10 +93,11 @@ export default function EventList({ projectId, events, tracks, canEdit, reloadTo
     )
   }
 
+  const nowIndex = ordered.findIndex(ev => new Date(ev.start).getTime() >= nowTs)
   let lastDay = null
   return (
     <div className="event-list">
-      {ordered.map(ev => {
+      {ordered.map((ev, i) => {
         const tasks = tasksByEvent[ev.id] || []
         const done = tasks.filter(t => t.status === 'done').length
         const k = dayKey(ev.start)
@@ -94,6 +105,7 @@ export default function EventList({ projectId, events, tracks, canEdit, reloadTo
         lastDay = k
         return (
           <div key={ev.id}>
+            {i === nowIndex && <div className="el-now"><span className="el-now-label">Now · {fmtNow(nowTs)}</span></div>}
             {showHeader && <div className="el-day">{fmtDayHeader(ev.start)}</div>}
             <div className="el-event" style={{ borderLeftColor: colorOf(ev) }}>
               <div className="el-event-head" onClick={() => onOpenEdit?.(ev.id)}>
@@ -132,6 +144,7 @@ export default function EventList({ projectId, events, tracks, canEdit, reloadTo
           </div>
         )
       })}
+      {nowIndex === -1 && <div className="el-now"><span className="el-now-label">Now · {fmtNow(nowTs)}</span></div>}
     </div>
   )
 }
