@@ -45,12 +45,14 @@ body {
 .toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;        /* on a narrow / non-maximized window, wrap to a 2nd row instead of clipping (e.g. the date/time range) */
   gap: 6px;
-  padding: 0 16px;
+  row-gap: 4px;
+  padding: 4px 16px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  height: 48px;
+  min-height: 48px;
 }
 
 .toolbar h1 {
@@ -81,9 +83,9 @@ body {
   font-size: 11px;
 }
 .toolbar-range-sep { color: var(--text-dimmer); }
-.toolbar-range-item { display: flex; flex-direction: column; line-height: 1.25; }
+.toolbar-range-item { display: flex; flex-direction: column; line-height: 1.25; white-space: nowrap; }
 .toolbar-range-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dimmer); }
-.toolbar-range-value { color: var(--text-bright); font-variant-numeric: tabular-nums; }
+.toolbar-range-value { color: var(--text-bright); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .toolbar .zoom-label {
   color: var(--text-dimmer);
