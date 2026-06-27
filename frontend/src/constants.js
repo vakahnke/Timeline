@@ -1,5 +1,5 @@
 export const RULER_HEIGHT  = 38;
-export const TRACK_HEIGHT  = 64;
+export const TRACK_HEIGHT  = 80;   // row height; tall enough that above/below name labels of adjacent rows don't collide (48px bar + 2×12px labels + clearance)
 // Low floor so multi-month / multi-year projects can be zoomed out to fit the whole span.
 export const MIN_PX_PER_HR = 0.02;
 export const MAX_PX_PER_HR = 8000;

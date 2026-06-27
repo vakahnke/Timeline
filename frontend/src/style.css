@@ -301,7 +301,7 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
 .header-list { overflow: hidden; }
 
 .track-header {
-  height: 64px;
+  height: 80px;   /* fallback; actual height is set inline to match its lane */
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -408,7 +408,7 @@ canvas.ruler {
 .track-lanes { position: relative; }
 
 .track-lane {
-  height: 64px;
+  height: 80px;   /* fallback; actual height is set inline per lane (depth × TRACK_HEIGHT) */
   border-bottom: 1px solid var(--border);
   position: relative;
   background: var(--bg-mid);
