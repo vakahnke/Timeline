@@ -130,6 +130,7 @@ const Timeline = forwardRef(function Timeline(
   const clearSelection = useCallback(() => setSelectedIds(prev => (prev.size ? new Set() : prev)), [])
   const lanesDownRef = useRef(null)   // distinguishes a clean empty-space click (clears selection) from a pan
   const [marquee, setMarquee] = useState(null)   // {left,top,width,height} screen rect while shift-dragging a box
+  const marqueeingRef = useRef(false)            // suppress event tooltips while the box is being dragged
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') clearSelection() }
     document.addEventListener('keydown', onKey)
@@ -307,6 +308,7 @@ const Timeline = forwardRef(function Timeline(
   }, [])
 
   const handleTooltip = useCallback((event, x, y) => {
+    if (marqueeingRef.current) { setTooltip(null); return }
     setTooltip(event ? { event, x, y } : null)
   }, [])
 
@@ -364,13 +366,14 @@ const Timeline = forwardRef(function Timeline(
     let active = false
     const onMove = (mv) => {
       if (!active && Math.abs(mv.clientX - e.clientX) < 4 && Math.abs(mv.clientY - e.clientY) < 4) return
-      active = true
+      if (!active) { active = true; marqueeingRef.current = true; setTooltip(null) }
       const x1 = clampX(mv.clientX), y1 = clampY(mv.clientY)
       setMarquee({ left: Math.min(x0, x1), top: Math.min(y0, y1), width: Math.abs(x1 - x0), height: Math.abs(y1 - y0) })
     }
     const onUp = (up) => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      marqueeingRef.current = false
       setMarquee(null)
       if (!active) return
       const x1 = clampX(up.clientX), y1 = clampY(up.clientY)
