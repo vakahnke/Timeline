@@ -504,6 +504,8 @@ canvas.ruler {
   font-size: 10px;
   font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
   z-index: 2;
   letter-spacing: 0.1px;

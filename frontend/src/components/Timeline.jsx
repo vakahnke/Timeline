@@ -489,6 +489,28 @@ const Timeline = forwardRef(function Timeline(
   const layoutRef = useRef(layout)
   useEffect(() => { layoutRef.current = layout }, [layout])
 
+  // Cap each above-the-bar name label at the gap to the next event on its row, so a label
+  // never overprints another event (Infinity = last on its row → no cap).
+  const labelMaxMap = useMemo(() => {
+    const start = range?.start ?? 0
+    const xOf = ms => ((ms - start) / 3_600_000) * pxPerHour
+    const byRow = {}
+    for (const e of events) {
+      const key = e.category + '#' + (layout.rowOf[e.id] ?? 0)
+      ;(byRow[key] ??= []).push(e)
+    }
+    const m = {}
+    for (const key in byRow) {
+      const arr = byRow[key].slice().sort((a, b) => new Date(a.start) - new Date(b.start))
+      for (let i = 0; i < arr.length; i++) {
+        const x = xOf(new Date(arr[i].start).getTime())
+        const next = arr[i + 1]
+        m[arr[i].id] = next ? Math.max(0, xOf(new Date(next.start).getTime()) - x - 6) : Infinity
+      }
+    }
+    return m
+  }, [events, layout, range, pxPerHour])
+
   const w = totalWidth()
 
   const nowX = range ? ((now - range.start) / 3_600_000) * pxPerHour : null
@@ -711,6 +733,7 @@ const Timeline = forwardRef(function Timeline(
                       rangeStart={range?.start ?? 0}
                       pxPerHour={pxPerHour}
                       top={8 + (layout.rowOf[ev.id] ?? 0) * TRACK_HEIGHT}
+                      labelMaxWidth={labelMaxMap[ev.id]}
                       trackColor={trackColorMap[ev.category]}
                       trackColorMap={trackColorMap}
                       isCritical={criticalEventIds.has(ev.id)}
