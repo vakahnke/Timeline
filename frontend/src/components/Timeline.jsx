@@ -511,6 +511,42 @@ const Timeline = forwardRef(function Timeline(
     return m
   }, [events, layout, range, pxPerHour])
 
+  // Keep a long event's name visible: when its bar is wider than the viewport and its
+  // start has scrolled off-screen, slide the inner label right so it stays at the left
+  // edge (clamped to the bar). Only bars wider than the viewport are touched, so it's cheap.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const vw = el.clientWidth
+    const wide = events
+      .filter(e => ((new Date(e.end) - new Date(e.start)) / 3_600_000) * pxPerHour > vw)
+      .map(e => e.id)
+    if (!wide.length) return
+    const update = () => {
+      const sl = el.scrollLeft
+      for (const id of wide) {
+        const block = el.querySelector(`.event-block[data-event-id="${id}"]`)
+        const inner = block && block.querySelector('.event-inner')
+        if (!inner) continue
+        const left  = parseFloat(block.style.left)  || 0
+        const width = parseFloat(block.style.width) || 0
+        const titleEl = block.querySelector('.event-title')
+        const labelW = (titleEl ? titleEl.offsetWidth : 80) + 24   // keep the label fully on the bar
+        const offset = Math.max(0, Math.min(sl - left, Math.max(0, width - labelW)))
+        inner.style.transform = offset ? `translateX(${offset}px)` : ''
+      }
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', update)
+      for (const id of wide) {
+        const inner = el.querySelector(`.event-block[data-event-id="${id}"] .event-inner`)
+        if (inner) inner.style.transform = ''
+      }
+    }
+  }, [events, pxPerHour, range])
+
   const w = totalWidth()
 
   const nowX = range ? ((now - range.start) / 3_600_000) * pxPerHour : null
