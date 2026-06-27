@@ -173,13 +173,20 @@ export default function ProjectTimeline() {
     return () => { cancelled = true }
   }, [projectId])
 
-  // Auto-fit the zoom once on first load so events are visible regardless of span.
+  // Default view on first load: ~1-month zoom with today at the left edge.
   useEffect(() => {
     if (loading || !range || didFitRef.current) return
     didFitRef.current = true
-    const id = requestAnimationFrame(() => timelineRef.current?.fitZoom())
-    return () => cancelAnimationFrame(id)
-  }, [loading, range])
+    const from = new Date(); from.setHours(0, 0, 0, 0)         // start of today
+    const to = new Date(from); to.setMonth(to.getMonth() + 1)  // one month out
+    const fromMs = from.getTime(), toMs = to.getTime()
+    const ev = buildRange(events)
+    pendingFrameRef.current = { from: fromMs, to: toMs }       // framed by the layout effect once range updates
+    setRange({
+      start: Math.min(ev?.start ?? fromMs, fromMs),
+      end:   Math.max(ev?.end ?? toMs, toMs),
+    })
+  }, [loading, range, events])
 
   // Today / this week / this month quick views. Extend the displayed range to reach the
   // period (so it's framable even if the project's events are elsewhere in time), then frame it.
