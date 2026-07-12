@@ -413,13 +413,33 @@ export default function ProjectTimeline() {
     }
   }, [projectId, project, flash])
 
+  // Successors are stored as the OTHER event's depends_on, so after saving this event we
+  // add/remove its id on each successor. Recorded as one group step so it undoes cleanly.
+  const reconcileSuccessors = useCallback(async (thisId, desiredIds) => {
+    const want = new Set(desiredIds)
+    const group = []
+    for (const e of eventsRef.current) {
+      if (e.id === thisId) continue
+      const deps = e.depends_on ?? []
+      const has  = deps.includes(thisId)
+      if (has === want.has(e.id)) continue        // already in the desired state
+      const next = has ? deps.filter(id => id !== thisId) : [...deps, thisId]
+      group.push({ id: e.id, before: { depends_on: deps }, after: { depends_on: next } })
+    }
+    if (!group.length) return
+    await Promise.all(group.map(g => applyUpdate(g.id, g.after)))
+    setUndoStack(s => [...s, { group }])
+    setRedoStack([])
+  }, [applyUpdate])
+
   const handleSave = useCallback(async (data) => {
-    const categoryColor = tracks.find(t => t.name === data.category)?.color ?? ''
-    const payload = { ...data, color: categoryColor }
-    if (modal.id) await updateEvent(modal.id, payload)
-    else          await createEvent(payload)
+    const { _successors, ...fields } = data
+    const categoryColor = tracks.find(t => t.name === fields.category)?.color ?? ''
+    const payload = { ...fields, color: categoryColor }
+    const saved = modal.id ? await updateEvent(modal.id, payload) : await createEvent(payload)
+    if (_successors) await reconcileSuccessors(saved.id, _successors)
     closeModal()
-  }, [modal, tracks, updateEvent, createEvent, closeModal])
+  }, [modal, tracks, updateEvent, createEvent, reconcileSuccessors, closeModal])
 
   const handleDelete = useCallback(async () => {
     await deleteEvent(modal.id)

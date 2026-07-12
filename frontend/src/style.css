@@ -785,6 +785,23 @@ canvas.ruler {
 .pct-row input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; }
 .pct-value { color: var(--text-bright); font-size: 12px; font-weight: 600; width: 34px; text-align: right; flex-shrink: 0; }
 
+/* ── Duration (start + duration → end, or duration + end → start) ───────────── */
+.dur-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dur-row .dur-val  { width: 84px; flex: 0 0 auto; }
+.dur-row .dur-unit { width: auto;  flex: 0 0 auto; }
+.dur-anchor {
+  background: none;
+  border: 1px solid var(--border-mid);
+  color: var(--text-dim);
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.dur-anchor:hover { color: var(--text-bright); border-color: rgba(129,140,248,0.5); }
+
 /* ── Event progress bar ───────────────────────────────────────────────────── */
 .event-progress {
   position: absolute;
