@@ -1,7 +1,7 @@
 # Kanban Board View — Design Document
 
-**Status:** DRAFT for review. All three research streams (UX, ordering, DnD library) folded in.
-Awaiting sign-off before code.
+**Status:** Phase A (frontend-only Board view) SHIPPED & verified on prod. Phase B (manual
+within-column reordering) pending. All three research streams (UX, ordering, DnD) below.
 **Last updated:** 2026-07-12
 **Scope:** A third project view — a **Board** (Kanban) — alongside the existing Timeline and List views.
 
