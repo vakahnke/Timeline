@@ -890,6 +890,7 @@ const Timeline = forwardRef(function Timeline(
                   style={{ height: layout.heights[t.name] + 'px' }}
                   onDoubleClick={e => handleLaneClick(e, t.name)}
                 >
+                  <div className="lane-bg" />
                   {trackEvents.map(ev => (
                     <EventBlock
                       key={ev.id}

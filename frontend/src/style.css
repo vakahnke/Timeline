@@ -423,14 +423,28 @@ canvas.ruler {
 
 .track-lane {
   height: 80px;   /* fallback; actual height is set inline per lane (depth × TRACK_HEIGHT) */
-  border-bottom: 1px solid var(--border);
   position: relative;
-  background: var(--bg-mid);
+  /* Background/border live on the viewport-sized .lane-bg child below — NOT on this
+     content-width element, which reaches ~1M px at high zoom and painted a giant compositor
+     layer that lagged the timeline (same class of bug as the ruler + arrows). */
 }
-.track-lane:nth-child(even) { background: var(--bg); }
-.track-lane:hover { background: rgba(129,140,248,0.025); }
-.track-lane.drag-over {
-  background: rgba(129,140,248,0.08) !important;
+/* Sticky, viewport-wide band: pins to the scrollport's left edge, scrolls vertically with the
+   lane, and never gets wider than the viewport — so it fills the visible row cheaply. First
+   child + pointer-events:none so event blocks paint on top and the lane keeps its click target. */
+.lane-bg {
+  position: sticky;
+  left: 0;
+  width: 100vw;
+  height: 100%;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-mid);
+  pointer-events: none;
+}
+.track-lane:nth-child(even) .lane-bg { background: var(--bg); }
+.track-lane:hover .lane-bg { background: rgba(129,140,248,0.025); }
+.track-lane.drag-over .lane-bg {
+  background: rgba(129,140,248,0.08);
   box-shadow: inset 0 0 0 1px rgba(129,140,248,0.18);
 }
 
