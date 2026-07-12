@@ -48,10 +48,19 @@ function drawRuler(canvas, rangeStart, pxPerHour, scrollLeft, vw, dpr) {
   ctx.fillRect(0, 0, cw, h)
 
   const pxPerMs = pxPerHour / 3_600_000
-  // Readable spacing (>=56px). Iterating only the visible window bounds the tick count naturally.
-  let interval  = TICK_INTERVALS[TICK_INTERVALS.length - 1]
+  // Major (labeled) ticks: smallest interval whose label stays readable (>=56px apart).
+  // Iterating only the visible window bounds the tick count naturally.
+  let major = TICK_INTERVALS[TICK_INTERVALS.length - 1]
   for (const iv of TICK_INTERVALS) {
-    if (iv.ms * pxPerMs >= 56) { interval = iv; break }
+    if (iv.ms * pxPerMs >= 56) { major = iv; break }
+  }
+  // Minor (unlabeled) ticks: subdivide the major span down to the natural next unit, so the
+  // tick density tracks the scale — a month view gets a tick per day, a day view a tick per
+  // hour, a week view something in between. Largest interval below the major that is still
+  // >=8px apart (denser than that reads as a blur, so we stop).
+  let minor = null
+  for (const iv of TICK_INTERVALS) {
+    if (iv.ms < major.ms && iv.ms * pxPerMs >= 8) minor = iv   // ascending list -> keep the largest
   }
 
   const startVis = rangeStart + (scrollLeft / pxPerHour) * 3_600_000
@@ -60,36 +69,37 @@ function drawRuler(canvas, rangeStart, pxPerHour, scrollLeft, vw, dpr) {
   ctx.font = '500 10px Inter, system-ui, -apple-system, "Segoe UI", sans-serif'
   ctx.textBaseline = 'middle'
 
-  const first = Math.ceil(startVis / interval.ms) * interval.ms
-  for (let t = first; t <= endVis; t += interval.ms) {
-    const cx = Math.round(x(t))
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+  // Minor ticks first (shorter + dimmer), skipping any that land on a major tick.
+  if (minor) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)'
     ctx.lineWidth   = 1
-    ctx.beginPath(); ctx.moveTo(cx + 0.5, h * 0.5); ctx.lineTo(cx + 0.5, h); ctx.stroke()
+    const firstMinor = Math.ceil(startVis / minor.ms) * minor.ms
+    for (let t = firstMinor; t <= endVis; t += minor.ms) {
+      if (t % major.ms === 0) continue
+      const cx = Math.round(x(t))
+      ctx.beginPath(); ctx.moveTo(cx + 0.5, h * 0.66); ctx.lineTo(cx + 0.5, h); ctx.stroke()
+    }
+  }
+
+  // Major ticks + labels.
+  const first = Math.ceil(startVis / major.ms) * major.ms
+  for (let t = first; t <= endVis; t += major.ms) {
+    const cx = Math.round(x(t))
+    ctx.strokeStyle = 'rgba(255,255,255,0.13)'
+    ctx.lineWidth   = 1
+    ctx.beginPath(); ctx.moveTo(cx + 0.5, h * 0.48); ctx.lineTo(cx + 0.5, h); ctx.stroke()
 
     const d = new Date(t)
     let label
-    if (interval.fmt === 'year') label = String(d.getFullYear())
-    else if (interval.fmt === 'month') label = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
-    else if (interval.fmt === 'date') label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    else if (interval.fmt === 'hour') label = d.toLocaleTimeString(undefined, { hour: '2-digit', hour12: false })
+    if (major.fmt === 'year') label = String(d.getFullYear())
+    else if (major.fmt === 'month') label = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+    else if (major.fmt === 'date') label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    else if (major.fmt === 'hour') label = d.toLocaleTimeString(undefined, { hour: '2-digit', hour12: false })
     else label = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
 
     ctx.fillStyle = '#64748b'
     ctx.textAlign = 'left'
     ctx.fillText(label, cx + 4, h * 0.5 - 1)
-  }
-
-  const half = interval.ms / 2
-  if (half * pxPerMs >= 20) {
-    const firstHalf = Math.ceil(startVis / half) * half
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)'
-    ctx.lineWidth   = 1
-    for (let t = firstHalf; t <= endVis; t += half) {
-      if (t % interval.ms === 0) continue
-      const cx = Math.round(x(t))
-      ctx.beginPath(); ctx.moveTo(cx + 0.5, h * 0.72); ctx.lineTo(cx + 0.5, h); ctx.stroke()
-    }
   }
 
   ctx.strokeStyle = 'rgba(255,255,255,0.06)'
