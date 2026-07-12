@@ -63,6 +63,23 @@ class MeView(generics.RetrieveAPIView):
         return self.request.user
 
 
+class UserListView(generics.ListAPIView):
+    """A directory of active users, for populating the member / team-member pickers so
+    people don't have to memorize usernames. Any authenticated user may read it (members
+    already see each other's names in member lists and task pickers). Optional ?search=
+    filters by username or email (case-insensitive substring). Inactive (unapproved)
+    accounts are excluded so you can't add someone who can't log in."""
+    permission_classes = [IsAuthenticated]
+    serializer_class   = UserSerializer
+
+    def get_queryset(self):
+        qs = User.objects.filter(is_active=True).order_by('username')
+        q = (self.request.query_params.get('search') or '').strip()
+        if q:
+            qs = qs.filter(Q(username__icontains=q) | Q(email__icontains=q))
+        return qs
+
+
 class LogoutView(generics.GenericAPIView):
     """Server-side logout: blacklist a refresh token so it can't be used again.
 

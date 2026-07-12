@@ -95,6 +95,11 @@ export const api = {
     myTasks:  (scope)   => req(url.myTasks() + (scope === 'all' ? '?scope=all' : '')),
   },
 
+  users: {
+    // Active-user directory for member/team pickers. Optional case-insensitive search.
+    list: (search) => req('/users/' + (search ? '?search=' + encodeURIComponent(search) : '')),
+  },
+
   projects: {
     list:   ()    => req(url.projects()),
     get:    (id)  => req(url.project(id)),

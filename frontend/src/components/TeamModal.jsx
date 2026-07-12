@@ -11,12 +11,22 @@ export default function TeamModal({ team, onClose, onChanged }) {
   const [identifier,  setIdentifier]  = useState('')
   const [error,       setError]       = useState('')
   const [busy,        setBusy]        = useState(false)
+  const [allUsers,    setAllUsers]    = useState([])
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Load the user directory to power the picker (only when managing an existing team's roster).
+  useEffect(() => {
+    if (creating || !canManage) return
+    api.users.list().then(setAllUsers).catch(() => {})
+  }, [creating, canManage])
+
+  const memberUsernames = new Set(members.map(u => u.username))
+  const userOptions = allUsers.filter(u => !memberUsernames.has(u.username))
 
   const errFrom = (err, fallback) => {
     try { return Object.values(JSON.parse(err.body)).flat()[0] || fallback } catch { return fallback }
@@ -80,7 +90,16 @@ export default function TeamModal({ team, onClose, onChanged }) {
             <>
               {canManage ? (
                 <form className="invite-row" onSubmit={addMember}>
-                  <input value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="Add member by email or username" />
+                  <input
+                    list="team-user-list"
+                    value={identifier}
+                    onChange={e => setIdentifier(e.target.value)}
+                    placeholder="Pick or type a name / email"
+                    autoComplete="off"
+                  />
+                  <datalist id="team-user-list">
+                    {userOptions.map(u => <option key={u.id} value={u.username}>{u.email}</option>)}
+                  </datalist>
                   <button className="btn-primary" type="submit">Add</button>
                 </form>
               ) : (

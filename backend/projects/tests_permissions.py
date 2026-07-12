@@ -185,3 +185,27 @@ class EffectiveAccessAdminTests(APITestCase):
         self.client.force_login(self.plain)
         res = self.client.get(self.url)
         self.assertIn(res.status_code, (302, 403))  # admin bounces non-staff
+
+
+class UserDirectoryTests(APITestCase):
+    """The /api/users/ directory that powers the member/team pickers."""
+
+    def setUp(self):
+        self.alice = User.objects.create_user('alice', 'alice@x.com', 'pw')
+        User.objects.create_user('bob', 'bob@x.com', 'pw')
+        User.objects.create_user('ghost', 'ghost@x.com', 'pw', is_active=False)  # unapproved
+
+    def test_requires_auth(self):
+        self.assertIn(self.client.get('/api/users/').status_code, (401, 403))
+
+    def test_lists_active_users_only(self):
+        self.client.force_authenticate(self.alice)
+        res = self.client.get('/api/users/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual({u['username'] for u in res.data}, {'alice', 'bob'})  # ghost excluded
+
+    def test_search_by_username_or_email(self):
+        self.client.force_authenticate(self.alice)
+        self.assertEqual([u['username'] for u in self.client.get('/api/users/?search=bob').data], ['bob'])
+        self.assertEqual({u['username'] for u in self.client.get('/api/users/?search=x.com').data},
+                         {'alice', 'bob'})

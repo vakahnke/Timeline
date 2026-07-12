@@ -22,6 +22,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
   const [addingTeam, setAddingTeam] = useState(false)
   const [note,       setNote]       = useState('')
   const [assignedTeams, setAssignedTeams] = useState([])
+  const [allUsers,   setAllUsers]   = useState([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -46,7 +47,12 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     api.teams.list()
       .then(ts => { setTeams(ts); if (ts.length) setSelTeam(String(ts[0].id)) })
       .catch(() => {})
+    api.users.list().then(setAllUsers).catch(() => {})
   }, [isOwner])
+
+  // Suggest only people who aren't already on the project.
+  const memberUsernames = new Set(members.map(m => m.user.username))
+  const userOptions = allUsers.filter(u => !memberUsernames.has(u.username))
 
   const addTeam = useCallback(async () => {
     if (!selTeam) return
@@ -128,10 +134,17 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
           {isOwner && (
             <form className="invite-row" onSubmit={addMember}>
               <input
+                list="mp-user-list"
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
-                placeholder="Email or username"
+                placeholder="Pick or type a name / email"
+                autoComplete="off"
               />
+              <datalist id="mp-user-list">
+                {userOptions.map(u => (
+                  <option key={u.id} value={u.username}>{u.email}</option>
+                ))}
+              </datalist>
               <select value={newRole} onChange={e => setNewRole(e.target.value)}>
                 {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>

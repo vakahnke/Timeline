@@ -19,6 +19,7 @@ from .views import (
     RegisterView,
     TeamViewSet,
     TemplateViewSet,
+    UserListView,
 )
 
 router = DefaultRouter()
@@ -39,6 +40,7 @@ urlpatterns = [
     path('auth/token/refresh/', TokenRefreshView.as_view(),                   name='token_refresh'),
     path('auth/logout/',        LogoutView.as_view(),                         name='logout'),
     path('me/',                 MeView.as_view(),              name='me'),
+    path('users/',              UserListView.as_view(),        name='users'),
     path('me/tasks/',           MyTasksView.as_view(),         name='my-tasks'),
     path('projects/<int:project_pk>/tasks/', ProjectTasksView.as_view(), name='project-tasks'),
     path('health/',             HealthView.as_view(),          name='health'),
