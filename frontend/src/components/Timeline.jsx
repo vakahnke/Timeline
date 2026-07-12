@@ -230,13 +230,18 @@ const Timeline = forwardRef(function Timeline(
     // Anchor `from` at the left edge NOW at the current zoom, before the zoom animation runs,
     // so the preceding setRange doesn't paint a jump at a stale scroll position.
     el.scrollLeft  = ((fromMs - r.start) / 3_600_000) * startPx - margin
-    const t0 = performance.now(), dur = 240
+    const ratio = targetPx / startPx
+    // Scale duration with the zoom magnitude: a small hop is quick, a big Fit->day is graceful.
+    const dur   = Math.min(480, Math.max(200, 200 + 70 * Math.abs(Math.log2(ratio))))
+    const t0 = performance.now()
     cancelAnimationFrame(frameRafRef.current)
     const step = (t) => {
       const k = Math.min(1, (t - t0) / dur)
       const e = 1 - Math.pow(1 - k, 3)
       zoomAnchorRef.current = { anchorTime: fromMs, mouseX: margin }
-      setPxPerHour(startPx + (targetPx - startPx) * e)
+      // Geometric (log-space) interpolation so the zoom rate is perceptually uniform — a
+      // linear px lerp over a big ratio (e.g. Fit -> day is ~30x) snaps then crawls.
+      setPxPerHour(startPx * Math.pow(ratio, e))
       if (k < 1) frameRafRef.current = requestAnimationFrame(step)
     }
     frameRafRef.current = requestAnimationFrame(step)
