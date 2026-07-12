@@ -59,6 +59,26 @@ function buildRange(events) {
   return { start: start - pad, end: end + pad }
 }
 
+const DAY_MS = 86_400_000
+
+// Shift a date-only 'YYYY-MM-DD' due date by whole days, staying date-only (no DST drift).
+function addDaysToDue(due, days) {
+  const d = new Date(due + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+// A patch is a left/right MOVE only if start and end shift by the same amount. Resizes
+// (one endpoint) and sub-day nudges return 0 days, so their tasks stay put.
+function moveDeltaDays(cur, patch) {
+  if (!cur || !patch.start || !patch.end) return 0
+  const ds = new Date(patch.start).getTime() - new Date(cur.start).getTime()
+  const de = new Date(patch.end).getTime()   - new Date(cur.end).getTime()
+  if (ds !== de) return 0
+  return Math.round(ds / DAY_MS)
+}
+
 export default function ProjectTimeline() {
   const { projectId } = useParams()
   const navigate = useNavigate()
@@ -235,15 +255,37 @@ export default function ProjectTimeline() {
     return updated
   }, [projectId])
 
+  const applyTaskUpdate = useCallback((eventId, taskId, patch) =>
+    api.tasks.update(projectId, eventId, taskId, patch), [projectId])
+
+  // Reschedule an event's tasks by the same whole-day shift as the drag. Returns undo
+  // records ({eventId, taskId, before, after}) so the move stays reversible in one step.
+  const shiftTasksForEvent = useCallback(async (eventId, days) => {
+    if (!days) return []
+    let tasks
+    try { tasks = await api.tasks.list(projectId, eventId) }
+    catch { return [] }   // best-effort: a failed fetch never blocks the event move
+    const recs = tasks
+      .filter(t => t.due_date)
+      .map(t => ({ eventId, taskId: t.id,
+                   before: { due_date: t.due_date },
+                   after:  { due_date: addDaysToDue(t.due_date, days) } }))
+    await Promise.all(recs.map(r => applyTaskUpdate(r.eventId, r.taskId, r.after)))
+    if (recs.length) setTasksReload(n => n + 1)
+    return recs
+  }, [projectId, applyTaskUpdate])
+
   const updateEvent = useCallback(async (id, patch) => {
     const cur = eventsRef.current.find(e => e.id === id)
     // Snapshot only the fields this patch changes, so undo restores exactly those.
     const before = cur ? Object.fromEntries(Object.keys(patch).map(k => [k, cur[k]])) : null
+    const days = moveDeltaDays(cur, patch)   // capture BEFORE the move updates eventsRef
     flash('Saving…', 'saving')
     try {
       const updated = await applyUpdate(id, patch)
+      const tasks = (days && cur?.task_count > 0) ? await shiftTasksForEvent(id, days) : []
       if (before) {
-        setUndoStack(s => [...s, { id, before, after: patch }])
+        setUndoStack(s => [...s, { id, before, after: patch, tasks: tasks.length ? tasks : undefined }])
         setRedoStack([])  // a fresh edit invalidates the redo branch
       }
       flash('Saved', 'saved')
@@ -252,26 +294,32 @@ export default function ProjectTimeline() {
       flash(err.status === 403 ? 'You don’t have edit access.' : 'Save failed.', 'error')
       throw err
     }
-  }, [applyUpdate, flash])
+  }, [applyUpdate, shiftTasksForEvent, flash])
 
   // Move several events as one undoable step (used by the multi-select group drag).
   // updates: [{ id, patch }].
   const moveEvents = useCallback(async (updates) => {
     if (!updates || !updates.length) return
-    const group = updates.map(({ id, patch }) => {
+    // Capture cur + the whole-day shift up front, before applyUpdate mutates eventsRef.
+    const items = updates.map(({ id, patch }) => {
       const cur = eventsRef.current.find(e => e.id === id)
-      return cur ? { id, before: Object.fromEntries(Object.keys(patch).map(k => [k, cur[k]])), after: patch } : null
+      return cur ? { id, patch, cur, days: moveDeltaDays(cur, patch),
+                     before: Object.fromEntries(Object.keys(patch).map(k => [k, cur[k]])) } : null
     }).filter(Boolean)
     flash('Saving…', 'saving')
     try {
-      await Promise.all(updates.map(({ id, patch }) => applyUpdate(id, patch)))
-      if (group.length) { setUndoStack(s => [...s, { group }]); setRedoStack([]) }
+      await Promise.all(items.map(it => applyUpdate(it.id, it.patch)))
+      const taskLists = await Promise.all(items.map(it =>
+        (it.days && it.cur.task_count > 0) ? shiftTasksForEvent(it.id, it.days) : Promise.resolve([])))
+      const group = items.map(({ id, before, patch }) => ({ id, before, after: patch }))
+      const tasks = taskLists.flat()
+      if (group.length) { setUndoStack(s => [...s, { group, tasks: tasks.length ? tasks : undefined }]); setRedoStack([]) }
       flash('Saved', 'saved')
     } catch (err) {
       flash(err.status === 403 ? 'You don’t have edit access.' : 'Save failed.', 'error')
       throw err
     }
-  }, [applyUpdate, flash])
+  }, [applyUpdate, shiftTasksForEvent, flash])
 
   const undo = useCallback(async () => {
     const entry = undoStack[undoStack.length - 1]
@@ -280,6 +328,10 @@ export default function ProjectTimeline() {
     try {
       if (entry.group) await Promise.all(entry.group.map(g => applyUpdate(g.id, g.before)))
       else await applyUpdate(entry.id, entry.before)
+      if (entry.tasks) {
+        await Promise.all(entry.tasks.map(t => applyTaskUpdate(t.eventId, t.taskId, t.before)))
+        setTasksReload(n => n + 1)
+      }
       setUndoStack(s => s.slice(0, -1))
       setRedoStack(s => [...s, entry])
       flash('Undone', 'saved')
@@ -287,7 +339,7 @@ export default function ProjectTimeline() {
       flash(err.status === 403 ? 'You don’t have edit access.'
             : err.status === 404 ? 'That event no longer exists.' : 'Undo failed.', 'error')
     }
-  }, [undoStack, applyUpdate, flash])
+  }, [undoStack, applyUpdate, applyTaskUpdate, flash])
 
   const redo = useCallback(async () => {
     const entry = redoStack[redoStack.length - 1]
@@ -296,6 +348,10 @@ export default function ProjectTimeline() {
     try {
       if (entry.group) await Promise.all(entry.group.map(g => applyUpdate(g.id, g.after)))
       else await applyUpdate(entry.id, entry.after)
+      if (entry.tasks) {
+        await Promise.all(entry.tasks.map(t => applyTaskUpdate(t.eventId, t.taskId, t.after)))
+        setTasksReload(n => n + 1)
+      }
       setRedoStack(s => s.slice(0, -1))
       setUndoStack(s => [...s, entry])
       flash('Redone', 'saved')
@@ -303,7 +359,7 @@ export default function ProjectTimeline() {
       flash(err.status === 403 ? 'You don’t have edit access.'
             : err.status === 404 ? 'That event no longer exists.' : 'Redo failed.', 'error')
     }
-  }, [redoStack, applyUpdate, flash])
+  }, [redoStack, applyUpdate, applyTaskUpdate, flash])
 
   // Ctrl/⌘+Z = undo, Ctrl/⌘+Shift+Z or Ctrl/⌘+Y = redo. Stay out of the way when a
   // modal is open or a form field is focused (let native text undo work there).
