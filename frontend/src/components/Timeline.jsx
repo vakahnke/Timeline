@@ -882,6 +882,12 @@ const Timeline = forwardRef(function Timeline(
             {displayedTracks.map(t => {
               const trackEvents = (eventsByCategory[t.name] || [])
                 .filter(e => !settings?.showOnlyCritical || criticalEventIds.has(e.id))
+                // Only render bars that overlap the current range. Events are positioned by
+                // absolute time, so an off-range bar (e.g. a 2027 task while the day view is
+                // bounded to ~2 weeks around today) would otherwise render hundreds of thousands
+                // of px wide/away — a giant GPU layer. Off-range bars can't be scrolled to anyway.
+                .filter(e => !range ||
+                  (new Date(e.end).getTime() >= range.start && new Date(e.start).getTime() <= range.end))
               return (
                 <div
                   key={t.name}
