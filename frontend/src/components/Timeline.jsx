@@ -183,7 +183,7 @@ function DepArrows({ arrows, svgH, scrollRef }) {
 }
 
 const Timeline = forwardRef(function Timeline(
-  { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, onOpenTasks, onMoveEvents, loading, apiError },
+  { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, onOpenTasks, onMoveEvents, onFit, loading, apiError },
   ref
 ) {
   const scrollRef       = useRef(null)
@@ -533,7 +533,7 @@ const Timeline = forwardRef(function Timeline(
       switch (e.key) {
         case '+': case '=': e.preventDefault(); zoomByFactor(1.6); break
         case '-': case '_': e.preventDefault(); zoomByFactor(1 / 1.6); break
-        case '0':           e.preventDefault(); doFit(); break
+        case '0':           e.preventDefault(); (onFit || doFit)(); break   // onFit re-expands a narrowed range
         case 'ArrowLeft':   e.preventDefault(); el.scrollLeft -= step; break
         case 'ArrowRight':  e.preventDefault(); el.scrollLeft += step; break
         case 'ArrowUp':     e.preventDefault(); el.scrollTop  -= step; break
@@ -545,7 +545,7 @@ const Timeline = forwardRef(function Timeline(
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [zoomByFactor, doFit])
+  }, [zoomByFactor, doFit, onFit])
 
   // Show a "move" cursor over events while Ctrl/⌘ is held (the modifier that arms dragging).
   useEffect(() => {

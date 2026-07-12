@@ -126,6 +126,7 @@ export default function ProjectTimeline() {
   const timelineRef    = useRef(null)
   const didFitRef      = useRef(false)
   const pendingFrameRef = useRef(null)
+  const pendingFitRef   = useRef(false)
 
   const role       = project?.my_role
   const canEdit    = role === 'owner' || role === 'editor'
@@ -221,8 +222,7 @@ export default function ProjectTimeline() {
   }, [loading, range, events])
 
   // Today / week / month quick views. Anchor the left edge at NOW (so the now-line sits at
-  // the left of the display) and extend forward one day / week / month. Grows the range so the
-  // window is framable even if the project's events are elsewhere in time, then frames it.
+  // the left of the display) and extend forward one day / week / month, then frame it.
   const viewPeriod = useCallback((period) => {
     const now = new Date()
     const to = new Date(now)
@@ -230,15 +230,42 @@ export default function ProjectTimeline() {
     else if (period === 'week') to.setDate(to.getDate() + 7)
     else                        to.setMonth(to.getMonth() + 1)   // month
     const fromMs = now.getTime(), toMs = to.getTime()
-    const ev = buildRange(events)
     pendingFrameRef.current = { from: fromMs, to: toMs }
-    setRange({
-      start: Math.min(ev?.start ?? fromMs, fromMs),
-      end:   Math.max(ev?.end ?? toMs, toMs),
-    })
+    if (period === 'day') {
+      // At day scale over a multi-year project the range would be ~1M px wide, turning long event
+      // bars into giant GPU layers that lag the transition out of Today. Bound the day view to a
+      // couple weeks of scroll so nothing gets that wide; press Fit / zoom out to reach far events.
+      const wk = 7 * DAY_MS
+      setRange({ start: fromMs - wk, end: toMs + wk })
+    } else {
+      // Week/month keep the whole project in range (their zoom stays well within a sane px width).
+      const ev = buildRange(events)
+      setRange({
+        start: Math.min(ev?.start ?? fromMs, fromMs),
+        end:   Math.max(ev?.end ?? toMs, toMs),
+      })
+    }
   }, [events])
 
+  // Fit = show the whole project. If the range was narrowed by the day view, re-expand it to span
+  // all events first (the fit then runs in the layout effect once the wider range has committed).
+  const handleFit = useCallback(() => {
+    const ev = buildRange(events)
+    if (ev && range && (ev.start !== range.start || ev.end !== range.end)) {
+      pendingFrameRef.current = null
+      pendingFitRef.current = true
+      setRange(ev)
+    } else {
+      timelineRef.current?.fitZoom()
+    }
+  }, [events, range])
+
   useLayoutEffect(() => {
+    if (pendingFitRef.current) {
+      pendingFitRef.current = false
+      timelineRef.current?.fitZoom()
+      return
+    }
     const pf = pendingFrameRef.current
     if (!pf || !range) return
     pendingFrameRef.current = null
@@ -565,7 +592,7 @@ export default function ProjectTimeline() {
         pxPerHour={pxPerHour}
         onZoomIn={() => timelineRef.current?.zoomBy(1.6)}
         onZoomOut={() => timelineRef.current?.zoomBy(1 / 1.6)}
-        onFit={() => timelineRef.current?.fitZoom()}
+        onFit={handleFit}
         onViewPeriod={viewPeriod}
         onNew={() => openNew()}
         onNewCategory={openNewCategory}
@@ -617,6 +644,7 @@ export default function ProjectTimeline() {
           onDeleteEvent={deleteEvent}
           onOpenTasks={(id) => setTaskPanelId(id)}
           onMoveEvents={moveEvents}
+          onFit={handleFit}
           loading={loading}
           apiError={apiError}
         />
