@@ -125,3 +125,30 @@ class ProjectMembership(models.Model):
 
     def __str__(self):
         return f'{self.user} @ {self.project} ({self.role})'
+
+
+class ProjectTeam(models.Model):
+    """A live, graded assignment of a Team to a Project.
+
+    Unlike the old snapshot expansion (which copied a team's members into individual
+    ProjectMembership rows), access here is resolved from the team's CURRENT membership at
+    request time — see permissions.get_role. Adding or removing a team member therefore
+    changes project access immediately, with no drift. Team grants are capped at Editor
+    (ownership is always an individual, direct ProjectMembership). See docs/PERMISSIONS.md.
+    """
+    project  = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='team_links')
+    team     = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='project_links')
+    role     = models.CharField(max_length=10, choices=Role.choices, default=Role.VIEWER)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['added_at']
+        constraints = [
+            models.UniqueConstraint(fields=['project', 'team'], name='uniq_project_team'),
+        ]
+
+    def __str__(self):
+        return f'{self.team} -> {self.project} ({self.role})'

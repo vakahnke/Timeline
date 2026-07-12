@@ -1,8 +1,10 @@
+from django.db.models import Q
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-from .models import ProjectMembership, Role
+from .models import ProjectMembership, ProjectTeam, Role
 
 ROLE_RANK = {Role.VIEWER: 1, Role.EDITOR: 2, Role.OWNER: 3}
+RANK_ROLE = {rank: role for role, rank in ROLE_RANK.items()}
 
 
 def is_org_admin(user):
@@ -12,20 +14,34 @@ def is_org_admin(user):
 
 
 def get_role(user, project_id):
-    """Return the user's effective role string for the project, or None if no access.
+    """Return the user's effective role for the project, or None if no access.
 
-    Org-admins (staff) are treated as Owner on every project — this single chokepoint
-    is what gives them full read/write, member management, and delete everywhere.
+    Access can come from two sources, reconciled by *highest-privilege-wins*:
+      1. a direct ProjectMembership, and
+      2. any Team assigned to the project (ProjectTeam) that the user is currently on
+         (a member or the team's owner) — evaluated LIVE, so team roster changes take
+         effect immediately.
+    Org-admins (staff) are treated as Owner on every project. See docs/PERMISSIONS.md.
     """
     if not user or not user.is_authenticated or project_id is None:
         return None
     if is_org_admin(user):
         return Role.OWNER
+
+    ranks = []
     membership = (ProjectMembership.objects
                   .filter(user=user, project_id=project_id)
                   .only('role')
                   .first())
-    return membership.role if membership else None
+    if membership:
+        ranks.append(ROLE_RANK[membership.role])
+    team_roles = (ProjectTeam.objects
+                  .filter(project_id=project_id)
+                  .filter(Q(team__members=user) | Q(team__owner=user))
+                  .values_list('role', flat=True))
+    ranks.extend(ROLE_RANK[r] for r in team_roles)
+
+    return RANK_ROLE[max(ranks)] if ranks else None
 
 
 class IsProjectMember(BasePermission):

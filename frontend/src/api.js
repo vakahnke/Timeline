@@ -24,7 +24,9 @@ const url = {
   team:        (id)      => `/teams/${id}/`,
   teamMembers: (id)      => `/teams/${id}/members/`,
   teamMember:  (id, uid) => `/teams/${id}/members/${uid}/`,
-  addTeam:     (pid)     => `/projects/${pid}/add-team/`,
+  addTeam:      (pid)      => `/projects/${pid}/add-team/`,
+  projectTeams: (pid)      => `/projects/${pid}/teams/`,
+  projectTeam:  (pid, tid) => `/projects/${pid}/teams/${tid}/`,
 }
 
 export class ApiError extends Error {
@@ -107,6 +109,10 @@ export const api = {
       remove:     (pid, mid) => req(url.member(pid, mid), { method: 'DELETE' }),
     },
     addTeam: (pid, d) => req(url.addTeam(pid), { method: 'POST', body: body(d) }),
+    teams: {
+      list:   (pid)          => req(url.projectTeams(pid)),
+      remove: (pid, teamId)  => req(url.projectTeam(pid, teamId), { method: 'DELETE' }),
+    },
   },
 
   teams: {

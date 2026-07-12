@@ -12,11 +12,10 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .emails import notify_admin_new_registration
-from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTemplate, Role, Team
+from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTeam, ProjectTemplate, Role, Team
 from .permissions import IsProjectMember, IsProjectOwner, IsTeamOwnerOrReadOnly, get_role, is_org_admin
 from .serializers import (
     AddMemberSerializer,
-    AddTeamResultSerializer,
     AddTeamToProjectSerializer,
     IdentifierSerializer,
     InstantiateTemplateSerializer,
@@ -24,6 +23,7 @@ from .serializers import (
     MeSerializer,
     ProjectMembershipSerializer,
     ProjectSerializer,
+    ProjectTeamSerializer,
     RegisterSerializer,
     SaveTemplateSerializer,
     TeamSerializer,
@@ -118,14 +118,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
               .prefetch_related('memberships'))   # members listed via the dedicated endpoint
         if is_org_admin(self.request.user):
             return qs                              # org-admins manage every project
-        # Membership filter via subquery (not a join) so the event aggregates above aren't
-        # multiplied by the number of memberships.
-        my_ids = ProjectMembership.objects.filter(user=self.request.user).values('project')
-        return qs.filter(id__in=my_ids)
+        # Two access sources, via subqueries (not joins) so the event aggregates above aren't
+        # multiplied: a direct membership, or a Team assigned to the project that the user is
+        # currently on. Team access is live — resolved from current membership.
+        user = self.request.user
+        my_ids   = ProjectMembership.objects.filter(user=user).values('project')
+        team_ids = (ProjectTeam.objects
+                    .filter(Q(team__members=user) | Q(team__owner=user))
+                    .values('project'))
+        return qs.filter(Q(id__in=my_ids) | Q(id__in=team_ids)).distinct()
 
     # Owner-only actions. NOTE: get_permissions overrides any permission_classes set on
     # the @action decorators, so owner-only actions must be enumerated here.
-    OWNER_ONLY_ACTIONS = {'destroy', 'member_detail', 'add_team'}
+    OWNER_ONLY_ACTIONS = {'destroy', 'member_detail', 'add_team', 'team_detail'}
 
     def get_permissions(self):
         # Writes to events/categories are handled by their own viewsets; project metadata
@@ -207,28 +212,46 @@ class ProjectViewSet(viewsets.ModelViewSet):
         membership.save(update_fields=['role'])
         return Response(ProjectMembershipSerializer(membership).data)
 
-    @extend_schema(request=AddTeamToProjectSerializer, responses=AddTeamResultSerializer)
+    @extend_schema(request=AddTeamToProjectSerializer, responses=ProjectTeamSerializer)
     @action(detail=True, methods=['post'], url_path='add-team')  # owner-only via get_permissions
     def add_team(self, request, pk=None):
-        """Add all current members of one of your teams to this project at a chosen role."""
+        """Assign one of your teams to this project at a role (Viewer or Editor). LIVE: every
+        current and future member of the team gets at least that access — no snapshot."""
         project = self.get_object()
         serializer = AddTeamToProjectSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         team = Team.objects.filter(pk=serializer.validated_data['team'], owner=request.user).first()
         if not team:
             return Response({'team': 'Team not found.'}, status=status.HTTP_400_BAD_REQUEST)
-        role = serializer.validated_data['role']
-        added = 0
-        for user in team.members.all():
-            _, created = ProjectMembership.objects.get_or_create(
-                project=project, user=user, defaults={'role': role})
-            if created:
-                added += 1
-        members = project.memberships.select_related('user')
-        return Response(
-            {'added': added, 'members': ProjectMembershipSerializer(members, many=True).data},
-            status=status.HTTP_200_OK,
+        link, created = ProjectTeam.objects.update_or_create(
+            project=project, team=team,
+            defaults={'role': serializer.validated_data['role'], 'added_by': request.user},
         )
+        return Response(
+            ProjectTeamSerializer(link, context={'request': request}).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    # GET: any member sees which teams are assigned. DELETE (team_detail): owner-only.
+    @extend_schema(responses=ProjectTeamSerializer(many=True))
+    @action(detail=True, methods=['get'], url_path='teams')
+    def teams(self, request, pk=None):
+        project = self.get_object()  # get_queryset is access-scoped -> non-members 404
+        links = (project.team_links
+                 .select_related('team', 'team__owner')
+                 .prefetch_related('team__members'))
+        return Response(ProjectTeamSerializer(links, many=True, context={'request': request}).data)
+
+    @extend_schema(parameters=[OpenApiParameter('team_id', OpenApiTypes.INT, OpenApiParameter.PATH)])
+    @action(detail=True, methods=['delete'],
+            url_path=r'teams/(?P<team_id>[^/.]+)')  # owner-only via get_permissions
+    def team_detail(self, request, pk=None, team_id=None):
+        """Un-assign a team from this project; its members lose team-derived access at once."""
+        project = self.get_object()
+        deleted, _ = ProjectTeam.objects.filter(project=project, team_id=team_id).delete()
+        if not deleted:
+            return Response({'detail': 'Team assignment not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _hidden_builtin_slugs():

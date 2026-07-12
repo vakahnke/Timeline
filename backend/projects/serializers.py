@@ -4,7 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import Project, ProjectMembership, Role, Team
+from .models import Project, ProjectMembership, ProjectTeam, Role, Team
 from .permissions import is_org_admin
 
 User = get_user_model()
@@ -186,7 +186,20 @@ class IdentifierSerializer(serializers.Serializer):
 
 class AddTeamToProjectSerializer(serializers.Serializer):
     team = serializers.IntegerField(help_text='Id of one of your teams.')
-    role = serializers.ChoiceField(choices=Role.choices, default=Role.EDITOR)
+    # Team grants are capped at Editor — ownership is always granted individually/directly
+    # so the "last owner" guarantee stays meaningful (see docs/PERMISSIONS.md §3.6).
+    role = serializers.ChoiceField(
+        choices=[(Role.VIEWER, 'Viewer'), (Role.EDITOR, 'Editor')], default=Role.EDITOR)
+
+
+class ProjectTeamSerializer(serializers.ModelSerializer):
+    """A team assignment on a project: the team (with its members) plus the granted role."""
+    team = TeamSerializer(read_only=True)
+
+    class Meta:
+        model  = ProjectTeam
+        fields = ['id', 'team', 'role', 'added_at']
+        read_only_fields = fields
 
 
 class AddTeamResultSerializer(serializers.Serializer):

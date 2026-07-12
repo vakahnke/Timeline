@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
 
 const ROLES = ['owner', 'editor', 'viewer']
+// Team grants are capped at Editor (ownership is always granted individually).
+const TEAM_ROLES = ['editor', 'viewer']
 // Privilege labels surfaced to users (the API still uses owner/editor/viewer).
 const ROLE_LABELS = { owner: 'Owner — full access', editor: 'Read & edit', viewer: 'Read only' }
 
@@ -19,6 +21,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
   const [teamRole,   setTeamRole]   = useState('editor')
   const [addingTeam, setAddingTeam] = useState(false)
   const [note,       setNote]       = useState('')
+  const [assignedTeams, setAssignedTeams] = useState([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -32,7 +35,11 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     }
   }, [projectId])
 
-  useEffect(() => { load() }, [load])
+  const loadTeams = useCallback(async () => {
+    try { setAssignedTeams(await api.projects.teams.list(projectId)) } catch { /* ignore */ }
+  }, [projectId])
+
+  useEffect(() => { load(); loadTeams() }, [load, loadTeams])
 
   useEffect(() => {
     if (!isOwner) return
@@ -45,9 +52,9 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     if (!selTeam) return
     setAddingTeam(true); setError(''); setNote('')
     try {
-      const res = await api.projects.addTeam(projectId, { team: Number(selTeam), role: teamRole })
-      setMembers(res.members)
-      setNote(`Added ${res.added} member${res.added === 1 ? '' : 's'} from the team.`)
+      const link = await api.projects.addTeam(projectId, { team: Number(selTeam), role: teamRole })
+      setNote(`Assigned “${link.team.name}” as ${ROLE_LABELS[link.role] || link.role}. Everyone on the team now has access.`)
+      await loadTeams()
     } catch (err) {
       let msg = 'Could not add team.'
       try { msg = Object.values(JSON.parse(err.body)).flat()[0] || msg } catch { /* keep */ }
@@ -55,7 +62,17 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     } finally {
       setAddingTeam(false)
     }
-  }, [projectId, selTeam, teamRole])
+  }, [projectId, selTeam, teamRole, loadTeams])
+
+  const removeTeam = useCallback(async (link) => {
+    if (!confirm(`Remove team “${link.team.name}” from this project? Members who don’t have direct access will lose it.`)) return
+    try {
+      await api.projects.teams.remove(projectId, link.team.id)
+      setAssignedTeams(prev => prev.filter(l => l.id !== link.id))
+    } catch {
+      setError('Could not remove team.')
+    }
+  }, [projectId])
 
   const addMember = useCallback(async (e) => {
     e.preventDefault()
@@ -131,7 +148,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.member_count})</option>)}
               </select>
               <select value={teamRole} onChange={e => setTeamRole(e.target.value)}>
-                {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                {TEAM_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
               </select>
               <button className="btn-template" onClick={addTeam} disabled={addingTeam}>
                 {addingTeam ? 'Adding…' : 'Add team'}
@@ -141,6 +158,27 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
 
           {note && <div className="dim" style={{ fontSize: 11, marginTop: -4 }}>{note}</div>}
           {error && <div className="field-error">&#10005; {error}</div>}
+
+          {assignedTeams.length > 0 && (
+            <>
+              <div className="mp-label">Assigned teams</div>
+              <div className="members-list">
+                {assignedTeams.map(link => (
+                  <div key={link.id} className="member-row">
+                    <div className="member-id">
+                      <span className="member-name">{link.team.name}</span>
+                      <span className="member-email">
+                        {link.team.member_count} member{link.team.member_count === 1 ? '' : 's'} · everyone gets {ROLE_LABELS[link.role] || link.role}
+                      </span>
+                    </div>
+                    {isOwner
+                      ? <button className="btn-danger btn-sm" onClick={() => removeTeam(link)}>Remove</button>
+                      : <span className={`role-badge role-badge--${link.role}`}>{link.role}</span>}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="mp-label">Who has access</div>
           {loading ? (
