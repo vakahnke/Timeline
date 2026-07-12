@@ -193,6 +193,9 @@ const Timeline = forwardRef(function Timeline(
     const el = scrollRef.current
     const r  = rangeRef.current
     if (!el || !r) return
+    // Stop any in-flight frameWindow (Today/Week/Month) animation, else its rAF loop and this
+    // one both setPxPerHour every frame and fight — the stutter when toggling Fit <-> Today.
+    cancelAnimationFrame(frameRafRef.current); frameRafRef.current = null
     const rect    = el.getBoundingClientRect()
     const mouseX  = (clientX != null ? clientX : rect.left + rect.width / 2) - rect.left
     const anchorX = mouseX + el.scrollLeft
