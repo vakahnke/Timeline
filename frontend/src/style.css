@@ -1493,6 +1493,7 @@ fieldset.modal-body:disabled { opacity: 1; }
 .task-status-badge--in_progress { color: var(--accent);    background: var(--accent-glow);   border-color: rgba(129,140,248,0.3); }
 .task-status-badge--blocked     { color: var(--danger);    background: var(--danger-glow);   border-color: rgba(248,113,113,0.3); }
 .task-status-badge--done        { color: #34d399;          background: rgba(52,211,153,0.16); border-color: rgba(52,211,153,0.35); }
+.task-status-badge--overdue     { color: var(--danger);    background: var(--danger-glow);   border-color: rgba(248,113,113,0.45); font-weight: 700; }
 
 /* ── "My tasks" dashboard panel ─────────────────────────────────────────── */
 .mytasks { margin-bottom: 28px; }
@@ -1871,6 +1872,11 @@ fieldset.modal-body:disabled { opacity: 1; }
 .el-now { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
 .el-now::before, .el-now::after { content: ''; flex: 1; height: 1px; background: rgba(239,68,68,0.55); }
 .el-now-label { font-size: 10px; font-weight: 700; color: #ef4444; white-space: nowrap; letter-spacing: 0.3px; text-transform: uppercase; }
+
+/* "Today" divider in the dashboard My-tasks lineup (mirrors the List-view Now line). */
+.mytask-today { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.mytask-today::before, .mytask-today::after { content: ''; flex: 1; height: 1px; background: rgba(239,68,68,0.55); }
+.mytask-today-label { font-size: 10px; font-weight: 700; color: #ef4444; white-space: nowrap; letter-spacing: 0.3px; text-transform: uppercase; }
 .el-event {
   background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent);
   border-radius: 10px; margin-bottom: 10px; overflow: hidden;

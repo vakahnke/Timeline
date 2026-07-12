@@ -30,6 +30,13 @@ function isOverdue(iso, status) {
   return new Date(y, m - 1, d) < today
 }
 
+// Local-midnight ms of a due date; undated tasks position as "far future" (after today).
+function dueMs(iso) {
+  if (!iso) return Infinity
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).getTime()
+}
+
 function fmtDur(ms) {
   const h = Math.round(ms / 3_600_000)
   if (h <= 0) return '0h'
@@ -128,8 +135,8 @@ export default function MyTasksPanel() {
         onClick={() => navigate(`/projects/${t.project.id}`)}
         onKeyDown={e => { if (e.key === 'Enter') navigate(`/projects/${t.project.id}`) }}
       >
-        <span className={`task-status-badge task-status-badge--${t.status}`}>
-          {STATUS_LABELS[t.status] || t.status}
+        <span className={`task-status-badge task-status-badge--${overdue ? 'overdue' : t.status}`}>
+          {overdue ? 'Overdue' : (STATUS_LABELS[t.status] || t.status)}
         </span>
         <span className="mytask-title">{t.title}</span>
         <span className="mytask-ctx dim">
@@ -141,6 +148,23 @@ export default function MyTasksPanel() {
         </span>
       </div>
     )
+  }
+
+  // A red "Today" divider marking where we are in the chronological lineup — everything
+  // above it is overdue/past-due, everything below is due today or upcoming.
+  const todayMs = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() })()
+  const todayLabel = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  const TodayLine = () => (
+    <div className="mytask-today"><span className="mytask-today-label">Today · {todayLabel}</span></div>
+  )
+  // Render a date-sorted list with the Today line inserted before the first not-yet-due task.
+  const renderList = (items, withToday) => {
+    if (!withToday) return items.map(Row)
+    const idx = items.findIndex(t => dueMs(t.due_date) >= todayMs)
+    const out = []
+    items.forEach((t, i) => { if (i === idx) out.push(<TodayLine key="__today" />); out.push(Row(t)) })
+    if (idx === -1) out.push(<TodayLine key="__today" />)   // everything is overdue
+    return out
   }
 
   return (
@@ -206,7 +230,7 @@ export default function MyTasksPanel() {
         groups.map(g => (
           <div key={g.name ?? '_'} className="mytask-group">
             {g.name && <div className="mytask-group-head">{g.name} <span className="dim">({g.items.length})</span></div>}
-            <div className="mytasks-list">{g.items.map(Row)}</div>
+            <div className="mytasks-list">{renderList(g.items, sort === 'date')}</div>
           </div>
         ))
       )}
