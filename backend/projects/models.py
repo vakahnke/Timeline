@@ -152,3 +152,12 @@ class ProjectTeam(models.Model):
 
     def __str__(self):
         return f'{self.team} -> {self.project} ({self.role})'
+
+
+class EffectiveAccessReport(Project):
+    """Table-less proxy used only to surface a read-only 'Effective access' report page in
+    the Django admin (rendered by projects/admin.py). Has no data of its own."""
+    class Meta:
+        proxy = True
+        verbose_name = 'Effective access'
+        verbose_name_plural = 'Effective access'

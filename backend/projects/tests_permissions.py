@@ -4,6 +4,8 @@ Covers the Phase-1 permissions rework (see docs/PERMISSIONS.md): a Team assigned
 project grants its current members access, resolved LIVE from team membership — no snapshot.
 """
 from django.contrib.auth import get_user_model
+from django.test import override_settings
+from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from .models import Project, ProjectMembership, ProjectTeam, Role, Team
@@ -150,3 +152,36 @@ class TeamProjectAccessTests(APITestCase):
     def test_remove_unassigned_team_404s(self):
         self.client.force_authenticate(self.owner)
         self.assertEqual(self.client.delete(self.team_link_url(self.team.id)).status_code, 404)
+
+
+# Render the admin page against plain static storage — the prod WhiteNoise manifest storage
+# needs a collectstatic manifest that doesn't exist under the test runner.
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class EffectiveAccessAdminTests(APITestCase):
+    """The read-only Effective Access admin report page (org-admins only)."""
+
+    def setUp(self):
+        self.url = reverse('admin:projects_effectiveaccessreport_changelist')
+        self.staff = User.objects.create_user('boss', 'boss@x.com', 'pw', is_staff=True)
+        self.plain = User.objects.create_user('plebe', 'plebe@x.com', 'pw')
+        p = Project.objects.create(name='Alpha', owner=self.plain)
+        ProjectMembership.objects.create(project=p, user=self.plain, role=Role.OWNER)
+        team = Team.objects.create(name='Crew', owner=self.plain)
+        team.members.add(self.staff)
+        ProjectTeam.objects.create(project=p, team=team, role=Role.EDITOR)
+
+    def test_renders_for_staff(self):
+        self.client.force_login(self.staff)
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Effective access')
+        self.assertContains(res, 'Alpha')          # the project appears
+        self.assertContains(res, 'via team')        # provenance rendered
+
+    def test_forbidden_for_non_staff(self):
+        self.client.force_login(self.plain)
+        res = self.client.get(self.url)
+        self.assertIn(res.status_code, (302, 403))  # admin bounces non-staff

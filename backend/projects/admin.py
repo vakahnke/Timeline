@@ -1,9 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.core.exceptions import PermissionDenied
+from django.template.response import TemplateResponse
 
+from .access_report import build_report
 from .emails import notify_user_account_activated
-from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTemplate, Team
+from .models import (EffectiveAccessReport, HiddenBuiltinTemplate, Project, ProjectMembership,
+                     ProjectTeam, ProjectTemplate, Team)
+from .permissions import is_org_admin
 
 User = get_user_model()
 
@@ -43,11 +48,18 @@ class ProjectMembershipInline(admin.TabularInline):
     autocomplete_fields = ['user']
 
 
+class ProjectTeamInline(admin.TabularInline):
+    model = ProjectTeam
+    extra = 0
+    autocomplete_fields = ['team']
+    readonly_fields = ['added_by', 'added_at']
+
+
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display  = ['name', 'owner', 'created_at']
     search_fields = ['name', 'owner__username']
-    inlines       = [ProjectMembershipInline]
+    inlines       = [ProjectMembershipInline, ProjectTeamInline]
 
 
 @admin.register(ProjectMembership)
@@ -55,6 +67,41 @@ class ProjectMembershipAdmin(admin.ModelAdmin):
     list_display  = ['user', 'project', 'role', 'joined_at']
     list_filter   = ['role']
     search_fields = ['user__username', 'project__name']
+
+
+@admin.register(ProjectTeam)
+class ProjectTeamAdmin(admin.ModelAdmin):
+    list_display        = ['team', 'project', 'role', 'added_by', 'added_at']
+    list_filter         = ['role']
+    search_fields       = ['team__name', 'project__name']
+    autocomplete_fields = ['project', 'team']
+    readonly_fields     = ['added_by', 'added_at']
+
+
+@admin.register(EffectiveAccessReport)
+class EffectiveAccessAdmin(admin.ModelAdmin):
+    """Read-only computed report: who can view / edit / manage each project, and *why*.
+    Not a table — it renders the live get_role resolution. Org-admins only."""
+
+    def has_module_permission(self, request):        return is_org_admin(request.user)
+    def has_view_permission(self, request, obj=None): return is_org_admin(request.user)
+    def has_add_permission(self, request):            return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return False
+
+    def changelist_view(self, request, extra_context=None):
+        if not is_org_admin(request.user):
+            raise PermissionDenied
+        rows, no_access = build_report()
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Effective access',
+            'rows': rows,
+            'no_access': no_access,
+            'project_count': Project.objects.count(),
+            'opts': self.model._meta,
+        }
+        return TemplateResponse(request, 'admin/effective_access.html', context)
 
 
 @admin.register(ProjectTemplate)

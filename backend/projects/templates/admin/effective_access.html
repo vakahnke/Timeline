@@ -1,0 +1,66 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}{{ block.super }}
+<style>
+  .ea-note { color: #555; margin: 4px 0 16px; max-width: 900px; }
+  .ea-note code { background: #f3f3f3; padding: 1px 4px; border-radius: 3px; }
+  .ea-user { margin: 22px 0 4px; padding-bottom: 4px; border-bottom: 2px solid #79aec8; }
+  .ea-user small { color: #666; font-weight: normal; }
+  .ea-admin { color: #b3261e; }
+  table.ea { border-collapse: collapse; width: 100%; max-width: 1000px; font-size: 13px; }
+  table.ea th, table.ea td { border: 1px solid #e0e0e0; padding: 5px 9px; text-align: left; }
+  table.ea th { background: #f6f6f6; }
+  table.ea td.ea-yes { color: #2e7d32; font-weight: 600; text-align: center; }
+  table.ea td.ea-no { color: #ccc; text-align: center; }
+  .ea-role { font-weight: 600; text-transform: capitalize; }
+  .ea-src { color: #555; }
+  .ea-orphans { margin-top: 26px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<p class="ea-note">
+  Computed live from the permission model — <code>org-admin override → team grants → direct grants</code>,
+  highest-privilege-wins. Read-only; matches exactly what the app enforces.
+  <br><b>{{ rows|length }}</b> access grants across <b>{{ project_count }}</b> projects.
+  <b>view</b> = can open · <b>edit</b> = change events/tasks/dates · <b>manage</b> = members, teams, delete.
+</p>
+
+{% regroup rows by user as user_groups %}
+{% for g in user_groups %}
+  {% with first=g.list.0 %}
+  <h3 class="ea-user">
+    {{ g.grouper }}{% if first.is_admin %} <span class="ea-admin">[org-admin]</span>{% endif %}
+    <small>&lt;{{ first.email }}&gt; — {{ g.list|length }} project{{ g.list|length|pluralize }}</small>
+  </h3>
+  {% if first.is_admin %}
+    <p class="ea-note">Sees <b>all {{ project_count }}</b> projects — <b>view + edit + manage</b> on every one (org-admin).</p>
+  {% else %}
+    <table class="ea">
+      <thead><tr><th>Project</th><th>Role</th><th>View</th><th>Edit</th><th>Manage</th><th>Source</th></tr></thead>
+      <tbody>
+      {% for r in g.list %}
+        <tr>
+          <td>{{ r.project }}</td>
+          <td class="ea-role">{{ r.role }}</td>
+          <td class="{% if r.can_view %}ea-yes{% else %}ea-no{% endif %}">{{ r.can_view|yesno:"✓,—" }}</td>
+          <td class="{% if r.can_edit %}ea-yes{% else %}ea-no{% endif %}">{{ r.can_edit|yesno:"✓,—" }}</td>
+          <td class="{% if r.can_manage %}ea-yes{% else %}ea-no{% endif %}">{{ r.can_manage|yesno:"✓,—" }}</td>
+          <td class="ea-src">{% for s in r.sources %}{{ s }}{% if not forloop.last %}; {% endif %}{% endfor %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+  {% endwith %}
+{% endfor %}
+
+{% if no_access %}
+  <div class="ea-orphans">
+    <h3 class="ea-user">No access <small>— registered but can't reach any project</small></h3>
+    <ul>
+      {% for u in no_access %}<li>{{ u.user }} &lt;{{ u.email }}&gt;</li>{% endfor %}
+    </ul>
+  </div>
+{% endif %}
+{% endblock %}
