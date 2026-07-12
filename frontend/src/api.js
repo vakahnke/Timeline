@@ -27,6 +27,7 @@ const url = {
   addTeam:      (pid)      => `/projects/${pid}/add-team/`,
   projectTeams: (pid)      => `/projects/${pid}/teams/`,
   projectTeam:  (pid, tid) => `/projects/${pid}/teams/${tid}/`,
+  projectAccess:(pid)      => `/projects/${pid}/access/`,
 }
 
 export class ApiError extends Error {
@@ -118,6 +119,8 @@ export const api = {
       list:   (pid)          => req(url.projectTeams(pid)),
       remove: (pid, teamId)  => req(url.projectTeam(pid, teamId), { method: 'DELETE' }),
     },
+    // Unified effective access (direct + team-derived + org-admin) with provenance.
+    access: (pid) => req(url.projectAccess(pid)),
   },
 
   teams: {

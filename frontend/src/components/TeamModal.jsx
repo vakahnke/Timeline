@@ -88,6 +88,11 @@ export default function TeamModal({ team, onClose, onChanged }) {
 
           {!creating && (
             <>
+              {canManage && team?.assigned_project_count > 0 && (
+                <p className="dim" style={{ fontSize: 11, margin: '0 0 8px' }}>
+                  ⚠ This team is assigned to {team.assigned_project_count} project{team.assigned_project_count === 1 ? '' : 's'} — adding or removing people changes their access there immediately.
+                </p>
+              )}
               {canManage ? (
                 <form className="invite-row" onSubmit={addMember}>
                   <input

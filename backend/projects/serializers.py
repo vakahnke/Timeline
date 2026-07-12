@@ -163,15 +163,24 @@ class TeamSerializer(serializers.ModelSerializer):
     members      = UserSerializer(many=True, read_only=True)
     member_count = serializers.SerializerMethodField()
     is_owner     = serializers.SerializerMethodField()
+    # How many projects this team is assigned to — so the UI can warn that a roster edit
+    # ripples across them (team access is live). See docs/PERMISSIONS.md.
+    assigned_project_count = serializers.SerializerMethodField()
 
     class Meta:
         model  = Team
-        fields = ['id', 'name', 'description', 'members', 'member_count', 'is_owner', 'created_at']
-        read_only_fields = ['id', 'members', 'member_count', 'is_owner', 'created_at']
+        fields = ['id', 'name', 'description', 'members', 'member_count', 'is_owner',
+                  'assigned_project_count', 'created_at']
+        read_only_fields = ['id', 'members', 'member_count', 'is_owner',
+                            'assigned_project_count', 'created_at']
 
     @extend_schema_field(serializers.IntegerField())
     def get_member_count(self, obj):
         return len(obj.members.all())  # uses the prefetch cache
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_assigned_project_count(self, obj):
+        return obj.project_links.count()
 
     @extend_schema_field(serializers.BooleanField())
     def get_is_owner(self, obj):

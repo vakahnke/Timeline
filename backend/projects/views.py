@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .access_report import project_access
 from .emails import notify_admin_new_registration
 from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTeam, ProjectTemplate, Role, Team
 from .permissions import IsProjectMember, IsProjectOwner, IsTeamOwnerOrReadOnly, get_role, is_org_admin
@@ -248,6 +249,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
             ProjectTeamSerializer(link, context={'request': request}).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+    @extend_schema(responses=None)
+    @action(detail=True, methods=['get'], url_path='access')
+    def access(self, request, pk=None):
+        """Effective access for this project: everyone who can reach it and *why* (direct
+        grant, via which team, or org-admin). Read-only; any member may view."""
+        project = self.get_object()  # get_queryset is access-scoped -> non-members 404
+        return Response(project_access(project))
 
     # GET: any member sees which teams are assigned. DELETE (team_detail): owner-only.
     @extend_schema(responses=ProjectTeamSerializer(many=True))

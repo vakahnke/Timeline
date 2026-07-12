@@ -1,6 +1,6 @@
 # Permissions & Access Control — Design Document
 
-**Status:** DRAFT for review — §1 audit, §2 research, and §3 proposed design complete. Awaiting sign-off before implementation.
+**Status:** Phase 1 (live team access) + Phase 2 (in-app provenance) SHIPPED. Phase 3 (Commenter/Guest tiers) pending. §1 audit, §2 research, §3 design below.
 **Last updated:** 2026-07-12
 **Scope:** Who can see and change projects, events, tasks, members, and teams.
 
@@ -369,8 +369,10 @@ granted directly, per-person. *(Open question 3.11-A if you want to allow team-O
 - **Phase 1 — core (satisfies the requirement).** `ProjectTeam` model + migration;
   `get_role` union; `get_queryset` union; `add-team` → upsert link; `DELETE team` + `GET teams`;
   tests for live add/remove propagation and highest-wins. *Backend-complete on its own.*
-- **Phase 2 — UI & provenance.** MembersPanel assigned-teams section + "via team" labels;
-  roster-edit "N projects" warning; change-team-role.
+- **Phase 2 — UI & provenance. ✅ SHIPPED.** MembersPanel "Assigned teams" section +
+  unified "Who has access" with per-person provenance ("Editor · via USRCO", "Owner ·
+  org-admin", locked) via `GET /projects/{id}/access/`; roster-edit "N projects" warning
+  (`assigned_project_count`). (Change-team-role: unassign + re-add for now.)
 - **Phase 3 — future tiers.** Commenter (with comments feature); Guest/external sharing.
 
 Each phase is independently shippable; Phase 1 alone closes the audit gap.

@@ -8,7 +8,7 @@ const TEAM_ROLES = ['editor', 'viewer']
 const ROLE_LABELS = { owner: 'Owner — full access', editor: 'Read & edit', viewer: 'Read only' }
 
 export default function MembersPanel({ projectId, isOwner, onClose }) {
-  const [members, setMembers] = useState([])
+  const [access,  setAccess]  = useState([])   // unified: direct + team-derived + org-admin
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState('')
 
@@ -24,13 +24,13 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
   const [assignedTeams, setAssignedTeams] = useState([])
   const [allUsers,   setAllUsers]   = useState([])
 
-  const load = useCallback(async () => {
+  const loadAccess = useCallback(async () => {
     setLoading(true)
     try {
-      setMembers(await api.projects.members.list(projectId))
+      setAccess(await api.projects.access(projectId))
       setError('')
     } catch {
-      setError('Could not load members.')
+      setError('Could not load access.')
     } finally {
       setLoading(false)
     }
@@ -40,7 +40,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     try { setAssignedTeams(await api.projects.teams.list(projectId)) } catch { /* ignore */ }
   }, [projectId])
 
-  useEffect(() => { load(); loadTeams() }, [load, loadTeams])
+  useEffect(() => { loadAccess(); loadTeams() }, [loadAccess, loadTeams])
 
   useEffect(() => {
     if (!isOwner) return
@@ -50,9 +50,10 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     api.users.list().then(setAllUsers).catch(() => {})
   }, [isOwner])
 
-  // Suggest only people who aren't already on the project.
-  const memberUsernames = new Set(members.map(m => m.user.username))
-  const userOptions = allUsers.filter(u => !memberUsernames.has(u.username))
+  // Suggest only people who don't already have a DIRECT grant (you can still directly-add
+  // someone who currently has access only via a team).
+  const directUsernames = new Set(access.filter(r => r.membership_id).map(r => r.user.username))
+  const userOptions = allUsers.filter(u => !directUsernames.has(u.username))
 
   const addTeam = useCallback(async () => {
     if (!selTeam) return
@@ -60,7 +61,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     try {
       const link = await api.projects.addTeam(projectId, { team: Number(selTeam), role: teamRole })
       setNote(`Assigned “${link.team.name}” as ${ROLE_LABELS[link.role] || link.role}. Everyone on the team now has access.`)
-      await loadTeams()
+      await Promise.all([loadTeams(), loadAccess()])
     } catch (err) {
       let msg = 'Could not add team.'
       try { msg = Object.values(JSON.parse(err.body)).flat()[0] || msg } catch { /* keep */ }
@@ -68,27 +69,26 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     } finally {
       setAddingTeam(false)
     }
-  }, [projectId, selTeam, teamRole, loadTeams])
+  }, [projectId, selTeam, teamRole, loadTeams, loadAccess])
 
   const removeTeam = useCallback(async (link) => {
     if (!confirm(`Remove team “${link.team.name}” from this project? Members who don’t have direct access will lose it.`)) return
     try {
       await api.projects.teams.remove(projectId, link.team.id)
-      setAssignedTeams(prev => prev.filter(l => l.id !== link.id))
+      await Promise.all([loadTeams(), loadAccess()])
     } catch {
       setError('Could not remove team.')
     }
-  }, [projectId])
+  }, [projectId, loadTeams, loadAccess])
 
   const addMember = useCallback(async (e) => {
     e.preventDefault()
     if (!identifier.trim()) return
-    setAdding(true)
-    setError('')
+    setAdding(true); setError('')
     try {
       await api.projects.members.add(projectId, { identifier: identifier.trim(), role: newRole })
       setIdentifier('')
-      await load()
+      await loadAccess()
     } catch (err) {
       let msg = 'Could not add member.'
       try { msg = Object.values(JSON.parse(err.body)).flat()[0] || msg } catch { /* keep */ }
@@ -96,30 +96,30 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
     } finally {
       setAdding(false)
     }
-  }, [projectId, identifier, newRole, load])
+  }, [projectId, identifier, newRole, loadAccess])
 
-  const changeRole = useCallback(async (m, role) => {
+  const changeRole = useCallback(async (row, role) => {
     try {
-      await api.projects.members.updateRole(projectId, m.id, { role })
-      setMembers(prev => prev.map(x => x.id === m.id ? { ...x, role } : x))
+      await api.projects.members.updateRole(projectId, row.membership_id, { role })
+      await loadAccess()
     } catch (err) {
       let msg = 'Could not change role.'
       try { msg = JSON.parse(err.body).detail || msg } catch { /* keep */ }
       setError(msg)
     }
-  }, [projectId])
+  }, [projectId, loadAccess])
 
-  const removeMember = useCallback(async (m) => {
-    if (!confirm(`Remove ${m.user.username} from this project?`)) return
+  const removeMember = useCallback(async (row) => {
+    if (!confirm(`Remove ${row.user.username}’s direct access to this project?`)) return
     try {
-      await api.projects.members.remove(projectId, m.id)
-      setMembers(prev => prev.filter(x => x.id !== m.id))
+      await api.projects.members.remove(projectId, row.membership_id)
+      await loadAccess()
     } catch (err) {
       let msg = 'Could not remove member.'
       try { msg = JSON.parse(err.body).detail || msg } catch { /* keep */ }
       setError(msg)
     }
-  }, [projectId])
+  }, [projectId, loadAccess])
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -195,31 +195,49 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
 
           <div className="mp-label">Who has access</div>
           {loading ? (
-            <p className="dim">Loading members…</p>
+            <p className="dim">Loading access…</p>
           ) : (
             <div className="members-list">
-              {members.map(m => (
-                <div key={m.id} className="member-row">
-                  <div className="member-id">
-                    <span className="member-name">{m.user.username}</span>
-                    <span className="member-email">{m.user.email}</span>
-                  </div>
-                  {isOwner ? (
-                    <>
-                      <select
-                        className="role-select"
-                        value={m.role}
-                        onChange={e => changeRole(m, e.target.value)}
+              {access.map(row => {
+                const via = row.via_teams.map(t => t.name).join(', ')
+                const direct = !!row.membership_id
+                // Editable only for a plain direct grant; org-admins and team-derived rows are locked.
+                const editable = isOwner && direct && !row.is_org_admin
+                return (
+                  <div key={row.user.id} className="member-row">
+                    <div className="member-id">
+                      <span className="member-name">{row.user.username}</span>
+                      <span className="member-email">
+                        {row.user.email}
+                        {row.is_org_admin && <span className="mp-src"> · org-admin</span>}
+                        {!row.is_org_admin && via && <span className="mp-src"> · via {via}</span>}
+                      </span>
+                    </div>
+                    {editable ? (
+                      <>
+                        <select
+                          className="role-select"
+                          value={row.direct_role}
+                          onChange={e => changeRole(row, e.target.value)}
+                        >
+                          {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                        </select>
+                        <button className="btn-danger btn-sm" onClick={() => removeMember(row)}>Remove</button>
+                      </>
+                    ) : (
+                      <span
+                        className={`role-badge role-badge--${row.role}`}
+                        title={row.is_org_admin
+                          ? 'Org-admin — owns every project'
+                          : via ? `Granted by team ${via} — remove or edit the team to change`
+                          : ''}
                       >
-                        {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-                      </select>
-                      <button className="btn-danger btn-sm" onClick={() => removeMember(m)}>Remove</button>
-                    </>
-                  ) : (
-                    <span className={`role-badge role-badge--${m.role}`}>{m.role}</span>
-                  )}
-                </div>
-              ))}
+                        {row.role}{(row.is_org_admin || (!direct && via)) ? ' 🔒' : ''}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

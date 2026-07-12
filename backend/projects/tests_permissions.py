@@ -209,3 +209,54 @@ class UserDirectoryTests(APITestCase):
         self.assertEqual([u['username'] for u in self.client.get('/api/users/?search=bob').data], ['bob'])
         self.assertEqual({u['username'] for u in self.client.get('/api/users/?search=x.com').data},
                          {'alice', 'bob'})
+
+
+class ProjectAccessEndpointTests(APITestCase):
+    """GET /projects/{id}/access/ — unified effective access with provenance (Phase 2)."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@x.com', 'pw')
+        self.tm    = User.objects.create_user('tm', 'tm@x.com', 'pw')
+        self.admin = User.objects.create_user('boss', 'boss@x.com', 'pw', is_staff=True)
+        self.project = Project.objects.create(name='P', owner=self.owner)
+        ProjectMembership.objects.create(project=self.project, user=self.owner, role=Role.OWNER)
+        self.team = Team.objects.create(name='USRCO', owner=self.owner)
+        self.team.members.add(self.tm)
+        ProjectTeam.objects.create(project=self.project, team=self.team, role=Role.EDITOR)
+
+    def url(self):            return f'/api/projects/{self.project.id}/access/'
+    def row(self, data, un):  return next(r for r in data if r['user']['username'] == un)
+
+    def test_direct_team_and_admin_provenance(self):
+        self.client.force_authenticate(self.owner)
+        res = self.client.get(self.url())
+        self.assertEqual(res.status_code, 200)
+
+        o = self.row(res.data, 'owner')
+        self.assertEqual((o['role'], o['direct_role']), ('owner', 'owner'))
+        self.assertIsNotNone(o['membership_id'])
+
+        t = self.row(res.data, 'tm')
+        self.assertEqual(t['role'], 'editor')
+        self.assertIsNone(t['membership_id'])                       # team-derived only
+        self.assertEqual([v['name'] for v in t['via_teams']], ['USRCO'])
+
+        b = self.row(res.data, 'boss')
+        self.assertTrue(b['is_org_admin'])
+        self.assertEqual(b['role'], 'owner')
+
+    def test_highest_privilege_wins_is_reflected(self):
+        ProjectMembership.objects.create(project=self.project, user=self.tm, role=Role.VIEWER)
+        self.client.force_authenticate(self.owner)
+        t = self.row(self.client.get(self.url()).data, 'tm')
+        self.assertEqual(t['role'], 'editor')                       # team editor > direct viewer
+        self.assertEqual(t['direct_role'], 'viewer')
+        self.assertTrue(t['via_teams'])
+
+    def test_any_member_can_view(self):
+        self.client.force_authenticate(self.tm)                    # team-derived member
+        self.assertEqual(self.client.get(self.url()).status_code, 200)
+
+    def test_non_member_404(self):
+        self.client.force_authenticate(User.objects.create_user('nobody', 'n@x.com', 'pw'))
+        self.assertEqual(self.client.get(self.url()).status_code, 404)

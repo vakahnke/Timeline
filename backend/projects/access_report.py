@@ -64,3 +64,42 @@ def build_report():
     no_access = [{'user': u.username, 'email': u.email}
                  for u in users if u.username not in accessed]
     return rows, no_access
+
+
+def project_access(project):
+    """Effective access for ONE project: every user who can reach it, with provenance.
+
+    Effective role comes from get_role (so it matches enforcement); the direct-grant and
+    per-team details are for display and management in the Members panel. One dict per user:
+      {user, role, direct_role, membership_id, via_teams: [{team_id,name,role}], is_org_admin}
+    """
+    users = list(User.objects.order_by('username'))
+    direct = {m.user_id: m for m in
+              ProjectMembership.objects.filter(project=project).select_related('user')}
+    links = list(ProjectTeam.objects.filter(project=project).select_related('team'))
+    # Users each team grants to (members + the team's owner), gathered once.
+    link_user_ids = {}
+    for link in links:
+        ids = set(link.team.members.values_list('id', flat=True))
+        ids.add(link.team.owner_id)
+        link_user_ids[link.id] = ids
+
+    rows = []
+    for u in users:
+        role = _rv(get_role(u, project.id))
+        if not role:
+            continue
+        m = direct.get(u.id)
+        via = [{'team_id': link.team_id, 'name': link.team.name, 'role': _rv(link.role)}
+               for link in links if u.id in link_user_ids[link.id]]
+        rows.append({
+            'user': {'id': u.id, 'username': u.username, 'email': u.email},
+            'role': role,
+            'direct_role': _rv(m.role) if m else None,
+            'membership_id': m.id if m else None,
+            'via_teams': via,
+            'is_org_admin': is_org_admin(u),
+        })
+    order = {'owner': 0, 'editor': 1, 'viewer': 2}
+    rows.sort(key=lambda r: (order.get(r['role'], 9), r['user']['username']))
+    return rows
