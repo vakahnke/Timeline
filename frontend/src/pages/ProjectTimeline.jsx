@@ -12,6 +12,7 @@ import EventTaskPanel from '../components/EventTaskPanel'
 import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
 import WorkloadModal from '../components/WorkloadModal'
+import ProjectStartModal from '../components/ProjectStartModal'
 
 const DEFAULT_SETTINGS = { showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 }
 
@@ -69,6 +70,14 @@ function addDaysToDue(due, days) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
+// Shift a datetime by whole CALENDAR days, preserving local time-of-day across DST — so a
+// reschedule lands the event on exactly the intended date (not an hour off near midnight).
+function addDaysToISO(iso, days) {
+  const d = new Date(iso)
+  d.setDate(d.getDate() + days)
+  return d.toISOString()
+}
+
 // A patch is a left/right MOVE only if start and end shift by the same amount. Resizes
 // (one endpoint) and sub-day nudges return 0 days, so their tasks stay put.
 function moveDeltaDays(cur, patch) {
@@ -109,6 +118,7 @@ export default function ProjectTimeline() {
   const [catModal,       setCatModal]     = useState(null)
   const [showMembers,    setShowMembers]  = useState(false)
   const [showWorkloads,  setShowWorkloads] = useState(false)
+  const [showReschedule, setShowReschedule] = useState(false)
   const [loading,        setLoading]      = useState(true)
   const [apiError,       setApiError]     = useState(null)
   const [accessError,    setAccessError]  = useState(null)
@@ -298,12 +308,14 @@ export default function ProjectTimeline() {
 
   // Move several events as one undoable step (used by the multi-select group drag).
   // updates: [{ id, patch }].
-  const moveEvents = useCallback(async (updates) => {
+  // opts.taskDays overrides the inferred per-event day-shift (used by a whole-project
+  // reschedule, where every event's tasks move by the same known amount).
+  const moveEvents = useCallback(async (updates, opts = {}) => {
     if (!updates || !updates.length) return
     // Capture cur + the whole-day shift up front, before applyUpdate mutates eventsRef.
     const items = updates.map(({ id, patch }) => {
       const cur = eventsRef.current.find(e => e.id === id)
-      return cur ? { id, patch, cur, days: moveDeltaDays(cur, patch),
+      return cur ? { id, patch, cur, days: opts.taskDays ?? moveDeltaDays(cur, patch),
                      before: Object.fromEntries(Object.keys(patch).map(k => [k, cur[k]])) } : null
     }).filter(Boolean)
     flash('Saving…', 'saving')
@@ -320,6 +332,27 @@ export default function ProjectTimeline() {
       throw err
     }
   }, [applyUpdate, shiftTasksForEvent, flash])
+
+  // Reschedule the whole project: shift every event (and its task due dates) by the same
+  // whole-day delta, as one undoable step. Reuses moveEvents so tasks follow automatically.
+  const rescheduleProject = useCallback(async (days) => {
+    if (!days) return
+    const snapshot = eventsRef.current.slice()   // capture BEFORE the move shifts eventsRef
+    const updates = snapshot.map(ev => ({
+      id: ev.id,
+      patch: { start: addDaysToISO(ev.start, days), end: addDaysToISO(ev.end, days) },
+    }))
+    await moveEvents(updates, { taskDays: days })
+    // Keep the shifted project in view: frame a ~1-month window at the new start.
+    const oldStart = Math.min(...snapshot.map(e => new Date(e.start).getTime()))
+    const oldEnd   = Math.max(...snapshot.map(e => new Date(e.end).getTime()))
+    const newStart = Math.min(...snapshot.map(e => new Date(addDaysToISO(e.start, days)).getTime()))
+    const newEnd   = Math.max(...snapshot.map(e => new Date(addDaysToISO(e.end,   days)).getTime()))
+    const frameTo  = new Date(newStart); frameTo.setMonth(frameTo.getMonth() + 1)
+    pendingFrameRef.current = { from: newStart, to: frameTo.getTime() }
+    // Range spans both old and new extents so undo can't strand events off-screen.
+    setRange({ start: Math.min(oldStart, newStart), end: Math.max(oldEnd, newEnd, frameTo.getTime()) })
+  }, [moveEvents])
 
   const undo = useCallback(async () => {
     const entry = undoStack[undoStack.length - 1]
@@ -514,6 +547,9 @@ export default function ProjectTimeline() {
     )
   }
 
+  const projectStart = events.length ? Math.min(...events.map(e => new Date(e.start).getTime())) : null
+  const projectEnd   = events.length ? Math.max(...events.map(e => new Date(e.end).getTime()))   : null
+
   return (
     <div className="app">
       <Toolbar
@@ -544,8 +580,9 @@ export default function ProjectTimeline() {
           return next
         })}
         onResetSettings={resetSettings}
-        projectStart={events.length ? Math.min(...events.map(e => new Date(e.start).getTime())) : null}
-        projectEnd={events.length   ? Math.max(...events.map(e => new Date(e.end).getTime()))   : null}
+        projectStart={projectStart}
+        projectEnd={projectEnd}
+        onEditStart={() => setShowReschedule(true)}
       />
       {view === 'list' ? (
         <EventList
@@ -628,6 +665,15 @@ export default function ProjectTimeline() {
           members={members}
           canEdit={canEdit}
           onClose={() => setShowWorkloads(false)}
+        />
+      )}
+      {showReschedule && projectStart != null && (
+        <ProjectStartModal
+          currentStart={projectStart}
+          currentEnd={projectEnd}
+          eventCount={events.length}
+          onApply={async (days) => { await rescheduleProject(days); setShowReschedule(false) }}
+          onClose={() => setShowReschedule(false)}
         />
       )}
     </div>

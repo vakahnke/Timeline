@@ -86,6 +86,17 @@ body {
 .toolbar-range-item { display: flex; flex-direction: column; line-height: 1.25; white-space: nowrap; }
 .toolbar-range-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dimmer); }
 .toolbar-range-value { color: var(--text-bright); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Editable Start value: looks like the text, reveals it's a button on hover. */
+button.toolbar-range-edit {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+button.toolbar-range-edit:hover { color: var(--accent); text-decoration: underline; }
 
 .toolbar .zoom-label {
   color: var(--text-dimmer);
@@ -665,6 +676,14 @@ canvas.ruler {
     0 32px 80px rgba(0,0,0,0.85),
     0 0 0 1px rgba(255,255,255,0.025);
 }
+.modal.modal-sm { width: 420px; }
+.reschedule-summary {
+  margin: 14px 0 2px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.reschedule-summary b { color: var(--text-bright); font-weight: 600; }
 
 .modal-head {
   display: flex;

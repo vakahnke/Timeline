@@ -18,7 +18,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, onResetSettings, projectStart, projectEnd }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, onResetSettings, projectStart, projectEnd, onEditStart }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -75,7 +75,15 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
         <div className="toolbar-range">
           <span className="toolbar-range-item">
             <span className="toolbar-range-label">Start</span>
-            <span className="toolbar-range-value">{fmtDT(projectStart)}</span>
+            {canEdit ? (
+              <button
+                className="toolbar-range-value toolbar-range-edit"
+                onClick={onEditStart}
+                title="Change the start date — shifts every event and its tasks"
+              >{fmtDT(projectStart)} ✎</button>
+            ) : (
+              <span className="toolbar-range-value">{fmtDT(projectStart)}</span>
+            )}
           </span>
           <span className="toolbar-range-sep">–</span>
           <span className="toolbar-range-item">
@@ -164,6 +172,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
               {canEdit && (
                 <>
                   <div className="settings-title">Project</div>
+                  <button className="settings-action" onClick={() => { onEditStart?.(); setShowSettings(false) }}>Change start date</button>
                   <button className="settings-action" onClick={() => { onSaveTemplate?.(); setShowSettings(false) }}>Save as Template</button>
                 </>
               )}
