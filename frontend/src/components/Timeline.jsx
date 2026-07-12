@@ -27,38 +27,45 @@ function toLocalISO(date) {
   return new Date(date - off).toISOString().slice(0, 16)
 }
 
-function drawRuler(canvas, rangeStart, rangeEnd, pxPerHour, width) {
-  const ctx  = canvas.getContext('2d')
-  const h    = RULER_HEIGHT
-  canvas.width  = width
-  canvas.height = h
-
+// Draw ONLY the visible slice of the ruler onto a viewport-sized canvas (redrawn on scroll).
+// The old approach sized the canvas to the full content width, which at a high zoom became a
+// multi-hundred-thousand-pixel canvas (past the browser's ~65k limit) — huge memory + reallocated
+// every zoom frame. This keeps the canvas ~viewport-wide regardless of zoom. `scrollLeft` is the
+// content offset of the viewport's left edge; `vw` is the viewport width in CSS px.
+function drawRuler(canvas, rangeStart, pxPerHour, scrollLeft, vw, dpr) {
+  const h  = RULER_HEIGHT
+  const cw = Math.max(1, Math.ceil(vw))
+  if (canvas.width !== cw * dpr || canvas.height !== h * dpr) {
+    canvas.width  = cw * dpr
+    canvas.height = h * dpr
+  }
+  canvas.style.width  = cw + 'px'
+  canvas.style.height = h + 'px'
+  const ctx = canvas.getContext('2d')
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)   // crisp on retina; draw in CSS px
+  ctx.clearRect(0, 0, cw, h)
   ctx.fillStyle = '#0f1219'
-  ctx.fillRect(0, 0, width, h)
+  ctx.fillRect(0, 0, cw, h)
 
-  const pxPerMs  = pxPerHour / 3_600_000
-  const span     = rangeEnd - rangeStart
-  // Pick the smallest interval that's both readable (>=56px apart) AND keeps the total
-  // tick count bounded — otherwise a long span at a high zoom tries to draw tens of
-  // thousands of ticks and freezes the tab.
-  let interval   = TICK_INTERVALS[TICK_INTERVALS.length - 1]
+  const pxPerMs = pxPerHour / 3_600_000
+  // Readable spacing (>=56px). Iterating only the visible window bounds the tick count naturally.
+  let interval  = TICK_INTERVALS[TICK_INTERVALS.length - 1]
   for (const iv of TICK_INTERVALS) {
-    if (iv.ms * pxPerMs >= 56 && span / iv.ms <= 600) { interval = iv; break }
+    if (iv.ms * pxPerMs >= 56) { interval = iv; break }
   }
 
-  const msToX    = ms => ((ms - rangeStart) / 3_600_000) * pxPerHour
-  const first    = Math.ceil(rangeStart / interval.ms) * interval.ms
-  ctx.font       = '500 10px Inter, system-ui, -apple-system, "Segoe UI", sans-serif'
+  const startVis = rangeStart + (scrollLeft / pxPerHour) * 3_600_000
+  const endVis   = rangeStart + ((scrollLeft + cw) / pxPerHour) * 3_600_000
+  const x = ms => ((ms - rangeStart) / 3_600_000) * pxPerHour - scrollLeft   // canvas-local x
+  ctx.font = '500 10px Inter, system-ui, -apple-system, "Segoe UI", sans-serif'
   ctx.textBaseline = 'middle'
 
-  for (let t = first; t <= rangeEnd; t += interval.ms) {
-    const x = Math.round(msToX(t))
+  const first = Math.ceil(startVis / interval.ms) * interval.ms
+  for (let t = first; t <= endVis; t += interval.ms) {
+    const cx = Math.round(x(t))
     ctx.strokeStyle = 'rgba(255,255,255,0.08)'
     ctx.lineWidth   = 1
-    ctx.beginPath()
-    ctx.moveTo(x + 0.5, h * 0.5)
-    ctx.lineTo(x + 0.5, h)
-    ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(cx + 0.5, h * 0.5); ctx.lineTo(cx + 0.5, h); ctx.stroke()
 
     const d = new Date(t)
     let label
@@ -70,31 +77,24 @@ function drawRuler(canvas, rangeStart, rangeEnd, pxPerHour, width) {
 
     ctx.fillStyle = '#64748b'
     ctx.textAlign = 'left'
-    ctx.fillText(label, x + 4, h * 0.5 - 1)
+    ctx.fillText(label, cx + 4, h * 0.5 - 1)
   }
 
-  // minor ticks
   const half = interval.ms / 2
   if (half * pxPerMs >= 20) {
-    const firstHalf = Math.ceil(rangeStart / half) * half
+    const firstHalf = Math.ceil(startVis / half) * half
     ctx.strokeStyle = 'rgba(255,255,255,0.04)'
     ctx.lineWidth   = 1
-    for (let t = firstHalf; t <= rangeEnd; t += half) {
+    for (let t = firstHalf; t <= endVis; t += half) {
       if (t % interval.ms === 0) continue
-      const x = Math.round(msToX(t))
-      ctx.beginPath()
-      ctx.moveTo(x + 0.5, h * 0.72)
-      ctx.lineTo(x + 0.5, h)
-      ctx.stroke()
+      const cx = Math.round(x(t))
+      ctx.beginPath(); ctx.moveTo(cx + 0.5, h * 0.72); ctx.lineTo(cx + 0.5, h); ctx.stroke()
     }
   }
 
   ctx.strokeStyle = 'rgba(255,255,255,0.06)'
   ctx.lineWidth   = 1
-  ctx.beginPath()
-  ctx.moveTo(0, h - 0.5)
-  ctx.lineTo(width, h - 0.5)
-  ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(0, h - 0.5); ctx.lineTo(cw, h - 0.5); ctx.stroke()
 }
 
 function applyDrag(arr, from, to) {
@@ -262,12 +262,27 @@ const Timeline = forwardRef(function Timeline(
     scrollToEnd:   () => { const el = scrollRef.current; if (el) el.scrollLeft = el.scrollWidth },
   }), [doFit, zoomByFactor, frameWindow])
 
-  // Draw ruler in the layout phase so it stays in sync with the blocks while zooming.
-  useLayoutEffect(() => {
-    if (!rulerRef.current || !range) return
-    const w = totalWidth()
-    drawRuler(rulerRef.current, range.start, range.end, pxPerHour, w)
-  }, [range, pxPerHour])
+  // Paint the visible slice of the ruler onto the viewport-sized canvas. Reads live refs so the
+  // scroll/resize listeners and the zoom layout-effect all share one code path.
+  const paintRuler = useCallback(() => {
+    const c = rulerRef.current, el = scrollRef.current, r = rangeRef.current
+    if (!c || !el || !r) return
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)   // cap dpr so retina can't balloon cost
+    drawRuler(c, r.start, pxRef.current, el.scrollLeft, el.clientWidth, dpr)
+  }, [])
+
+  // Redraw in the layout phase so it stays in sync with the blocks while zooming/range-changing.
+  useLayoutEffect(() => { paintRuler() }, [range, pxPerHour, paintRuler])
+
+  // Redraw the (viewport-sized) ruler as you scroll horizontally, and on resize.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const redraw = () => paintRuler()
+    el.addEventListener('scroll', redraw, { passive: true })
+    window.addEventListener('resize', redraw)
+    return () => { el.removeEventListener('scroll', redraw); window.removeEventListener('resize', redraw) }
+  }, [paintRuler])
 
   // Re-anchor scroll synchronously BEFORE paint so zoom doesn't visibly snap then correct.
   useLayoutEffect(() => {
@@ -740,7 +755,7 @@ const Timeline = forwardRef(function Timeline(
         onMouseLeave={() => { if (cursorLabelRef.current) cursorLabelRef.current.style.display = 'none' }}
       >
         <div className="timeline-inner" style={{ width: w + 'px' }}>
-          <canvas className="ruler" ref={rulerRef} height={RULER_HEIGHT} />
+          <canvas className="ruler" ref={rulerRef} />
 
           {nowInRange && (
             <div className="now-line" style={{ left: nowX + 'px' }}>

@@ -395,6 +395,7 @@ canvas.ruler {
   display: block;
   position: sticky;
   top: 0;
+  left: 0;                 /* viewport-sized now: pin to the top-left and redraw on scroll */
   z-index: 5;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
