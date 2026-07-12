@@ -220,23 +220,16 @@ export default function ProjectTimeline() {
     })
   }, [loading, range, events])
 
-  // Today / this week / this month quick views. Extend the displayed range to reach the
-  // period (so it's framable even if the project's events are elsewhere in time), then frame it.
+  // Today / week / month quick views. Anchor the left edge at NOW (so the now-line sits at
+  // the left of the display) and extend forward one day / week / month. Grows the range so the
+  // window is framable even if the project's events are elsewhere in time, then frames it.
   const viewPeriod = useCallback((period) => {
     const now = new Date()
-    let from, to
-    if (period === 'day') {
-      from = new Date(now); from.setHours(0, 0, 0, 0)
-      to = new Date(from); to.setDate(to.getDate() + 1)
-    } else if (period === 'week') {
-      from = new Date(now); from.setHours(0, 0, 0, 0)
-      from.setDate(from.getDate() - ((from.getDay() + 6) % 7))  // Monday-start week
-      to = new Date(from); to.setDate(to.getDate() + 7)
-    } else {  // month
-      from = new Date(now.getFullYear(), now.getMonth(), 1)
-      to   = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-    }
-    const fromMs = from.getTime(), toMs = to.getTime()
+    const to = new Date(now)
+    if (period === 'day')       to.setDate(to.getDate() + 1)
+    else if (period === 'week') to.setDate(to.getDate() + 7)
+    else                        to.setMonth(to.getMonth() + 1)   // month
+    const fromMs = now.getTime(), toMs = to.getTime()
     const ev = buildRange(events)
     pendingFrameRef.current = { from: fromMs, to: toMs }
     setRange({
