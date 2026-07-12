@@ -50,6 +50,8 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                 onClick={() => onViewChange?.('timeline')} title="Timeline view">Timeline</button>
         <button className={`view-toggle-btn${view === 'list' ? ' active' : ''}`}
                 onClick={() => onViewChange?.('list')} title="List view (best on phones)">List</button>
+        <button className={`view-toggle-btn${view === 'board' ? ' active' : ''}`}
+                onClick={() => onViewChange?.('board')} title="Board view (Kanban by status)">Board</button>
       </div>
       {view === 'timeline' && (
         <>

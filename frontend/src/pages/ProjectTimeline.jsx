@@ -13,6 +13,7 @@ import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
 import WorkloadModal from '../components/WorkloadModal'
 import ProjectStartModal from '../components/ProjectStartModal'
+import Board from '../components/Board'
 
 const DEFAULT_SETTINGS = { showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 }
 
@@ -109,10 +110,10 @@ export default function ProjectTimeline() {
   const [modal,          setModal]        = useState(null)
   const [taskPanelId,    setTaskPanelId]  = useState(null)  // event id whose task panel is open
   const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task panel close
-  // 'timeline' (pan/zoom) vs 'list' (mobile-friendly agenda). Defaults to list on a
-  // phone-sized viewport; remembered per browser.
+  // 'timeline' (pan/zoom) vs 'list' (mobile-friendly agenda) vs 'board' (Kanban by status).
+  // Defaults to list on a phone-sized viewport; remembered per browser.
   const [view,           setView]         = useState(() => {
-    try { const v = localStorage.getItem('timeline:view'); if (v === 'list' || v === 'timeline') return v } catch { /* ignore */ }
+    try { const v = localStorage.getItem('timeline:view'); if (v === 'list' || v === 'timeline' || v === 'board') return v } catch { /* ignore */ }
     return (typeof window !== 'undefined' && window.innerWidth <= 720) ? 'list' : 'timeline'
   })
   const [catModal,       setCatModal]     = useState(null)
@@ -585,7 +586,15 @@ export default function ProjectTimeline() {
         projectEnd={projectEnd}
         onEditStart={() => setShowReschedule(true)}
       />
-      {view === 'list' ? (
+      {view === 'board' ? (
+        <Board
+          projectId={projectId}
+          canEdit={canEdit}
+          reloadToken={tasksReload}
+          onOpenTasks={(id) => setTaskPanelId(id)}
+          onChanged={() => setTasksReload(n => n + 1)}
+        />
+      ) : view === 'list' ? (
         <EventList
           projectId={projectId}
           events={events}
