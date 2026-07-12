@@ -17,14 +17,20 @@ function isOverdue(iso, status) {
   return new Date(y, m - 1, d) < t
 }
 
-// One task card. A dedicated grip handle carries the drag listeners (clean click-vs-drag,
-// touch-friendly); the body opens the task; a "⋯" menu is the explicit/touch move path.
+// One task card. The WHOLE card is draggable (grab anywhere), with a distance/delay activation
+// so a plain click still opens the task. A "⋯ Move to…" menu is the touch/keyboard/explicit path.
 export default function BoardCard({ task, canEdit, overlay = false, onOpen, onMove }) {
   const [menu, setMenu] = useState(false)
   const menuRef = useRef(null)
+  const draggedRef = useRef(false)   // suppress the ghost click a drag emits on release
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `card:${task.id}`, disabled: !canEdit || overlay, data: { task },
   })
+
+  useEffect(() => {
+    if (isDragging) { draggedRef.current = true; return }
+    if (draggedRef.current) { const id = setTimeout(() => { draggedRef.current = false }, 0); return () => clearTimeout(id) }
+  }, [isDragging])
 
   useEffect(() => {
     if (!menu) return
@@ -34,38 +40,44 @@ export default function BoardCard({ task, canEdit, overlay = false, onOpen, onMo
   }, [menu])
 
   const overdue = isOverdue(task.due_date, task.status)
-  const cls = `board-card${task.status === 'done' ? ' is-done' : ''}${isDragging ? ' is-dragging' : ''}${overlay ? ' overlay' : ''}`
+  const draggable = canEdit && !overlay
+  const cls = `board-card${draggable ? ' draggable' : ''}${task.status === 'done' ? ' is-done' : ''}` +
+              `${isDragging ? ' is-dragging' : ''}${overlay ? ' overlay' : ''}`
+
+  const handleClick = () => {
+    if (draggedRef.current) { draggedRef.current = false; return }   // this click ended a drag
+    onOpen?.(task)
+  }
 
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }} className={cls}>
-      {canEdit && !overlay && (
-        <button className="board-card-grip" {...listeners} {...attributes} title="Drag to move" aria-label="Drag task">⠿</button>
-      )}
-
-      <div className="board-card-main" onClick={() => onOpen?.(task)} role="button" tabIndex={0}
-           onKeyDown={e => { if (e.key === 'Enter') onOpen?.(task) }}>
-        <div className="board-card-title">{task.title}</div>
-        <div className="board-card-meta">
-          <span className="board-card-event" title={task.event?.title}>{task.event?.title}</span>
-          {task.due_date && (
-            <span className={`board-card-due${overdue ? ' overdue' : ''}`}>
-              {overdue ? 'Overdue · ' : ''}{fmtDue(task.due_date)}
-            </span>
-          )}
-        </div>
-        <div className="board-card-foot">
-          <span className="board-card-who">{task.assignee?.username || 'Unassigned'}</span>
-        </div>
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform) }}
+      className={cls}
+      onClick={handleClick}
+      {...(draggable ? { ...listeners, ...attributes } : {})}
+    >
+      <div className="board-card-title">{task.title}</div>
+      <div className="board-card-meta">
+        <span className="board-card-event" title={task.event?.title}>{task.event?.title}</span>
+        {task.due_date && (
+          <span className={`board-card-due${overdue ? ' overdue' : ''}`}>
+            {overdue ? 'Overdue · ' : ''}{fmtDue(task.due_date)}
+          </span>
+        )}
+      </div>
+      <div className="board-card-foot">
+        <span className="board-card-who">{task.assignee?.username || 'Unassigned'}</span>
       </div>
 
-      {canEdit && !overlay && (
-        <div className="board-card-move" ref={menuRef}>
+      {draggable && (
+        <div className="board-card-move" ref={menuRef} onPointerDown={e => e.stopPropagation()}>
           <button type="button" className="board-move-btn" title="Move to…" aria-label="Move to…"
-                  onClick={() => setMenu(m => !m)}>⋯</button>
+                  onClick={e => { e.stopPropagation(); setMenu(m => !m) }}>⋯</button>
           {menu && (
-            <div className="board-move-menu">
+            <div className="board-move-menu" onClick={e => e.stopPropagation()}>
               {ALL_STATUSES.filter(s => s !== task.status).map(s => (
-                <button key={s} type="button" onClick={() => { setMenu(false); onMove(task, s) }}>
+                <button key={s} type="button" onClick={e => { e.stopPropagation(); setMenu(false); onMove(task, s) }}>
                   {STATUS_LABELS[s]}
                 </button>
               ))}

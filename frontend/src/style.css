@@ -1902,14 +1902,13 @@ fieldset.modal-body:disabled { opacity: 1; }
 .board-col--blocked .board-col-head { background: var(--danger-glow); }
 .board-col--blocked .board-col-title { color: var(--danger); }
 
-.board-card { position: relative; background: rgba(255,255,255,0.03); border: 1px solid var(--border-mid); border-radius: 9px; padding: 8px 26px 8px 22px; }
+.board-card { position: relative; background: rgba(255,255,255,0.03); border: 1px solid var(--border-mid); border-radius: 9px; padding: 8px 26px 8px 10px; }
+.board-card.draggable { cursor: grab; }
+.board-card.draggable:active { cursor: grabbing; }
 .board-card.is-dragging { opacity: 0.4; }
 .board-card.overlay { box-shadow: 0 12px 30px rgba(0,0,0,0.55); cursor: grabbing; }
 .board-card.is-done { opacity: 0.6; }
 .board-card.is-done .board-card-title { text-decoration: line-through; }
-.board-card-grip { position: absolute; left: 3px; top: 5px; background: none; border: none; color: var(--text-dimmer); cursor: grab; padding: 2px; font-size: 12px; line-height: 1; touch-action: none; }
-.board-card-grip:active { cursor: grabbing; }
-.board-card-main { cursor: pointer; }
 .board-card-title { font-size: 12.5px; color: var(--text-bright); font-weight: 500; line-height: 1.3; }
 .board-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 5px; }
 .board-card-event { font-size: 10.5px; color: var(--text-dim); background: rgba(255,255,255,0.05); border-radius: 5px; padding: 1px 6px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
