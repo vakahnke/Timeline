@@ -3,7 +3,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 from .models import ProjectMembership, ProjectTeam, Role
 
-ROLE_RANK = {Role.VIEWER: 1, Role.EDITOR: 2, Role.OWNER: 3}
+ROLE_RANK = {Role.VIEWER: 1, Role.COMMENTER: 2, Role.EDITOR: 3, Role.OWNER: 4}
 RANK_ROLE = {rank: role for role, rank in ROLE_RANK.items()}
 
 
@@ -70,6 +70,12 @@ class IsProjectMember(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return self._allows(get_role(request.user, obj.project_id), request.method)
+
+
+class IsProjectCommenter(IsProjectMember):
+    """Comments: SAFE methods -> any member; writes -> Commenter+ (can comment without being
+    able to edit the timeline). This is what the Commenter role unlocks."""
+    write_min_role = Role.COMMENTER
 
 
 class IsProjectOwner(BasePermission):

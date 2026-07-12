@@ -87,3 +87,24 @@ class Task(models.Model):
         # Lets IsProjectMember (which expects obj.project_id) authorize tasks via their
         # event's project. Free when the queryset select_related's 'event'.
         return self.event.project_id
+
+
+class Comment(models.Model):
+    """A discussion comment on an event. Anyone with Viewer+ can read; Commenter+ can post
+    (the Commenter role's whole purpose). Authors edit/delete their own; owners moderate."""
+    event      = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='comments')
+    author     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments')
+    body       = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.author} on {self.event_id}: {self.body[:40]}'
+
+    @property
+    def project_id(self):
+        return self.event.project_id

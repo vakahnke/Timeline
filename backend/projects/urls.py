@@ -8,7 +8,8 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from events.views import CategoryViewSet, EventViewSet, MyTasksView, ProjectTasksView, TaskViewSet
+from events.views import (CategoryViewSet, CommentViewSet, EventViewSet, MyTasksView,
+                          ProjectTasksView, TaskViewSet)
 
 from .auth import EmailOrUsernameTokenObtainPairView
 from .views import (
@@ -32,7 +33,8 @@ projects_nested.register(r'events',     EventViewSet,    basename='project-event
 projects_nested.register(r'categories', CategoryViewSet, basename='project-categories')
 
 events_nested = NestedDefaultRouter(projects_nested, r'events', lookup='event')
-events_nested.register(r'tasks', TaskViewSet, basename='event-tasks')
+events_nested.register(r'tasks',    TaskViewSet,    basename='event-tasks')
+events_nested.register(r'comments', CommentViewSet, basename='event-comments')
 
 urlpatterns = [
     path('auth/register/',      RegisterView.as_view(),                       name='register'),

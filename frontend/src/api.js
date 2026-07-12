@@ -13,6 +13,8 @@ const url = {
   category:   (pid, id) => `/projects/${pid}/categories/${id}/`,
   tasks:      (pid, eid)      => `/projects/${pid}/events/${eid}/tasks/`,
   task:       (pid, eid, tid) => `/projects/${pid}/events/${eid}/tasks/${tid}/`,
+  comments:   (pid, eid)      => `/projects/${pid}/events/${eid}/comments/`,
+  comment:    (pid, eid, cid) => `/projects/${pid}/events/${eid}/comments/${cid}/`,
   projectTasks: (pid)        => `/projects/${pid}/tasks/`,
   myTasks:    ()        => '/me/tasks/',
   members:    (pid)     => `/projects/${pid}/members/`,
@@ -162,5 +164,12 @@ export const api = {
     update:    (pid, eid, id, d) => req(url.task(pid, eid, id),  { method: 'PATCH', body: body(d) }),
     remove:    (pid, eid, id)    => req(url.task(pid, eid, id),  { method: 'DELETE' }),
     byProject: (pid)             => req(url.projectTasks(pid)),
+  },
+
+  comments: {
+    list:   (pid, eid)        => req(url.comments(pid, eid)),
+    create: (pid, eid, d)     => req(url.comments(pid, eid),    { method: 'POST',  body: body(d) }),
+    update: (pid, eid, id, d) => req(url.comment(pid, eid, id), { method: 'PATCH', body: body(d) }),
+    remove: (pid, eid, id)    => req(url.comment(pid, eid, id), { method: 'DELETE' }),
   },
 }

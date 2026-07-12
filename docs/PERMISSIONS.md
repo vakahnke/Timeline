@@ -1,6 +1,6 @@
 # Permissions & Access Control — Design Document
 
-**Status:** Phase 1 (live team access) + Phase 2 (in-app provenance) SHIPPED. Phase 3 (Commenter/Guest tiers) pending. §1 audit, §2 research, §3 design below.
+**Status:** Phase 1 (live team access) + Phase 2 (provenance) + Phase 3 **Commenter** (event comments + the Commenter role) SHIPPED. Only the Phase 3 **Guest/external** tier remains. §1 audit, §2 research, §3 design below.
 **Last updated:** 2026-07-12
 **Scope:** Who can see and change projects, events, tasks, members, and teams.
 
@@ -373,6 +373,9 @@ granted directly, per-person. *(Open question 3.11-A if you want to allow team-O
   unified "Who has access" with per-person provenance ("Editor · via USRCO", "Owner ·
   org-admin", locked) via `GET /projects/{id}/access/`; roster-edit "N projects" warning
   (`assigned_project_count`). (Change-team-role: unassign + re-add for now.)
-- **Phase 3 — future tiers.** Commenter (with comments feature); Guest/external sharing.
+- **Phase 3 — tiers.** ✅ **Commenter SHIPPED** — event comment threads
+  (`/projects/{id}/events/{eid}/comments/`, Commenter+ to post via `IsProjectCommenter`) + the
+  Commenter role in the ladder (Viewer < Commenter < Editor < Owner). Guest/external sharing
+  still pending.
 
 Each phase is independently shippable; Phase 1 alone closes the audit gap.

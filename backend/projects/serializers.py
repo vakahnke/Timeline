@@ -198,7 +198,8 @@ class AddTeamToProjectSerializer(serializers.Serializer):
     # Team grants are capped at Editor — ownership is always granted individually/directly
     # so the "last owner" guarantee stays meaningful (see docs/PERMISSIONS.md §3.6).
     role = serializers.ChoiceField(
-        choices=[(Role.VIEWER, 'Viewer'), (Role.EDITOR, 'Editor')], default=Role.EDITOR)
+        choices=[(Role.VIEWER, 'Viewer'), (Role.COMMENTER, 'Commenter'), (Role.EDITOR, 'Editor')],
+        default=Role.EDITOR)
 
 
 class ProjectTeamSerializer(serializers.ModelSerializer):

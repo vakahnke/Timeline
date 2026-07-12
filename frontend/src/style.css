@@ -917,7 +917,7 @@ canvas.ruler {
    exactly like every other event. (The critical path is still conveyed by the arrows.) */
 
 /* Read-only events aren't draggable — don't imply a grab affordance. */
-.event-block.readonly { cursor: default; }
+.event-block.readonly { cursor: pointer; }   /* clickable to open read-only (view / comment) */
 
 /* While Ctrl/⌘ is held, events become movable — show it in the cursor. */
 .timeline-scroll.armed .event-block:not(.readonly) { cursor: move; }
@@ -1183,9 +1183,10 @@ fieldset.modal-body:disabled { opacity: 1; }
   border: 1px solid transparent;
   flex-shrink: 0;
 }
-.role-badge--owner  { color: var(--accent);  background: var(--accent-glow);  border-color: rgba(129,140,248,0.3); }
-.role-badge--editor { color: var(--success); background: var(--success-glow); border-color: rgba(52,211,153,0.3); }
-.role-badge--viewer { color: var(--text-dim); background: rgba(255,255,255,0.05); border-color: var(--border-mid); }
+.role-badge--owner     { color: var(--accent);  background: var(--accent-glow);  border-color: rgba(129,140,248,0.3); }
+.role-badge--editor    { color: var(--success); background: var(--success-glow); border-color: rgba(52,211,153,0.3); }
+.role-badge--commenter { color: #7dd3fc; background: rgba(125,211,252,0.12); border-color: rgba(125,211,252,0.3); }
+.role-badge--viewer    { color: var(--text-dim); background: rgba(255,255,255,0.05); border-color: var(--border-mid); }
 
 /* ── Toolbar additions ────────────────────────────────────────────────────── */
 .btn-back { font-size: 14px; line-height: 1; padding: 4px 9px; }
@@ -1245,6 +1246,32 @@ fieldset.modal-body:disabled { opacity: 1; }
 .member-email { color: var(--text-dimmer); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mp-src { color: var(--accent); }   /* provenance hint: "· via TeamX" / "· org-admin" */
 .btn-sm { padding: 3px 9px; font-size: 10.5px; }
+
+/* ── Event comments ─────────────────────────────────────────────────────────── */
+.modal-comments { padding: 14px 20px; border-top: 1px solid var(--border); }
+.ec { display: flex; flex-direction: column; gap: 6px; }
+.ec-label { font-size: 10px; color: var(--text-dim); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+.ec-count { margin-left: 6px; color: var(--text-dimmer); }
+.ec-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
+.ec-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; }
+.ec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ec-author { font-size: 12px; font-weight: 600; color: var(--text-bright); }
+.ec-when { font-size: 10.5px; color: var(--text-dimmer); white-space: nowrap; }
+.ec-body { font-size: 12.5px; color: var(--text-bright); white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+.ec-actions { display: flex; gap: 12px; margin-top: 4px; }
+.ec-link { background: none; border: none; padding: 0; font-size: 11px; color: var(--text-dim); cursor: pointer; }
+.ec-link:hover { color: var(--text-bright); }
+.ec-del:hover { color: var(--danger); }
+.ec-edit { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.ec-edit-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.ec-form { display: flex; gap: 6px; align-items: flex-end; margin-top: 2px; }
+.ec-edit textarea, .ec-form textarea {
+  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border-mid);
+  color: var(--text-bright); font: inherit; font-size: 12.5px; padding: 7px 9px;
+  border-radius: 7px; resize: vertical; outline: none;
+}
+.ec-form textarea { flex: 1; }
+.ec-edit textarea:focus, .ec-form textarea:focus { border-color: rgba(129,140,248,0.5); }
 
 /* ── Toast (global status pill) ───────────────────────────────────────────── */
 .toast {

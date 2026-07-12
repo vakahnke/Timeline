@@ -6,12 +6,13 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from projects.models import Project, ProjectMembership
-from projects.permissions import IsProjectMember
+from projects.models import Project, ProjectMembership, Role
+from projects.permissions import IsProjectCommenter, IsProjectMember, get_role
 
-from .models import Category, Event, Task
+from .models import Category, Comment, Event, Task
 from .serializers import (
     CategorySerializer,
+    CommentSerializer,
     EventSerializer,
     MyTaskSerializer,
     TaskSerializer,
@@ -100,6 +101,53 @@ class TaskViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
                 .filter(event_id=self.kwargs['event_pk'],
                         event__project_id=self.kwargs['project_pk'])
                 .select_related('event', 'owner', 'assignee'))
+
+
+class CommentViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
+    """Comments on an event: /api/projects/<project_pk>/events/<event_pk>/comments/
+
+    Read: any member (Viewer+). Post: Commenter+ (what the Commenter role unlocks).
+    Edit/delete: the comment's author, or the project owner (moderation).
+    """
+    serializer_class   = CommentSerializer
+    permission_classes = [IsAuthenticated, IsProjectCommenter]
+    http_method_names  = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    @property
+    def event(self):
+        if not hasattr(self, '_event'):
+            self._event = get_object_or_404(
+                Event, pk=self.kwargs['event_pk'], project_id=self.kwargs['project_pk'])
+        return self._event
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['event'] = self.event
+        return ctx
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Comment.objects.none()
+        return (Comment.objects
+                .filter(event_id=self.kwargs['event_pk'],
+                        event__project_id=self.kwargs['project_pk'])
+                .select_related('author', 'event'))
+
+    def _can_modify(self, comment):
+        return (comment.author_id == self.request.user.id
+                or get_role(self.request.user, self.kwargs['project_pk']) == Role.OWNER)
+
+    def update(self, request, *args, **kwargs):
+        if not self._can_modify(self.get_object()):
+            return Response({'detail': 'Only the author or an owner can edit this comment.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if not self._can_modify(self.get_object()):
+            return Response({'detail': 'Only the author or an owner can delete this comment.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
 
 
 class ProjectTasksView(generics.ListAPIView):

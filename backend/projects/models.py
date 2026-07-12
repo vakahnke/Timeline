@@ -26,9 +26,10 @@ class Project(models.Model):
 
 
 class Role(models.TextChoices):
-    OWNER  = 'owner',  'Owner'
-    EDITOR = 'editor', 'Editor'
-    VIEWER = 'viewer', 'Viewer'
+    OWNER     = 'owner',     'Owner'
+    EDITOR    = 'editor',    'Editor'
+    COMMENTER = 'commenter', 'Commenter'   # view + comment, but can't edit the timeline
+    VIEWER    = 'viewer',    'Viewer'
 
 
 class ProjectTemplate(models.Model):

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import EventTasksSummary from './EventTasksSummary'
+import EventComments from './EventComments'
 import { useUndoableForm } from '../hooks/useUndoableForm'
 
 function fmtDateTime(dateStr) {
@@ -31,7 +32,7 @@ function durFromMs(ms) {
   return { val: round2(ms / UNIT_MS.hours), unit: 'hours' }
 }
 
-export default function EventModal({ eventId, defaults, events, tracks, projectId, readOnly = false, escDisabled = false, tasksReloadToken, onManageTasks, onSave, onDelete, onClose }) {
+export default function EventModal({ eventId, defaults, events, tracks, projectId, readOnly = false, escDisabled = false, canComment = false, isOwner = false, tasksReloadToken, onManageTasks, onSave, onDelete, onClose }) {
   const existing = eventId ? events.find(e => e.id === eventId) : null
 
   // Editable fields live in one undoable object so Ctrl+Z / the modal's ↶ ↷ can revert
@@ -372,6 +373,19 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
 
           {error && <div className="field-error">&#10005; {error}</div>}
         </fieldset>
+
+        {/* Comments live OUTSIDE the disabled fieldset so Commenters (read-only on the event
+            fields) can still post. Only for saved events. */}
+        {existing && (
+          <div className="modal-comments">
+            <EventComments
+              projectId={projectId}
+              eventId={eventId}
+              canComment={canComment}
+              isOwner={isOwner}
+            />
+          </div>
+        )}
 
         <div className="modal-foot">
           {readOnly ? (

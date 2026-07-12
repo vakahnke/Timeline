@@ -126,9 +126,10 @@ export default function ProjectTimeline() {
   const didFitRef      = useRef(false)
   const pendingFrameRef = useRef(null)
 
-  const role    = project?.my_role
-  const canEdit = role === 'owner' || role === 'editor'
-  const isOwner = role === 'owner'
+  const role       = project?.my_role
+  const canEdit    = role === 'owner' || role === 'editor'
+  const canComment = canEdit || role === 'commenter'
+  const isOwner    = role === 'owner'
 
   // Keep an event's task rollup (badge + tooltip) live as the panel edits tasks, without
   // refetching the event list. Returns the same array when nothing changed so the panel's
@@ -633,6 +634,8 @@ export default function ProjectTimeline() {
           tracks={tracks}
           projectId={projectId}
           readOnly={!canEdit}
+          canComment={canComment}
+          isOwner={isOwner}
           tasksReloadToken={tasksReload}
           onManageTasks={(id) => { closeModal(); setTaskPanelId(id) }}
           onSave={handleSave}

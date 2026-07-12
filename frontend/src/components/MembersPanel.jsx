@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
 
-const ROLES = ['owner', 'editor', 'viewer']
+const ROLES = ['owner', 'editor', 'commenter', 'viewer']
 // Team grants are capped at Editor (ownership is always granted individually).
-const TEAM_ROLES = ['editor', 'viewer']
-// Privilege labels surfaced to users (the API still uses owner/editor/viewer).
-const ROLE_LABELS = { owner: 'Owner — full access', editor: 'Read & edit', viewer: 'Read only' }
+const TEAM_ROLES = ['editor', 'commenter', 'viewer']
+// Privilege labels surfaced to users (the API still uses owner/editor/commenter/viewer).
+const ROLE_LABELS = {
+  owner: 'Owner — full access', editor: 'Read & edit',
+  commenter: 'Read & comment', viewer: 'Read only',
+}
 
 export default function MembersPanel({ projectId, isOwner, onClose }) {
   const [access,  setAccess]  = useState([])   // unified: direct + team-derived + org-admin

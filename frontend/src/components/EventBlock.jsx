@@ -309,6 +309,9 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         borderColor: color,
       }}
       onMouseDown={canEdit ? handleMoveDown : undefined}
+      /* Editors open via handleMoveDown's click-vs-drag detection; non-editors (viewer/
+         commenter) can't drag, so a plain click opens the event read-only (to read/add comments). */
+      onClick={canEdit ? undefined : () => onEdit(event.id)}
       onMouseEnter={e => onTooltip(event, e.clientX, e.clientY)}
       onMouseLeave={() => onTooltip(null)}
     >

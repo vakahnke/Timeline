@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from projects.serializers import UserSerializer
 
-from .models import Category, Event, Task
+from .models import Category, Comment, Event, Task
 
 User = get_user_model()
 
@@ -139,6 +139,27 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['event'] = self.context['event']
+        return super().create(validated_data)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """A comment on an event. Author is the current user (set on create); body is required."""
+    author = UserSerializer(read_only=True)
+
+    class Meta:
+        model  = Comment
+        fields = ['id', 'author', 'body', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'author', 'created_at', 'updated_at']
+
+    def validate_body(self, value):
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('Comment cannot be empty.')
+        return value
+
+    def create(self, validated_data):
+        validated_data['event']  = self.context['event']
+        validated_data['author'] = self.context['request'].user
         return super().create(validated_data)
 
 
