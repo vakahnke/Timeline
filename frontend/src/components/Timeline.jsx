@@ -189,7 +189,8 @@ const Timeline = forwardRef(function Timeline(
   }, [setPxPerHour])
 
   // Aim the zoom at an absolute pxPerHour, keeping the time under `clientX` fixed.
-  const zoomTo = useCallback((targetPx, clientX) => {
+  // `instant` jumps in one step (Fit button); otherwise the rAF loop eases (pinch/wheel/±).
+  const zoomTo = useCallback((targetPx, clientX, instant = false) => {
     const el = scrollRef.current
     const r  = rangeRef.current
     if (!el || !r) return
@@ -200,9 +201,18 @@ const Timeline = forwardRef(function Timeline(
     const mouseX  = (clientX != null ? clientX : rect.left + rect.width / 2) - rect.left
     const anchorX = mouseX + el.scrollLeft
     const anchorTime = r.start + (anchorX / pxRef.current) * 3_600_000
-    zoomTargetRef.current = { px: clampPx(targetPx), anchorTime, mouseX }
+    const px = clampPx(targetPx)
+    if (instant) {
+      cancelAnimationFrame(zoomRafRef.current); zoomRafRef.current = null; zoomTargetRef.current = null
+      if (px !== pxRef.current) {
+        zoomAnchorRef.current = { anchorTime, mouseX }   // [pxPerHour] effect keeps this time fixed before paint
+        setPxPerHour(px)
+      }
+      return
+    }
+    zoomTargetRef.current = { px, anchorTime, mouseX }
     if (!zoomRafRef.current) zoomRafRef.current = requestAnimationFrame(zoomStep)
-  }, [zoomStep])
+  }, [zoomStep, setPxPerHour])
 
   // Multiply the *pending* target so rapid steps compound smoothly.
   const zoomByFactor = useCallback((factor, clientX) => {
@@ -215,39 +225,30 @@ const Timeline = forwardRef(function Timeline(
     if (!r) return
     const spanHrs = (r.end - r.start) / 3_600_000
     const avail   = scrollRef.current?.clientWidth ?? 800
-    zoomTo((avail / spanHrs) * 0.92, null)
+    zoomTo((avail / spanHrs) * 0.92, null, true)   // instant — snap, like the framing buttons
   }, [zoomTo])
 
-  // Smoothly frame a time window [fromMs, toMs] with `fromMs` near the left edge — eases
-  // the zoom while re-anchoring `fromMs` at the margin each frame (reuses zoomAnchorRef).
+  // Instant framing (Today/Week/Month): jump straight to the zoom that fits [fromMs, toMs]
+  // with `fromMs` at the left edge. No animation loop → nothing to stutter or collide with
+  // the pinch/wheel zoom loop, and the arrows/ruler repaint exactly once, on landing.
   const frameWindow = useCallback((fromMs, toMs) => {
     const el = scrollRef.current
     const r  = rangeRef.current
     if (!el || !r) return
-    zoomTargetRef.current = null
-    cancelAnimationFrame(zoomRafRef.current); zoomRafRef.current = null
+    // Kill any in-flight animation from either loop before jumping.
+    cancelAnimationFrame(zoomRafRef.current); zoomRafRef.current = null; zoomTargetRef.current = null
+    cancelAnimationFrame(frameRafRef.current); frameRafRef.current = null
     const margin   = Math.max(8, el.clientWidth * 0.02)
     const hours    = Math.max(1 / 60, (toMs - fromMs) / 3_600_000)
     const targetPx = clampPx((el.clientWidth - margin * 2) / hours)
-    const startPx  = pxRef.current
-    // Anchor `from` at the left edge NOW at the current zoom, before the zoom animation runs,
-    // so the preceding setRange doesn't paint a jump at a stale scroll position.
-    el.scrollLeft  = ((fromMs - r.start) / 3_600_000) * startPx - margin
-    const ratio = targetPx / startPx
-    // Scale duration with the zoom magnitude: a small hop is quick, a big Fit->day is graceful.
-    const dur   = Math.min(480, Math.max(200, 200 + 70 * Math.abs(Math.log2(ratio))))
-    const t0 = performance.now()
-    cancelAnimationFrame(frameRafRef.current)
-    const step = (t) => {
-      const k = Math.min(1, (t - t0) / dur)
-      const e = 1 - Math.pow(1 - k, 3)
+    if (targetPx !== pxRef.current) {
+      // Zoom changes: the [pxPerHour] layout effect anchors `from` at the margin before paint.
       zoomAnchorRef.current = { anchorTime: fromMs, mouseX: margin }
-      // Geometric (log-space) interpolation so the zoom rate is perceptually uniform — a
-      // linear px lerp over a big ratio (e.g. Fit -> day is ~30x) snaps then crawls.
-      setPxPerHour(startPx * Math.pow(ratio, e))
-      if (k < 1) frameRafRef.current = requestAnimationFrame(step)
+      setPxPerHour(targetPx)
+    } else {
+      // Zoom already matches (e.g. Today pressed twice): just re-center the scroll.
+      el.scrollLeft = ((fromMs - r.start) / 3_600_000) * targetPx - margin
     }
-    frameRafRef.current = requestAnimationFrame(step)
   }, [setPxPerHour])
 
   useEffect(() => () => {
