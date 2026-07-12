@@ -242,8 +242,9 @@ export default function ProjectTimeline() {
     const pf = pendingFrameRef.current
     if (!pf || !range) return
     pendingFrameRef.current = null
-    const id = requestAnimationFrame(() => timelineRef.current?.frameWindow(pf.from, pf.to))
-    return () => cancelAnimationFrame(id)
+    // Synchronous (no rAF): the child's layout effects have already synced range/zoom refs, so
+    // frameWindow anchors the left edge before paint — one smooth zoom instead of jump-then-zoom.
+    timelineRef.current?.frameWindow(pf.from, pf.to)
   }, [range])
 
   // Undo/redo for event edits. Each entry captures the changed fields before/after a

@@ -150,8 +150,10 @@ const Timeline = forwardRef(function Timeline(
     return onMoveEvents?.(updates)
   }, [events, selectedIds, onMoveEvents])
 
-  useEffect(() => { pxRef.current      = pxPerHour    }, [pxPerHour])
-  useEffect(() => { rangeRef.current   = range        }, [range])
+  // Layout phase (not passive) so frameWindow, called from the parent's layout effect right
+  // after a setRange, reads the NEW range/zoom synchronously — no one-frame lag, no jump.
+  useLayoutEffect(() => { pxRef.current    = pxPerHour }, [pxPerHour])
+  useLayoutEffect(() => { rangeRef.current = range     }, [range])
   useEffect(() => { tracksLenRef.current = tracks.length; tracksRef.current = tracks }, [tracks])
 
   useEffect(() => {
@@ -225,6 +227,9 @@ const Timeline = forwardRef(function Timeline(
     const hours    = Math.max(1 / 60, (toMs - fromMs) / 3_600_000)
     const targetPx = clampPx((el.clientWidth - margin * 2) / hours)
     const startPx  = pxRef.current
+    // Anchor `from` at the left edge NOW at the current zoom, before the zoom animation runs,
+    // so the preceding setRange doesn't paint a jump at a stale scroll position.
+    el.scrollLeft  = ((fromMs - r.start) / 3_600_000) * startPx - margin
     const t0 = performance.now(), dur = 240
     cancelAnimationFrame(frameRafRef.current)
     const step = (t) => {
