@@ -451,6 +451,7 @@ canvas.ruler {
 /* ── Event blocks ─────────────────────────────────────────────────────────── */
 .event-block {
   position: absolute;
+  z-index: 1;   /* keep blocks above the sticky .lane-bg (it composites); :hover/.dragging raise further */
   top: 8px;
   height: 48px;
   border-radius: 8px;
@@ -924,7 +925,7 @@ canvas.ruler {
   position: absolute;
   left: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;   /* above event blocks (z:1) but below a hovered/dragged block — preserves prior layering */
   overflow: visible;
 }
 
