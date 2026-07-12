@@ -114,6 +114,74 @@ function applyDrag(arr, from, to) {
   return r
 }
 
+// Dependency-arrows overlay sized to the VIEWPORT, not the content. A content-width SVG became a
+// multi-hundred-thousand-pixel element at high zoom (e.g. 1,063,191px for a 2-year range at day
+// scale) — a GPU layer past the compositor's max texture size, which froze the screen for seconds
+// on real hardware (invisible to main-thread profiling since compositing is off-thread). This keeps
+// the SVG ~viewport-wide, translates it to follow horizontal scroll, and offsets the few arrow
+// paths by scrollLeft — re-rendering only itself (not the event blocks) on scroll.
+function DepArrows({ arrows, svgH, scrollRef }) {
+  const [vp, setVp] = useState({ sx: 0, vw: 0 })
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    let raf = 0
+    const sync = () => {
+      raf = 0
+      const sx = el.scrollLeft, vw = el.clientWidth
+      setVp(prev => (prev.sx === sx && prev.vw === vw) ? prev : { sx, vw })
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(sync) }
+    sync()
+    el.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      cancelAnimationFrame(raf)
+    }
+  }, [scrollRef])
+
+  const { sx, vw } = vp
+  if (!vw) return null
+  const PAD = 60   // keep arrows entering from just off-screen so nothing pops in at the edge
+  const visible = []
+  for (let i = 0; i < arrows.length; i++) {
+    const a = arrows[i]
+    const lo = Math.min(a.x1, a.x2) - sx, hi = Math.max(a.x1, a.x2) - sx
+    if (hi >= -PAD && lo <= vw + PAD) visible.push([i, a])
+  }
+  return (
+    <svg className="dep-arrows" width={Math.ceil(vw)} height={svgH} style={{ top: 0, transform: `translateX(${sx}px)` }}>
+      <defs>
+        <marker id="arr-normal" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(129,140,248,0.65)" />
+        </marker>
+        <marker id="arr-critical" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(248,113,113,0.9)" />
+        </marker>
+      </defs>
+      {visible.map(([i, a]) => {
+        const x1 = a.x1 - sx, x2 = a.x2 - sx
+        const span = Math.abs(x2 - x1)
+        const cx1  = x1 + span * 0.45
+        const cx2  = x2 - span * 0.45
+        return (
+          <path
+            key={i}
+            d={`M${x1},${a.y1} C${cx1},${a.y1} ${cx2},${a.y2} ${x2},${a.y2}`}
+            fill="none"
+            stroke={a.critical ? 'rgba(248,113,113,0.85)' : 'rgba(129,140,248,0.55)'}
+            strokeWidth={a.critical ? 2 : 1.5}
+            strokeDasharray={a.critical ? undefined : '5,3'}
+            markerEnd={a.critical ? 'url(#arr-critical)' : 'url(#arr-normal)'}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
 const Timeline = forwardRef(function Timeline(
   { events, tracks, range, pxPerHour, setPxPerHour, settings, canEdit = true, onReorderTracks, onEditCategory, onUpdateEvent, onOpenEdit, onOpenNew, onDeleteEvent, onOpenTasks, onMoveEvents, loading, apiError },
   ref
@@ -781,32 +849,7 @@ const Timeline = forwardRef(function Timeline(
             const visibleArrows = !settings?.showArrows ? [] :
               settings?.showOnlyCritical ? arrows.filter(a => a.critical) : arrows
             return visibleArrows.length > 0 && (
-              <svg className="dep-arrows" width={w} height={svgH} style={{ top: 0 }}>
-                <defs>
-                  <marker id="arr-normal" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-                    <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(129,140,248,0.65)" />
-                  </marker>
-                  <marker id="arr-critical" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-                    <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(248,113,113,0.9)" />
-                  </marker>
-                </defs>
-                {visibleArrows.map((a, i) => {
-                  const span = Math.abs(a.x2 - a.x1)
-                  const cx1  = a.x1 + span * 0.45
-                  const cx2  = a.x2 - span * 0.45
-                  return (
-                    <path
-                      key={i}
-                      d={`M${a.x1},${a.y1} C${cx1},${a.y1} ${cx2},${a.y2} ${a.x2},${a.y2}`}
-                      fill="none"
-                      stroke={a.critical ? 'rgba(248,113,113,0.85)' : 'rgba(129,140,248,0.55)'}
-                      strokeWidth={a.critical ? 2 : 1.5}
-                      strokeDasharray={a.critical ? undefined : '5,3'}
-                      markerEnd={a.critical ? 'url(#arr-critical)' : 'url(#arr-normal)'}
-                    />
-                  )
-                })}
-              </svg>
+              <DepArrows arrows={visibleArrows} svgH={svgH} scrollRef={scrollRef} />
             )
           })()}
 
