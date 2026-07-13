@@ -81,6 +81,18 @@ export default function Minimap({ scrollRef, range, pxPerHour, events, trackColo
         ctx.fill()
       }
     }
+
+    // "Now" marker — the red line matching the timeline's now-line, so today is visible in the
+    // whole-project overview. Drawn last so it sits on top of the bars.
+    const nowX = toX(Date.now())
+    if (nowX >= 0 && nowX <= W) {
+      ctx.strokeStyle = 'rgba(239,68,68,0.85)'
+      ctx.lineWidth   = 1
+      ctx.beginPath()
+      ctx.moveTo(Math.round(nowX) + 0.5, 0)
+      ctx.lineTo(Math.round(nowX) + 0.5, H)
+      ctx.stroke()
+    }
   }
 
   // Position the viewport box over the slice currently visible in the main scroll. Uses
