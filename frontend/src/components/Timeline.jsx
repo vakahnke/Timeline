@@ -114,6 +114,27 @@ function applyDrag(arr, from, to) {
   return r
 }
 
+// Draw the zebra track-lane backgrounds + bottom borders onto a VIEWPORT-sized canvas, replacing
+// six sticky 100vw `.lane-bg` divs. WebKit composites many sticky/large layers very slowly, which
+// was the remaining Today->view transition lag in Safari; one canvas layer fixes it. `bands` carry
+// content-space y (top already +RULER_HEIGHT); we subtract scrollTop and fill the full width.
+function drawLaneBg(canvas, bands, scrollTop, vw, vh, dpr, colors) {
+  const cw = Math.max(1, Math.ceil(vw)), ch = Math.max(1, Math.ceil(vh))
+  if (canvas.width !== cw * dpr || canvas.height !== ch * dpr) { canvas.width = cw * dpr; canvas.height = ch * dpr }
+  canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px'
+  const ctx = canvas.getContext('2d')
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, cw, ch)
+  for (const b of bands) {
+    const y = b.top - scrollTop
+    if (y > ch || y + b.height < 0) continue
+    ctx.fillStyle = b.even ? colors.bg : colors.bgMid
+    ctx.fillRect(0, y, cw, b.height)
+    ctx.fillStyle = colors.border
+    ctx.fillRect(0, y + b.height - 1, cw, 1)   // bottom divider
+  }
+}
+
 // Draw the dependency arrows onto a VIEWPORT-sized canvas (offset by scroll), instead of an SVG.
 // An SVG that re-renders every scroll frame is fine in Blink but stalls WebKit/Safari badly
 // (layer churn + per-frame DOM diff). Canvas is one cheap layer that both engines handle well.
@@ -162,6 +183,9 @@ const Timeline = forwardRef(function Timeline(
   const rulerRef        = useRef(null)
   const arrowsCanvasRef = useRef(null)
   const arrowsDataRef   = useRef([])
+  const laneBgRef       = useRef(null)
+  const laneBandsRef    = useRef([])
+  const laneColorsRef   = useRef(null)
   const headerListRef   = useRef(null)
   const headersRef      = useRef(null)
   const tracksLenRef    = useRef(tracks.length)
@@ -338,18 +362,36 @@ const Timeline = forwardRef(function Timeline(
     drawArrows(c, arrowsDataRef.current, sl, st, el.clientWidth, el.clientHeight, dpr)
   }, [])
 
-  // Redraw in the layout phase so they stay in sync with the blocks while zooming/range-changing.
-  useLayoutEffect(() => { paintRuler(); paintArrows() }, [range, pxPerHour, paintRuler, paintArrows])
+  // ...and the zebra lane backgrounds, same viewport-canvas approach (replaces 6 sticky layers).
+  const paintLaneBg = useCallback(() => {
+    const c = laneBgRef.current, el = scrollRef.current
+    if (!c || !el) return
+    if (!laneColorsRef.current) {
+      const cs = getComputedStyle(document.documentElement)
+      laneColorsRef.current = {
+        bg:     cs.getPropertyValue('--bg').trim()     || '#09090f',
+        bgMid:  cs.getPropertyValue('--bg-mid').trim() || '#0d1017',
+        border: cs.getPropertyValue('--border').trim() || 'rgba(255,255,255,0.06)',
+      }
+    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const sl = el.scrollLeft, st = el.scrollTop
+    c.style.transform = `translate(${sl}px, ${st}px)`
+    drawLaneBg(c, laneBandsRef.current, st, el.clientWidth, el.clientHeight, dpr, laneColorsRef.current)
+  }, [])
 
-  // Redraw the (viewport-sized) ruler + arrows as you scroll, and on resize.
+  // Redraw in the layout phase so they stay in sync with the blocks while zooming/range-changing.
+  useLayoutEffect(() => { paintLaneBg(); paintRuler(); paintArrows() }, [range, pxPerHour, paintRuler, paintArrows, paintLaneBg])
+
+  // Redraw the (viewport-sized) lane backgrounds + ruler + arrows as you scroll, and on resize.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const redraw = () => { paintRuler(); paintArrows() }
+    const redraw = () => { paintLaneBg(); paintRuler(); paintArrows() }
     el.addEventListener('scroll', redraw, { passive: true })
     window.addEventListener('resize', redraw)
     return () => { el.removeEventListener('scroll', redraw); window.removeEventListener('resize', redraw) }
-  }, [paintRuler, paintArrows])
+  }, [paintRuler, paintArrows, paintLaneBg])
 
   // Re-anchor scroll synchronously BEFORE paint so zoom doesn't visibly snap then correct.
   useLayoutEffect(() => {
@@ -786,6 +828,16 @@ const Timeline = forwardRef(function Timeline(
   // Push the current arrow set into the ref the imperative painter reads, then repaint.
   useLayoutEffect(() => { arrowsDataRef.current = visibleArrows; paintArrows() }, [visibleArrows, paintArrows])
 
+  // Track-lane bands (zebra + heights) for the lane-background canvas.
+  useLayoutEffect(() => {
+    laneBandsRef.current = displayedTracks.map((t, i) => ({
+      top:    RULER_HEIGHT + (layout.tops[t.name] ?? 0),
+      height: layout.heights[t.name] ?? 0,
+      even:   (i % 2 === 1),   // matches .track-lane:nth-child(even)
+    }))
+    paintLaneBg()
+  }, [displayedTracks, layout, paintLaneBg])
+
   return (
     <div className="timeline-main">
       <div className="timeline-wrapper">
@@ -830,6 +882,8 @@ const Timeline = forwardRef(function Timeline(
         onMouseLeave={() => { if (cursorLabelRef.current) cursorLabelRef.current.style.display = 'none' }}
       >
         <div className="timeline-inner" style={{ width: w + 'px' }}>
+          {/* Zebra lane backgrounds: a viewport-pinned canvas behind the blocks (see paintLaneBg). */}
+          <canvas className="lane-bgs-canvas" ref={laneBgRef} />
           <canvas className="ruler" ref={rulerRef} />
 
           {nowInRange && (
@@ -884,7 +938,6 @@ const Timeline = forwardRef(function Timeline(
                   style={{ height: layout.heights[t.name] + 'px' }}
                   onDoubleClick={e => handleLaneClick(e, t.name)}
                 >
-                  <div className="lane-bg" />
                   {trackEvents.map(ev => (
                     <EventBlock
                       key={ev.id}

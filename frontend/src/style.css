@@ -424,26 +424,23 @@ canvas.ruler {
 .track-lane {
   height: 80px;   /* fallback; actual height is set inline per lane (depth × TRACK_HEIGHT) */
   position: relative;
-  /* Background/border live on the viewport-sized .lane-bg child below — NOT on this
-     content-width element, which reaches ~1M px at high zoom and painted a giant compositor
-     layer that lagged the timeline (same class of bug as the ruler + arrows). */
+  /* Transparent host for the event blocks. The zebra bands + borders are painted on the
+     .lane-bgs-canvas (one viewport layer) instead of per-lane sticky divs — WebKit composites
+     many sticky/large layers very slowly. */
 }
-/* Sticky, viewport-wide band: pins to the scrollport's left edge, scrolls vertically with the
-   lane, and never gets wider than the viewport — so it fills the visible row cheaply. First
-   child + pointer-events:none so event blocks paint on top and the lane keeps its click target. */
-.lane-bg {
-  position: sticky;
+/* Viewport-pinned lane-background canvas: translate()d to follow scroll (see paintLaneBg), sits
+   below the event blocks. */
+.lane-bgs-canvas {
+  position: absolute;
+  top: 0;
   left: 0;
-  width: 100vw;
-  height: 100%;
-  box-sizing: border-box;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-mid);
   pointer-events: none;
+  z-index: 0;
+  transform-origin: 0 0;
 }
-.track-lane:nth-child(even) .lane-bg { background: var(--bg); }
-.track-lane:hover .lane-bg { background: rgba(129,140,248,0.025); }
-.track-lane.drag-over .lane-bg {
+/* Drop target while dragging an event onto a lane. Transient (only during an active drag), so the
+   content-width paint is acceptable; it just tints the visible lane. */
+.track-lane.drag-over {
   background: rgba(129,140,248,0.08);
   box-shadow: inset 0 0 0 1px rgba(129,140,248,0.18);
 }
