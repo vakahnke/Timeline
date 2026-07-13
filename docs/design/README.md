@@ -51,7 +51,9 @@ all docs, what's designed-but-unbuilt vs. shipped.
 
 <!-- Optional index. Update as docs are added so parked ideas stay visible. -->
 
-_None yet — add features here as designs land._
+- [probabilistic-schedule.md](probabilistic-schedule.md) — **Draft**. On-time probability/health that
+  decays as deadlines near, + the factors driving it. Key constraint: needs a data foundation (task
+  status-transition log + project target date) before the statistical tier is possible.
 
 Already-designed features living elsewhere in `docs/`:
 - [KANBAN.md](../KANBAN.md) — Phase A shipped; Phase B (manual reorder) pending.
