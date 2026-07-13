@@ -114,72 +114,44 @@ function applyDrag(arr, from, to) {
   return r
 }
 
-// Dependency-arrows overlay sized to the VIEWPORT, not the content. A content-width SVG became a
-// multi-hundred-thousand-pixel element at high zoom (e.g. 1,063,191px for a 2-year range at day
-// scale) — a GPU layer past the compositor's max texture size, which froze the screen for seconds
-// on real hardware (invisible to main-thread profiling since compositing is off-thread). This keeps
-// the SVG ~viewport-wide, translates it to follow horizontal scroll, and offsets the few arrow
-// paths by scrollLeft — re-rendering only itself (not the event blocks) on scroll.
-function DepArrows({ arrows, svgH, scrollRef }) {
-  const [vp, setVp] = useState({ sx: 0, vw: 0 })
-  useLayoutEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    let raf = 0
-    const sync = () => {
-      raf = 0
-      const sx = el.scrollLeft, vw = el.clientWidth
-      setVp(prev => (prev.sx === sx && prev.vw === vw) ? prev : { sx, vw })
-    }
-    const onScroll = () => { if (!raf) raf = requestAnimationFrame(sync) }
-    sync()
-    el.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
-    return () => {
-      el.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-      cancelAnimationFrame(raf)
-    }
-  }, [scrollRef])
-
-  const { sx, vw } = vp
-  if (!vw) return null
-  const PAD = 60   // keep arrows entering from just off-screen so nothing pops in at the edge
-  const visible = []
-  for (let i = 0; i < arrows.length; i++) {
-    const a = arrows[i]
-    const lo = Math.min(a.x1, a.x2) - sx, hi = Math.max(a.x1, a.x2) - sx
-    if (hi >= -PAD && lo <= vw + PAD) visible.push([i, a])
+// Draw the dependency arrows onto a VIEWPORT-sized canvas (offset by scroll), instead of an SVG.
+// An SVG that re-renders every scroll frame is fine in Blink but stalls WebKit/Safari badly
+// (layer churn + per-frame DOM diff). Canvas is one cheap layer that both engines handle well.
+// `arrows` carry content-space coords (x already ×pxPerHour, y already +RULER_HEIGHT); we subtract
+// scrollLeft/scrollTop to place them, and cull anything off-screen.
+function drawArrows(canvas, arrows, scrollLeft, scrollTop, vw, vh, dpr) {
+  const cw = Math.max(1, Math.ceil(vw)), ch = Math.max(1, Math.ceil(vh))
+  if (canvas.width !== cw * dpr || canvas.height !== ch * dpr) { canvas.width = cw * dpr; canvas.height = ch * dpr }
+  canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px'
+  const ctx = canvas.getContext('2d')
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, cw, ch)
+  const PAD = 40
+  for (const a of arrows) {
+    const x1 = a.x1 - scrollLeft, x2 = a.x2 - scrollLeft
+    const y1 = a.y1 - scrollTop,  y2 = a.y2 - scrollTop
+    if (Math.max(x1, x2) < -PAD || Math.min(x1, x2) > cw + PAD) continue
+    if (Math.max(y1, y2) < -PAD || Math.min(y1, y2) > ch + PAD) continue
+    const span = Math.abs(x2 - x1)
+    const cx1 = x1 + span * 0.45, cx2 = x2 - span * 0.45
+    ctx.strokeStyle = a.critical ? 'rgba(248,113,113,0.85)' : 'rgba(129,140,248,0.55)'
+    ctx.lineWidth   = a.critical ? 2 : 1.5
+    ctx.setLineDash(a.critical ? [] : [5, 3])
+    ctx.beginPath()
+    ctx.moveTo(x1, y1)
+    ctx.bezierCurveTo(cx1, y1, cx2, y2, x2, y2)
+    ctx.stroke()
+    ctx.setLineDash([])
+    // Arrowhead at the target end. The curve arrives horizontally (its end control point shares
+    // y2), so the head points right — matching the old SVG marker (refX=5, 7×7).
+    ctx.fillStyle = a.critical ? 'rgba(248,113,113,0.9)' : 'rgba(129,140,248,0.65)'
+    ctx.beginPath()
+    ctx.moveTo(x2 + 2, y2)
+    ctx.lineTo(x2 - 5, y2 - 3.5)
+    ctx.lineTo(x2 - 5, y2 + 3.5)
+    ctx.closePath()
+    ctx.fill()
   }
-  return (
-    <svg className="dep-arrows" width={Math.ceil(vw)} height={svgH} style={{ top: 0, transform: `translateX(${sx}px)` }}>
-      <defs>
-        <marker id="arr-normal" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(129,140,248,0.65)" />
-        </marker>
-        <marker id="arr-critical" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
-          <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(248,113,113,0.9)" />
-        </marker>
-      </defs>
-      {visible.map(([i, a]) => {
-        const x1 = a.x1 - sx, x2 = a.x2 - sx
-        const span = Math.abs(x2 - x1)
-        const cx1  = x1 + span * 0.45
-        const cx2  = x2 - span * 0.45
-        return (
-          <path
-            key={i}
-            d={`M${x1},${a.y1} C${cx1},${a.y1} ${cx2},${a.y2} ${x2},${a.y2}`}
-            fill="none"
-            stroke={a.critical ? 'rgba(248,113,113,0.85)' : 'rgba(129,140,248,0.55)'}
-            strokeWidth={a.critical ? 2 : 1.5}
-            strokeDasharray={a.critical ? undefined : '5,3'}
-            markerEnd={a.critical ? 'url(#arr-critical)' : 'url(#arr-normal)'}
-          />
-        )
-      })}
-    </svg>
-  )
 }
 
 const Timeline = forwardRef(function Timeline(
@@ -188,6 +160,8 @@ const Timeline = forwardRef(function Timeline(
 ) {
   const scrollRef       = useRef(null)
   const rulerRef        = useRef(null)
+  const arrowsCanvasRef = useRef(null)
+  const arrowsDataRef   = useRef([])
   const headerListRef   = useRef(null)
   const headersRef      = useRef(null)
   const tracksLenRef    = useRef(tracks.length)
@@ -353,18 +327,29 @@ const Timeline = forwardRef(function Timeline(
     drawRuler(c, r.start, pxRef.current, el.scrollLeft, el.clientWidth, dpr)
   }, [])
 
-  // Redraw in the layout phase so it stays in sync with the blocks while zooming/range-changing.
-  useLayoutEffect(() => { paintRuler() }, [range, pxPerHour, paintRuler])
+  // Same idea for the dependency arrows: a viewport-sized canvas, translated to follow scroll and
+  // redrawn imperatively (no per-scroll React render — the whole point of moving off SVG).
+  const paintArrows = useCallback(() => {
+    const c = arrowsCanvasRef.current, el = scrollRef.current
+    if (!c || !el) return
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const sl = el.scrollLeft, st = el.scrollTop
+    c.style.transform = `translate(${sl}px, ${st}px)`
+    drawArrows(c, arrowsDataRef.current, sl, st, el.clientWidth, el.clientHeight, dpr)
+  }, [])
 
-  // Redraw the (viewport-sized) ruler as you scroll horizontally, and on resize.
+  // Redraw in the layout phase so they stay in sync with the blocks while zooming/range-changing.
+  useLayoutEffect(() => { paintRuler(); paintArrows() }, [range, pxPerHour, paintRuler, paintArrows])
+
+  // Redraw the (viewport-sized) ruler + arrows as you scroll, and on resize.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const redraw = () => paintRuler()
+    const redraw = () => { paintRuler(); paintArrows() }
     el.addEventListener('scroll', redraw, { passive: true })
     window.addEventListener('resize', redraw)
     return () => { el.removeEventListener('scroll', redraw); window.removeEventListener('resize', redraw) }
-  }, [paintRuler])
+  }, [paintRuler, paintArrows])
 
   // Re-anchor scroll synchronously BEFORE paint so zoom doesn't visibly snap then correct.
   useLayoutEffect(() => {
@@ -793,6 +778,14 @@ const Timeline = forwardRef(function Timeline(
     return out
   }, [events, range, pxPerHour, layout, criticalLinks])
 
+  // Arrows actually drawn, honoring the show-arrows / critical-only settings.
+  const visibleArrows = useMemo(() =>
+    !settings?.showArrows ? [] : settings?.showOnlyCritical ? arrows.filter(a => a.critical) : arrows,
+    [arrows, settings?.showArrows, settings?.showOnlyCritical])
+
+  // Push the current arrow set into the ref the imperative painter reads, then repaint.
+  useLayoutEffect(() => { arrowsDataRef.current = visibleArrows; paintArrows() }, [visibleArrows, paintArrows])
+
   return (
     <div className="timeline-main">
       <div className="timeline-wrapper">
@@ -845,13 +838,8 @@ const Timeline = forwardRef(function Timeline(
             </div>
           )}
 
-          {(() => {
-            const visibleArrows = !settings?.showArrows ? [] :
-              settings?.showOnlyCritical ? arrows.filter(a => a.critical) : arrows
-            return visibleArrows.length > 0 && (
-              <DepArrows arrows={visibleArrows} svgH={svgH} scrollRef={scrollRef} />
-            )
-          })()}
+          {/* Dependency arrows: a viewport-pinned canvas, drawn imperatively (see paintArrows). */}
+          <canvas className="dep-arrows-canvas" ref={arrowsCanvasRef} />
 
           <div
             className="track-lanes"

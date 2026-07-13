@@ -921,12 +921,15 @@ canvas.ruler {
 }
 
 /* ── Dependency arrows (SVG overlay) ─────────────────────────────────────── */
-.dep-arrows {
+/* Viewport-pinned arrows canvas: positioned at the content origin and translate()d to follow
+   scroll (see paintArrows), so it stays one small GPU layer instead of a content-width SVG. */
+.dep-arrows-canvas {
   position: absolute;
+  top: 0;
   left: 0;
   pointer-events: none;
-  z-index: 2;   /* above event blocks (z:1) but below a hovered/dragged block — preserves prior layering */
-  overflow: visible;
+  z-index: 2;   /* above event blocks (z:1) but below a hovered/dragged block — preserves layering */
+  transform-origin: 0 0;
 }
 
 /* Critical-path events get NO special box styling — they keep their category color
