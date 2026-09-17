@@ -85,8 +85,8 @@ dependencies) shifted to a start date you choose.
 
 - **Use one:** dashboard → **From Template** → choose a template, set name/start, optionally
   assign to another user → **Create**.
-- **Built-ins:** *Two-Week Sprint*, *Product Launch*, *Event Plan*, *Custom Shop Build*,
-  *MTA Rapid Prototyping (OTA)*.
+- **Built-ins:** business plans (*Startup MVP*, *Seed Fundraising Round*, *Go-to-Market Launch*, *Hire a Key Role*, *Quarterly OKR Cycle*, …),
+  work plans (*Two-Week Sprint*, *Product Launch*, *Event Plan*), and hobby builds (*Homebrew a Batch of Ale*, *First Marathon*, *Build a Steel-String Acoustic*, …).
 - **Save your own:** open a project → **Save as Template** in the toolbar. Saved templates
   are private to you and appear alongside the built-ins in the **From Template** picker
   (delete them there).

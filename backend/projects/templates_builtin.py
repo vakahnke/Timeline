@@ -7,7 +7,7 @@ chosen start datetime; `depends_on` holds indices into the task list.
 """
 
 DAY = 1440        # minutes
-MONTH = 30 * DAY  # ~1 month, for long acquisition-scale schedules
+MONTH = 30 * DAY  # ~1 month, for multi-month schedules
 WEEK = 7 * DAY    # minutes, for week-scale hobby schedules
 
 BUILTIN_TEMPLATES = {
@@ -128,151 +128,6 @@ BUILTIN_TEMPLATES = {
             {'title': 'Site grading, gutters & apron',       'category': 'Finishing & Closeout', 'start_offset_minutes': 67 * DAY, 'duration_minutes': 5 * DAY,  'notes': 'Final grade for drainage, gutters/downspouts, and concrete apron/driveway.',              'percent_complete': 0, 'depends_on': [16]},
             {'title': 'Final inspections',                   'category': 'Inspections',          'start_offset_minutes': 91 * DAY, 'duration_minutes': 1 * DAY,  'notes': 'Final building, electrical, and plumbing sign-offs / certificate of occupancy.',          'percent_complete': 0, 'depends_on': [28, 29]},
             {'title': 'Punch list & closeout',               'category': 'Finishing & Closeout', 'start_offset_minutes': 92 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Fix punch-list items, clean up, and move in.',                                            'percent_complete': 0, 'depends_on': [30]},
-        ],
-    },
-    'mta_ota': {
-        'name': 'MTA Rapid Prototyping (OTA)',
-        'description': 'A Middle Tier of Acquisition (MTA) Rapid Prototyping program (DoDI 5000.80 / 10 USC 4022) '
-                       'executed with a prototype Other Transaction via a consortium. Per DAU\'s Adaptive Acquisition '
-                       'Framework: starts at the initiation ADM, requirements within 6 months, documentation within '
-                       '2 years, and prototype demonstrated within 5 years through the Outcome Determination ADM.',
-        'categories': [
-            {'name': 'Requirements',             'color': '#818cf8'},
-            {'name': 'Acquisition Strategy',     'color': '#fbbf24'},
-            {'name': 'OT Solicitation & Award',  'color': '#ff8c4a'},
-            {'name': 'Prototype Development',     'color': '#4a88ff'},
-            {'name': 'Test & Demonstration',     'color': '#4adcff'},
-            {'name': 'Program Management',        'color': '#4aff9e'},
-            {'name': 'Transition & Production',   'color': '#c44aff'},
-        ],
-        'tasks': [
-            # ── Requirements (approved ≤ 6 months) ──────────────────────────────
-            {'title': 'Identify capability gap & emerging need',     'category': 'Requirements',            'start_offset_minutes': 0,                'duration_minutes': 1 * MONTH,  'notes': 'Merit-based need from COCOMs/JCS; confirm fit for MTA rapid prototyping.',                 'percent_complete': 0, 'depends_on': []},
-            {'title': 'Develop requirements document',               'category': 'Requirements',            'start_offset_minutes': 1 * MONTH,        'duration_minutes': 4 * MONTH,  'notes': 'Succinct requirements; MTA is not subject to JCIDS.',                                      'percent_complete': 0, 'depends_on': [0]},
-            {'title': 'Requirements approval (≤ 6 months)',          'category': 'Requirements',            'start_offset_minutes': 5 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'Requirement approved not more than 6 months after initiation.',                            'percent_complete': 0, 'depends_on': [1]},
-            # ── Acquisition Strategy ────────────────────────────────────────────
-            {'title': 'Develop MTA acquisition strategy',            'category': 'Acquisition Strategy',    'start_offset_minutes': 2 * MONTH,        'duration_minutes': 4 * MONTH,  'notes': 'Tailored strategy incl. schedule/technical/security risk and a transition plan.',         'percent_complete': 0, 'depends_on': [0]},
-            {'title': 'Develop prototype OT strategy',               'category': 'Acquisition Strategy',    'start_offset_minutes': 4 * MONTH,        'duration_minutes': 2 * MONTH,  'notes': 'Use a prototype Other Transaction (10 USC 4022), executed via a consortium.',             'percent_complete': 0, 'depends_on': [3]},
-            {'title': 'Program baseline & cost estimate',            'category': 'Acquisition Strategy',    'start_offset_minutes': 5 * MONTH,        'duration_minutes': 2 * MONTH,  'notes': 'Cost, schedule, and performance baseline for the prototype effort.',                      'percent_complete': 0, 'depends_on': [3]},
-            {'title': 'Test & evaluation strategy',                  'category': 'Acquisition Strategy',    'start_offset_minutes': 5 * MONTH,        'duration_minutes': 2 * MONTH,  'notes': 'How prototype performance will be demonstrated/assessed in an operational environment.',   'percent_complete': 0, 'depends_on': [3]},
-            {'title': 'MTA initiation — sign Acquisition Decision Memo (ADM)', 'category': 'Acquisition Strategy', 'start_offset_minutes': 7 * MONTH, 'duration_minutes': 3 * DAY, 'notes': 'AE signs ADM designating the MTA program; starts the 5-year clock.',                       'percent_complete': 0, 'depends_on': [2, 4, 5, 6]},
-            # ── OT Solicitation & Award (via consortium) ────────────────────────
-            {'title': 'Develop problem statement & solicitation',    'category': 'OT Solicitation & Award', 'start_offset_minutes': 7 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'With the consortium manager, frame the problem statement and evaluation approach.',        'percent_complete': 0, 'depends_on': [7]},
-            {'title': 'Issue Request for White Papers (RWP)',        'category': 'OT Solicitation & Award', 'start_offset_minutes': 8 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'Solicit white papers from consortium members.',                                           'percent_complete': 0, 'depends_on': [8]},
-            {'title': 'Evaluate white papers & down-select',         'category': 'OT Solicitation & Award', 'start_offset_minutes': 9 * MONTH,        'duration_minutes': 1 * MONTH,  'notes': 'Assess concepts against criteria; invite the strongest to propose.',                      'percent_complete': 0, 'depends_on': [9]},
-            {'title': 'Issue Request for Prototype Proposals (RFPP)', 'category': 'OT Solicitation & Award', 'start_offset_minutes': 10 * MONTH,       'duration_minutes': 64800,      'notes': 'Detailed prototype proposals from down-selected offerors (~1.5 months).',                 'percent_complete': 0, 'depends_on': [10]},
-            {'title': 'Evaluate prototype proposals',                'category': 'OT Solicitation & Award', 'start_offset_minutes': 496800,           'duration_minutes': 64800,      'notes': 'Technical + cost evaluation (~1.5 months); government sponsor approves selection.',        'percent_complete': 0, 'depends_on': [11]},
-            {'title': 'Negotiate & award prototype OT agreement',    'category': 'OT Solicitation & Award', 'start_offset_minutes': 13 * MONTH,       'duration_minutes': 2 * MONTH,  'notes': 'Competitively awarded prototype OT (enables sole-source follow-on production later).',     'percent_complete': 0, 'depends_on': [12]},
-            # ── Prototype Development ───────────────────────────────────────────
-            {'title': 'Prototype design & systems engineering',      'category': 'Prototype Development',   'start_offset_minutes': 15 * MONTH,       'duration_minutes': 6 * MONTH,  'notes': 'Mature the design; define interfaces and build plan.',                                    'percent_complete': 0, 'depends_on': [13]},
-            {'title': 'Fabricate / build prototype',                 'category': 'Prototype Development',   'start_offset_minutes': 21 * MONTH,       'duration_minutes': 12 * MONTH, 'notes': 'Build the fieldable prototype using innovative technology.',                               'percent_complete': 0, 'depends_on': [14]},
-            {'title': 'Integration & checkout',                      'category': 'Prototype Development',   'start_offset_minutes': 33 * MONTH,       'duration_minutes': 4 * MONTH,  'notes': 'Integrate subsystems; bench/ground checkout before test.',                                'percent_complete': 0, 'depends_on': [15]},
-            # ── Test & Demonstration ────────────────────────────────────────────
-            {'title': 'Developmental test & evaluation (DT&E)',      'category': 'Test & Demonstration',    'start_offset_minutes': 36 * MONTH,       'duration_minutes': 6 * MONTH,  'notes': 'Verify performance against the requirement.',                                             'percent_complete': 0, 'depends_on': [16]},
-            {'title': 'Operational demonstration',                   'category': 'Test & Demonstration',    'start_offset_minutes': 42 * MONTH,       'duration_minutes': 6 * MONTH,  'notes': 'Demonstrate the prototype in an operationally relevant environment.',                     'percent_complete': 0, 'depends_on': [17]},
-            # ── Program Management (milestones) ─────────────────────────────────
-            {'title': 'Program documentation complete (≤ 2 years)',  'category': 'Program Management',      'start_offset_minutes': 24 * MONTH,       'duration_minutes': 3 * DAY,    'notes': 'All necessary documentation complete NLT 2 years after program start.',                   'percent_complete': 0, 'depends_on': [7]},
-            {'title': 'Governance review / IPR',                     'category': 'Program Management',      'start_offset_minutes': 30 * MONTH,       'duration_minutes': 3 * DAY,    'notes': 'Report status to governance bodies; update baseline as needed.',                          'percent_complete': 0, 'depends_on': [7]},
-            # ── Transition & Production ─────────────────────────────────────────
-            {'title': 'Evaluate prototype results',                  'category': 'Transition & Production', 'start_offset_minutes': 48 * MONTH,       'duration_minutes': 1 * MONTH,  'notes': 'Assess demonstration results against the requirement.',                                   'percent_complete': 0, 'depends_on': [18]},
-            {'title': 'Outcome Determination ADM (transition decision)', 'category': 'Transition & Production', 'start_offset_minutes': 49 * MONTH,   'duration_minutes': 3 * DAY,    'notes': 'AE decision: transition to Rapid Fielding / a program of record, or end the effort.',     'percent_complete': 0, 'depends_on': [21]},
-            {'title': 'Award follow-on production OT / transition',  'category': 'Transition & Production', 'start_offset_minutes': 49 * MONTH + 15 * DAY, 'duration_minutes': 5 * MONTH, 'notes': 'Sole-source follow-on production OT or transition to the next acquisition pathway.',       'percent_complete': 0, 'depends_on': [22]},
-        ],
-    },
-    'research_ot': {
-        'name': 'Research Other Transaction (10 USC 4021)',
-        'description': 'A research Other Transaction under 10 U.S.C. 4021 (formerly 10 U.S.C. 2371) for basic, '
-                       'applied, or advanced research — typically with universities, labs, nontraditional '
-                       'performers, or a consortium, and cost-shared. Covers planning and the 4021 eligibility '
-                       'determination (significant nontraditional participation or at least one-third non-Federal '
-                       'cost share), announcement/solicitation, white-paper and proposal evaluation, negotiation '
-                       'and award, milestone-based research execution, reporting, and closeout. (Per the DoD OT '
-                       'Guide / OSD Guide to Research Other Transactions.)',
-        'categories': [
-            {'name': 'Planning & Authority',   'color': '#818cf8'},
-            {'name': 'Solicitation',           'color': '#fbbf24'},
-            {'name': 'Evaluation & Selection', 'color': '#ff8c4a'},
-            {'name': 'Negotiation & Award',    'color': '#4a88ff'},
-            {'name': 'Research Execution',     'color': '#4adcff'},
-            {'name': 'Reporting & Closeout',   'color': '#4aff9e'},
-        ],
-        'tasks': [
-            # ── Planning & Authority ────────────────────────────────────────────
-            {'title': 'Define research objectives & scope',          'category': 'Planning & Authority',   'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Frame the basic/applied/advanced research need and intended outcomes. Research OTs (4021) advance knowledge, not a fieldable prototype.', 'percent_complete': 0, 'depends_on': []},
-            {'title': 'Engage the research community',                'category': 'Planning & Authority',   'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Market research with universities, labs, nontraditional performers, and/or a consortium to gauge approaches and partners.', 'percent_complete': 0, 'depends_on': []},
-            {'title': 'Confirm 4021 eligibility & document it',       'category': 'Planning & Authority',   'start_offset_minutes': 1 * MONTH,          'duration_minutes': 2 * WEEK,  'notes': 'Document the 4021 condition met: significant nontraditional defense contractor participation, OR at least one-third of cost from non-Federal sources.', 'percent_complete': 0, 'depends_on': [0]},
-            {'title': 'Develop research OT approach & cost-share plan','category': 'Planning & Authority',  'start_offset_minutes': 1 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Acquisition approach: funding, cost-sharing arrangement, data/IP strategy, and milestone structure.', 'percent_complete': 0, 'depends_on': [0, 1]},
-            {'title': 'Agreements Officer / legal review',           'category': 'Planning & Authority',   'start_offset_minutes': 1 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Agreements Officer and counsel review the approach and authority determination.', 'percent_complete': 0, 'depends_on': [3]},
-            # ── Solicitation ────────────────────────────────────────────────────
-            {'title': 'Develop announcement & evaluation criteria',  'category': 'Solicitation',           'start_offset_minutes': 2 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Draft the announcement/solicitation (e.g., via consortium or competitive announcement) and the technical/cost-share evaluation criteria.', 'percent_complete': 0, 'depends_on': [2, 4]},
-            {'title': 'Publish announcement / Request for White Papers','category': 'Solicitation',         'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Solicit white papers from the research community / consortium members.', 'percent_complete': 0, 'depends_on': [5]},
-            {'title': "Proposers' day / Q&A",                        'category': 'Solicitation',           'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 2 * DAY,  'notes': 'Industry/academia day to clarify the need and answer questions during the open period.', 'percent_complete': 0, 'depends_on': [5]},
-            # ── Evaluation & Selection ──────────────────────────────────────────
-            {'title': 'Evaluate white papers',                       'category': 'Evaluation & Selection', 'start_offset_minutes': 3 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Assess technical merit and proposed cost share; identify the most promising concepts.', 'percent_complete': 0, 'depends_on': [6]},
-            {'title': 'Invite & evaluate full research proposals',    'category': 'Evaluation & Selection', 'start_offset_minutes': 4 * MONTH + 1 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Request and evaluate full proposals from invited performers (technical, cost, and cost-share).', 'percent_complete': 0, 'depends_on': [8]},
-            {'title': 'Document selection rationale',                'category': 'Evaluation & Selection', 'start_offset_minutes': 5 * MONTH + 1 * WEEK,'duration_minutes': 1 * WEEK, 'notes': 'Record the selection basis to support the agreement file / agreement analysis.', 'percent_complete': 0, 'depends_on': [9]},
-            # ── Negotiation & Award ─────────────────────────────────────────────
-            {'title': 'Negotiate terms (scope, cost share, IP/data)','category': 'Negotiation & Award',    'start_offset_minutes': 5 * MONTH + 2 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Negotiate statement of work, cost-share, milestones, and data/IP rights with the selected performer(s).', 'percent_complete': 0, 'depends_on': [10]},
-            {'title': 'Agreement analysis & cost reasonableness',    'category': 'Negotiation & Award',    'start_offset_minutes': 6 * MONTH + 2 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Prepare the agreement analysis documenting reasonableness of cost and key terms.', 'percent_complete': 0, 'depends_on': [11]},
-            {'title': 'Award research OT agreement',                 'category': 'Negotiation & Award',    'start_offset_minutes': 7 * MONTH,          'duration_minutes': 3 * DAY,  'notes': 'Agreements Officer signs the 4021 research OT agreement.', 'percent_complete': 0, 'depends_on': [12]},
-            # ── Research Execution ──────────────────────────────────────────────
-            {'title': 'Kickoff & research management plan',          'category': 'Research Execution',     'start_offset_minutes': 7 * MONTH + 1 * WEEK,'duration_minutes': 1 * WEEK, 'notes': 'Align on tasks, schedule, milestones, reporting cadence, and points of contact.', 'percent_complete': 0, 'depends_on': [13]},
-            {'title': 'Execute research — Phase 1',                  'category': 'Research Execution',     'start_offset_minutes': 7 * MONTH + 2 * WEEK,'duration_minutes': 6 * MONTH,'notes': 'Perform the first research phase against payable milestones.', 'percent_complete': 0, 'depends_on': [14]},
-            {'title': 'Payable milestone / progress review',         'category': 'Research Execution',     'start_offset_minutes': 13 * MONTH + 2 * WEEK,'duration_minutes': 3 * DAY, 'notes': 'Verify milestone completion and authorize the associated payment; adjust scope if warranted.', 'percent_complete': 0, 'depends_on': [15]},
-            {'title': 'Execute research — Phase 2',                  'category': 'Research Execution',     'start_offset_minutes': 13 * MONTH + 3 * WEEK,'duration_minutes': 6 * MONTH,'notes': 'Continue the research effort through the remaining milestones.', 'percent_complete': 0, 'depends_on': [16]},
-            # ── Reporting & Closeout ────────────────────────────────────────────
-            {'title': 'Deliver interim reports & data',              'category': 'Reporting & Closeout',   'start_offset_minutes': 13 * MONTH + 2 * WEEK,'duration_minutes': 1 * WEEK,'notes': 'Submit interim technical reports and data deliverables per the agreement.', 'percent_complete': 0, 'depends_on': [15]},
-            {'title': 'Final technical report & results',            'category': 'Reporting & Closeout',   'start_offset_minutes': 19 * MONTH + 3 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Deliver final report and research results; capture lessons and transition opportunities.', 'percent_complete': 0, 'depends_on': [17]},
-            {'title': 'Agreement closeout',                          'category': 'Reporting & Closeout',   'start_offset_minutes': 20 * MONTH + 3 * WEEK,'duration_minutes': 3 * WEEK,'notes': 'Final payments, property/data disposition, and administrative closeout of the agreement.', 'percent_complete': 0, 'depends_on': [19]},
-        ],
-    },
-    'prototype_ot': {
-        'name': 'Prototype Other Transaction (10 USC 4022)',
-        'description': 'A prototype Other Transaction under 10 U.S.C. 4022 (formerly 10 U.S.C. 2371b), executed '
-                       'via a consortium, from need through follow-on production. Covers the 4022 eligibility '
-                       'determination (significant nontraditional participation or at least one-third cost share), '
-                       'market research, the problem statement, the Request for White Papers (RWP) and Request for '
-                       'Prototype Proposals (RPP), evaluation and down-select, negotiation and competitive award, '
-                       'prototype execution against payable milestones, the successful-completion determination, '
-                       'and the sole-source follow-on production OT it enables. (Per the DoD OT Guide.)',
-        'categories': [
-            {'name': 'Planning & Authority',          'color': '#818cf8'},
-            {'name': 'Solicitation (Consortium)',     'color': '#fbbf24'},
-            {'name': 'Evaluation & Down-Select',      'color': '#ff8c4a'},
-            {'name': 'Negotiation & Award',           'color': '#4a88ff'},
-            {'name': 'Prototype Execution',           'color': '#4adcff'},
-            {'name': 'Completion & Production',        'color': '#c44aff'},
-        ],
-        'tasks': [
-            # ── Planning & Authority ────────────────────────────────────────────
-            {'title': 'Define capability need & problem statement',  'category': 'Planning & Authority',      'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Frame the capability gap and the problem the prototype will solve.', 'percent_complete': 0, 'depends_on': []},
-            {'title': 'Market research & engage consortium/industry', 'category': 'Planning & Authority',      'start_offset_minutes': 0,                  'duration_minutes': 1 * MONTH, 'notes': 'Survey the market and the consortium membership for viable prototype approaches.', 'percent_complete': 0, 'depends_on': []},
-            {'title': 'Confirm 4022 eligibility & document it',      'category': 'Planning & Authority',      'start_offset_minutes': 1 * MONTH,          'duration_minutes': 2 * WEEK,  'notes': 'Document the 4022 condition met: a nontraditional defense contractor participating to a significant extent; all significant participants small/nontraditional; at least one-third non-Federal cost share; or a senior procurement executive determination.', 'percent_complete': 0, 'depends_on': [0]},
-            {'title': 'Develop OT acquisition approach',             'category': 'Planning & Authority',      'start_offset_minutes': 1 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Approach incl. competitive procedures and the intent to enable a sole-source follow-on production OT.', 'percent_complete': 0, 'depends_on': [0, 1]},
-            {'title': 'Funding & payable-milestone strategy',        'category': 'Planning & Authority',      'start_offset_minutes': 1 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Define funding, payable-milestone structure, and data/IP strategy.', 'percent_complete': 0, 'depends_on': [3]},
-            # ── Solicitation (Consortium) ───────────────────────────────────────
-            {'title': 'Problem statement & evaluation criteria',     'category': 'Solicitation (Consortium)', 'start_offset_minutes': 2 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'With the consortium manager, finalize the problem statement and evaluation criteria.', 'percent_complete': 0, 'depends_on': [2, 4]},
-            {'title': 'Issue Request for White Papers (RWP)',        'category': 'Solicitation (Consortium)', 'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 3 * WEEK, 'notes': 'Solicit white papers from consortium members.', 'percent_complete': 0, 'depends_on': [5]},
-            {'title': "Proposers' day / industry Q&A",               'category': 'Solicitation (Consortium)', 'start_offset_minutes': 2 * MONTH + 3 * WEEK,'duration_minutes': 2 * DAY,  'notes': 'Clarify the problem statement and answer questions during the open period.', 'percent_complete': 0, 'depends_on': [5]},
-            # ── Evaluation & Down-Select ────────────────────────────────────────
-            {'title': 'Evaluate white papers',                       'category': 'Evaluation & Down-Select',  'start_offset_minutes': 3 * MONTH + 2 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Assess concepts against the criteria.', 'percent_complete': 0, 'depends_on': [6]},
-            {'title': 'Down-select & invite proposals',              'category': 'Evaluation & Down-Select',  'start_offset_minutes': 4 * MONTH,          'duration_minutes': 1 * WEEK,  'notes': 'Invite the strongest offerors to submit prototype proposals.', 'percent_complete': 0, 'depends_on': [8]},
-            {'title': 'Issue Request for Prototype Proposals (RPP)', 'category': 'Evaluation & Down-Select',  'start_offset_minutes': 4 * MONTH + 1 * WEEK,'duration_minutes': 3 * WEEK, 'notes': 'Solicit detailed prototype proposals from the down-selected offerors.', 'percent_complete': 0, 'depends_on': [9]},
-            {'title': 'Evaluate prototype proposals',                'category': 'Evaluation & Down-Select',  'start_offset_minutes': 5 * MONTH,          'duration_minutes': 3 * WEEK,  'notes': 'Technical and cost evaluation; recommend the awardee.', 'percent_complete': 0, 'depends_on': [10]},
-            # ── Negotiation & Award ─────────────────────────────────────────────
-            {'title': 'Negotiate agreement (SOW, milestones, IP)',   'category': 'Negotiation & Award',       'start_offset_minutes': 5 * MONTH + 3 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Negotiate statement of work, payable milestones, and data/IP rights.', 'percent_complete': 0, 'depends_on': [11]},
-            {'title': 'Agreement analysis & price reasonableness',   'category': 'Negotiation & Award',       'start_offset_minutes': 6 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK, 'notes': 'Document reasonableness of the negotiated price and key terms.', 'percent_complete': 0, 'depends_on': [12]},
-            {'title': 'Award prototype OT (competitive)',            'category': 'Negotiation & Award',       'start_offset_minutes': 7 * MONTH + 1 * WEEK,'duration_minutes': 3 * DAY,  'notes': 'Competitively awarded prototype OT — a successful prototype enables a sole-source follow-on production OT (4022(f)).', 'percent_complete': 0, 'depends_on': [13]},
-            # ── Prototype Execution ─────────────────────────────────────────────
-            {'title': 'Kickoff & integrated master schedule',        'category': 'Prototype Execution',       'start_offset_minutes': 7 * MONTH + 2 * WEEK,'duration_minutes': 1 * WEEK, 'notes': 'Stand up the effort: schedule, milestones, and management cadence.', 'percent_complete': 0, 'depends_on': [14]},
-            {'title': 'Prototype design & development',              'category': 'Prototype Execution',       'start_offset_minutes': 7 * MONTH + 3 * WEEK,'duration_minutes': 4 * MONTH,'notes': 'Mature the design; define interfaces and the build plan.', 'percent_complete': 0, 'depends_on': [15]},
-            {'title': 'Payable milestone review',                    'category': 'Prototype Execution',       'start_offset_minutes': 9 * MONTH + 3 * WEEK,'duration_minutes': 3 * DAY,  'notes': 'Verify milestone completion and authorize payment; periodic throughout execution.', 'percent_complete': 0, 'depends_on': [15]},
-            {'title': 'Build / fabricate prototype',                 'category': 'Prototype Execution',       'start_offset_minutes': 11 * MONTH + 3 * WEEK,'duration_minutes': 5 * MONTH,'notes': 'Fabricate and integrate the fieldable prototype.', 'percent_complete': 0, 'depends_on': [16]},
-            {'title': 'Prototype test & demonstration',             'category': 'Prototype Execution',       'start_offset_minutes': 16 * MONTH + 3 * WEEK,'duration_minutes': 3 * MONTH,'notes': 'Demonstrate the prototype against the requirement in a relevant environment.', 'percent_complete': 0, 'depends_on': [18]},
-            # ── Completion & Production ──────────────────────────────────────────
-            {'title': 'Document successful completion',              'category': 'Completion & Production',    'start_offset_minutes': 19 * MONTH + 3 * WEEK,'duration_minutes': 2 * WEEK,'notes': 'Successful-completion determination — the predicate for a sole-source follow-on production OT.', 'percent_complete': 0, 'depends_on': [19]},
-            {'title': 'Production readiness / transition decision',  'category': 'Completion & Production',    'start_offset_minutes': 20 * MONTH + 1 * WEEK,'duration_minutes': 1 * MONTH,'notes': 'Decide whether to pursue follow-on production or transition to another pathway.', 'percent_complete': 0, 'depends_on': [20]},
-            {'title': 'Award follow-on production OT / transition',  'category': 'Completion & Production',    'start_offset_minutes': 21 * MONTH + 1 * WEEK,'duration_minutes': 4 * MONTH,'notes': 'Sole-source follow-on production OT (no further competition required) or transition to the next acquisition pathway.', 'percent_complete': 0, 'depends_on': [21]},
         ],
     },
     'homebrew': {
@@ -522,6 +377,194 @@ BUILTIN_TEMPLATES = {
             {'title': 'Pore-fill, sand & spray finish'        , 'category': 'Finishing'    , 'start_offset_minutes': 71 * DAY,  'duration_minutes': 10 * DAY, 'notes': 'Grain-fill open-pored woods, sand to ~320, then spray several coats of nitrocellulose lacquer (or shellac/poly) with flash-off time between coats. Mask the fretboard and bridge gluing area.', 'percent_complete': 0, 'depends_on': [8]},
             {'title': 'Finish cure'                           , 'category': 'Finishing'    , 'start_offset_minutes': 81 * DAY,  'duration_minutes': 3 * WEEK, 'notes': 'Let nitro cure ~2-4 weeks before leveling and buffing so solvents gas off and the film stops shrinking; buffing too early leaves a dull finish and later witness lines. Finish before gluing the bridge so glue bonds wood-to-wood, not over lacquer.', 'percent_complete': 0, 'depends_on': [9]},
             {'title': 'Glue bridge, install hardware & set up', 'category': 'Setup'        , 'start_offset_minutes': 102 * DAY, 'duration_minutes': 4 * DAY,  'notes': 'Level/buff the finish, scrape finish off the bridge footprint and glue the bridge, then fit nut, saddle and tuners and string up. Dial in action (string height), nut slots and intonation (saddle position) for a playable setup.', 'percent_complete': 0, 'depends_on': [10]},
+        ],
+    },
+
+    # ── Business & startup templates ─────────────────────────────────────────
+    'startup_mvp': {
+        'name': 'Startup MVP: Idea to Launch',
+        'description': 'A 12-week lean path from customer interviews to a public launch: validate the problem, scope one job for one persona, build the core flow, run a private beta, then launch.',
+        'categories': [
+            {'name': 'Discovery',    'color': '#818cf8'},
+            {'name': 'Product',      'color': '#c44aff'},
+            {'name': 'Engineering',  'color': '#4a88ff'},
+            {'name': 'Go-to-Market', 'color': '#ffd84a'},
+            {'name': 'Launch',       'color': '#34d399'},
+        ],
+        'tasks': [
+            {'title': 'Write problem & customer hypotheses',          'category': 'Discovery',    'start_offset_minutes': 0,        'duration_minutes': 3 * DAY,  'notes': 'One page: who has the problem, how they solve it today, why now. Name the riskiest assumption.',                       'percent_complete': 0, 'depends_on': []},
+            {'title': 'Run 15-20 customer interviews',                'category': 'Discovery',    'start_offset_minutes': 3 * DAY,  'duration_minutes': 2 * WEEK, 'notes': 'Ask about past behavior, not future intent. Recruit from communities, LinkedIn, and warm intros.',                    'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Synthesize findings & pick the riskiest assumption', 'category': 'Discovery', 'start_offset_minutes': 17 * DAY, 'duration_minutes': 3 * DAY, 'notes': 'Affinity-map the notes. Decide which hypothesis the MVP must test first.',                                          'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Define MVP scope: one job, one persona',       'category': 'Product',      'start_offset_minutes': 20 * DAY, 'duration_minutes': 4 * DAY,  'notes': 'Write the single user story the MVP must nail. Everything else goes on the "later" list.',                          'percent_complete': 0, 'depends_on': [2]},
+            {'title': 'Low-fi prototype & 5 usability tests',         'category': 'Product',      'start_offset_minutes': 24 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Clickable mockups are enough. Watch five people try the core flow before writing code.',                            'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Set up repo, CI, hosting & analytics',         'category': 'Engineering',  'start_offset_minutes': 24 * DAY, 'duration_minutes': 4 * DAY,  'notes': 'Boring, reliable defaults. Deploy an empty app to production on day one.',                                          'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Build the core flow',                          'category': 'Engineering',  'start_offset_minutes': 31 * DAY, 'duration_minutes': 3 * WEEK, 'notes': 'Ship the one job end to end. No settings pages, no admin, no edge cases yet.',                                      'percent_complete': 0, 'depends_on': [4, 5]},
+            {'title': 'Instrument activation & retention events',     'category': 'Engineering',  'start_offset_minutes': 52 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Track sign-up, first success moment, and return visits so the beta produces numbers, not anecdotes.',                'percent_complete': 0, 'depends_on': [6]},
+            {'title': 'Landing page & waitlist',                      'category': 'Go-to-Market', 'start_offset_minutes': 31 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Headline from the interviews, one call to action, an email capture. Start collecting demand early.',                 'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Pricing hypothesis & billing',                 'category': 'Go-to-Market', 'start_offset_minutes': 45 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Pick a starting price and wire up a checkout. Charging early is the strongest validation signal.',                    'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Private beta with 10 design partners',         'category': 'Launch',       'start_offset_minutes': 55 * DAY, 'duration_minutes': 2 * WEEK, 'notes': 'Onboard each partner personally. Weekly calls; watch the activation and retention numbers.',                        'percent_complete': 0, 'depends_on': [7, 8]},
+            {'title': 'Fix the top beta issues',                      'category': 'Engineering',  'start_offset_minutes': 69 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Only what blocks the core job. Resist feature requests until retention looks healthy.',                              'percent_complete': 0, 'depends_on': [10]},
+            {'title': 'Launch plan: channels, communities, press',    'category': 'Go-to-Market', 'start_offset_minutes': 62 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Choose 2-3 channels where the interviewees actually hang out. Draft the posts and the press note.',                 'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Public launch',                                'category': 'Launch',       'start_offset_minutes': 77 * DAY, 'duration_minutes': 2 * DAY,  'notes': 'Flip the waitlist open, publish, and be online all day answering questions.',                                       'percent_complete': 0, 'depends_on': [9, 11, 12]},
+            {'title': 'Launch retro & next-30-days plan',             'category': 'Launch',       'start_offset_minutes': 82 * DAY, 'duration_minutes': 2 * DAY,  'notes': 'What converted, what did not, what the first paying users asked for. Set the next experiment.',                     'percent_complete': 0, 'depends_on': [13]},
+        ],
+    },
+    'seed_round': {
+        'name': 'Seed Fundraising Round',
+        'description': 'A ~16-week seed raise: prepare the story and numbers, build an investor pipeline, run a tight pitching sprint, secure a lead, then close and announce.',
+        'categories': [
+            {'name': 'Preparation',       'color': '#818cf8'},
+            {'name': 'Investor Pipeline', 'color': '#4a88ff'},
+            {'name': 'Pitching',          'color': '#c44aff'},
+            {'name': 'Closing',           'color': '#34d399'},
+        ],
+        'tasks': [
+            {'title': 'Define the raise: amount, use of funds, runway', 'category': 'Preparation',       'start_offset_minutes': 0,                   'duration_minutes': 1 * WEEK, 'notes': 'How much buys 18-24 months and which milestones it must reach.',                                                     'percent_complete': 0, 'depends_on': []},
+            {'title': 'Financial model & 18-month plan',                'category': 'Preparation',       'start_offset_minutes': 1 * WEEK,            'duration_minutes': 2 * WEEK, 'notes': 'Hiring plan, burn, revenue assumptions. Investors will stress-test every line.',                                     'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Pitch deck',                                     'category': 'Preparation',       'start_offset_minutes': 1 * WEEK,            'duration_minutes': 2 * WEEK, 'notes': 'Problem, product, traction, market, team, ask. 12-15 slides; the narrative matters more than the design.',           'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Assemble the data room',                         'category': 'Preparation',       'start_offset_minutes': 3 * WEEK,            'duration_minutes': 1 * WEEK, 'notes': 'Cap table, financials, key metrics, customer references, incorporation docs, IP assignments.',                       'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Choose the instrument: SAFE vs priced round',    'category': 'Preparation',       'start_offset_minutes': 3 * WEEK,            'duration_minutes': 1 * WEEK, 'notes': 'Decide with counsel. Model dilution under a few valuation and cap scenarios.',                                       'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Build a target list of 60-100 investors',        'category': 'Investor Pipeline', 'start_offset_minutes': 2 * WEEK,            'duration_minutes': 1 * WEEK, 'notes': 'Filter by stage, sector, check size, and recent activity. Rank into tiers.',                                       'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Line up warm intros',                            'category': 'Investor Pipeline', 'start_offset_minutes': 3 * WEEK,            'duration_minutes': 2 * WEEK, 'notes': 'Ask founders and angels who know each target. Send a forwardable blurb they can paste.',                            'percent_complete': 0, 'depends_on': [5]},
+            {'title': 'Practice the pitch with advisors',               'category': 'Pitching',          'start_offset_minutes': 4 * WEEK,            'duration_minutes': 1 * WEEK, 'notes': 'Five dry runs. Collect the hardest questions and bake the answers into the deck.',                                   'percent_complete': 0, 'depends_on': [2]},
+            {'title': 'First-meeting sprint',                           'category': 'Pitching',          'start_offset_minutes': 5 * WEEK,            'duration_minutes': 2 * WEEK, 'notes': 'Batch every first meeting into two weeks so the process creates momentum and competition.',                        'percent_complete': 0, 'depends_on': [3, 6, 7]},
+            {'title': 'Partner meetings & follow-ups',                  'category': 'Pitching',          'start_offset_minutes': 7 * WEEK,            'duration_minutes': 3 * WEEK, 'notes': 'Second and third meetings, partner presentations, customer calls. Send weekly traction updates.',                    'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Secure a lead investor',                         'category': 'Pitching',          'start_offset_minutes': 10 * WEEK,           'duration_minutes': 2 * WEEK, 'notes': 'The lead sets terms and signals to everyone else. Push for a decision date.',                                       'percent_complete': 0, 'depends_on': [9]},
+            {'title': 'Negotiate the term sheet',                       'category': 'Closing',           'start_offset_minutes': 12 * WEEK,           'duration_minutes': 1 * WEEK, 'notes': 'Valuation, pro rata, board seat, option pool. Review every clause with counsel.',                                   'percent_complete': 0, 'depends_on': [4, 10]},
+            {'title': 'Fill the round with follow-on investors',        'category': 'Closing',           'start_offset_minutes': 12 * WEEK,           'duration_minutes': 2 * WEEK, 'notes': 'Go back to the warm no-but-maybes with the lead in hand. Keep allocation for strategic angels.',                    'percent_complete': 0, 'depends_on': [10]},
+            {'title': 'Legal docs & due diligence',                     'category': 'Closing',           'start_offset_minutes': 13 * WEEK,           'duration_minutes': 2 * WEEK, 'notes': 'Answer diligence requests from the data room. Finalize the financing documents.',                                   'percent_complete': 0, 'depends_on': [11]},
+            {'title': 'Sign, wire & close',                             'category': 'Closing',           'start_offset_minutes': 15 * WEEK,           'duration_minutes': 3 * DAY,  'notes': 'Signatures, wires confirmed, cap table updated.',                                                                  'percent_complete': 0, 'depends_on': [12, 13]},
+            {'title': 'Announce & start monthly investor updates',      'category': 'Closing',           'start_offset_minutes': 15 * WEEK + 3 * DAY, 'duration_minutes': 2 * DAY,  'notes': 'Announcement post, thank-yous, and a standing monthly update template.',                                            'percent_complete': 0, 'depends_on': [14]},
+        ],
+    },
+    'customer_discovery': {
+        'name': 'Customer Discovery Sprint',
+        'description': 'Four weeks to test your riskiest customer and problem hypotheses with 20 interviews, then make a pivot-or-persevere call.',
+        'categories': [
+            {'name': 'Plan',       'color': '#818cf8'},
+            {'name': 'Recruit',    'color': '#ffd84a'},
+            {'name': 'Interview',  'color': '#4a88ff'},
+            {'name': 'Synthesize', 'color': '#c44aff'},
+            {'name': 'Decide',     'color': '#34d399'},
+        ],
+        'tasks': [
+            {'title': 'Write customer & problem hypotheses',          'category': 'Plan',       'start_offset_minutes': 0,        'duration_minutes': 2 * DAY, 'notes': 'Who, what problem, how they cope today, what would make them switch.',                            'percent_complete': 0, 'depends_on': []},
+            {'title': 'Draft the interview script',                   'category': 'Plan',       'start_offset_minutes': 2 * DAY,  'duration_minutes': 1 * DAY, 'notes': 'Open-ended questions about past behavior. Never pitch, never ask "would you use this?"',         'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Define the target segment & screener',         'category': 'Plan',       'start_offset_minutes': 2 * DAY,  'duration_minutes': 1 * DAY, 'notes': 'Three screener questions that separate real customers from everyone else.',                      'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Recruit 20 interviewees',                      'category': 'Recruit',    'start_offset_minutes': 3 * DAY,  'duration_minutes': 1 * WEEK, 'notes': 'Communities, LinkedIn, customer lists, warm intros. Offer a small thank-you.',                   'percent_complete': 0, 'depends_on': [2]},
+            {'title': 'Schedule the interviews',                      'category': 'Recruit',    'start_offset_minutes': 10 * DAY, 'duration_minutes': 2 * DAY, 'notes': '30 minutes each, two per day max so notes stay fresh.',                                            'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Pilot 3 interviews & refine the script',       'category': 'Interview',  'start_offset_minutes': 12 * DAY, 'duration_minutes': 2 * DAY, 'notes': 'Cut questions that produce nothing; add follow-ups where people light up.',                       'percent_complete': 0, 'depends_on': [1, 4]},
+            {'title': 'Interviews: week 1',                           'category': 'Interview',  'start_offset_minutes': 14 * DAY, 'duration_minutes': 5 * DAY, 'notes': 'Two people per call: one asks, one takes verbatim notes.',                                        'percent_complete': 0, 'depends_on': [5]},
+            {'title': 'Interviews: week 2',                           'category': 'Interview',  'start_offset_minutes': 19 * DAY, 'duration_minutes': 5 * DAY, 'notes': 'Stop early if the answers converge. Keep going if they do not.',                                  'percent_complete': 0, 'depends_on': [6]},
+            {'title': 'Tag & affinity-map the notes',                 'category': 'Synthesize', 'start_offset_minutes': 21 * DAY, 'duration_minutes': 3 * DAY, 'notes': 'Start while interviews are still running. Cluster quotes into pains, workarounds, and triggers.', 'percent_complete': 0, 'depends_on': [6]},
+            {'title': 'Score each hypothesis',                        'category': 'Synthesize', 'start_offset_minutes': 24 * DAY, 'duration_minutes': 2 * DAY, 'notes': 'Validated, invalidated, or unclear, with the supporting quotes for each.',                          'percent_complete': 0, 'depends_on': [7, 8]},
+            {'title': 'Findings memo & personas',                     'category': 'Synthesize', 'start_offset_minutes': 26 * DAY, 'duration_minutes': 2 * DAY, 'notes': 'Two pages, readable by anyone on the team. Include what surprised you.',                           'percent_complete': 0, 'depends_on': [9]},
+            {'title': 'Pivot / persevere decision',                   'category': 'Decide',     'start_offset_minutes': 28 * DAY, 'duration_minutes': 1 * DAY, 'notes': 'Whole team in the room. Decide based on the memo, not on who argues best.',                        'percent_complete': 0, 'depends_on': [10]},
+            {'title': 'Plan the next experiment',                     'category': 'Decide',     'start_offset_minutes': 29 * DAY, 'duration_minutes': 1 * DAY, 'notes': 'Name the next riskiest assumption and the cheapest test for it.',                                  'percent_complete': 0, 'depends_on': [11]},
+        ],
+    },
+    'gtm_launch': {
+        'name': 'Go-to-Market Launch',
+        'description': 'An 8-week go-to-market plan for a new product or major release: positioning, pricing and packaging, sales enablement, marketing assets, launch day, and the 30-day review.',
+        'categories': [
+            {'name': 'Positioning',         'color': '#c44aff'},
+            {'name': 'Pricing & Packaging', 'color': '#818cf8'},
+            {'name': 'Sales Enablement',    'color': '#4a88ff'},
+            {'name': 'Marketing',           'color': '#ffd84a'},
+            {'name': 'Launch',              'color': '#34d399'},
+        ],
+        'tasks': [
+            {'title': 'Define the ICP & positioning statement',     'category': 'Positioning',         'start_offset_minutes': 0,                  'duration_minutes': 1 * WEEK, 'notes': 'For [who], who [need], the product is a [category] that [key benefit], unlike [alternative].',       'percent_complete': 0, 'depends_on': []},
+            {'title': 'Messaging hierarchy & competitive battlecard', 'category': 'Positioning',       'start_offset_minutes': 1 * WEEK,           'duration_minutes': 1 * WEEK, 'notes': 'Headline, three pillars, proof points. One page per competitor on how to win.',                       'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Pricing tiers & packaging',                  'category': 'Pricing & Packaging', 'start_offset_minutes': 1 * WEEK,           'duration_minutes': 2 * WEEK, 'notes': 'Which features land in which tier, and the metric you charge on.',                                  'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Billing & plan pages live',                  'category': 'Pricing & Packaging', 'start_offset_minutes': 3 * WEEK,           'duration_minutes': 1 * WEEK, 'notes': 'Checkout, upgrade paths, and the public pricing page, tested end to end.',                            'percent_complete': 0, 'depends_on': [2]},
+            {'title': 'Sales deck & demo script',                   'category': 'Sales Enablement',    'start_offset_minutes': 2 * WEEK,           'duration_minutes': 1 * WEEK, 'notes': 'A 15-minute demo that follows the messaging pillars.',                                                'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Objection handling & FAQ',                   'category': 'Sales Enablement',    'start_offset_minutes': 3 * WEEK,           'duration_minutes': 4 * DAY,  'notes': 'Collect the top 20 questions from support and sales; write the answers once.',                      'percent_complete': 0, 'depends_on': [2, 4]},
+            {'title': 'Train sales & support',                      'category': 'Sales Enablement',    'start_offset_minutes': 5 * WEEK,           'duration_minutes': 3 * DAY,  'notes': 'Live walkthrough, recorded. Everyone can give the demo before launch day.',                          'percent_complete': 0, 'depends_on': [3, 5]},
+            {'title': 'Website & landing page refresh',             'category': 'Marketing',           'start_offset_minutes': 2 * WEEK,           'duration_minutes': 2 * WEEK, 'notes': 'Home page and product page rewritten around the new messaging.',                                    'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Launch content: blog, case study, video',    'category': 'Marketing',           'start_offset_minutes': 3 * WEEK,           'duration_minutes': 3 * WEEK, 'notes': 'One announcement post, one customer story, one two-minute product video.',                          'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Email & social campaign build',              'category': 'Marketing',           'start_offset_minutes': 6 * WEEK,           'duration_minutes': 1 * WEEK, 'notes': 'Announcement email, three-part nurture, social posts scheduled for launch week.',                   'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Press & analyst outreach',                   'category': 'Marketing',           'start_offset_minutes': 5 * WEEK,           'duration_minutes': 2 * WEEK, 'notes': 'Embargoed briefings the week before launch. Offer customer references.',                             'percent_complete': 0, 'depends_on': [1, 7]},
+            {'title': 'Launch day',                                 'category': 'Launch',              'start_offset_minutes': 7 * WEEK,           'duration_minutes': 1 * DAY,  'notes': 'Publish everything at once. Track sign-ups, demo requests, and support volume hourly.',              'percent_complete': 0, 'depends_on': [6, 7, 9, 10]},
+            {'title': 'Launch-week war room',                       'category': 'Launch',              'start_offset_minutes': 7 * WEEK + 1 * DAY, 'duration_minutes': 4 * DAY,  'notes': 'Daily 15-minute metrics review; fix what is confusing people in the funnel.',                       'percent_complete': 0, 'depends_on': [11]},
+            {'title': '30-day funnel review & iterate',             'category': 'Launch',              'start_offset_minutes': 8 * WEEK + 3 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Conversion by channel, win/loss notes from sales, pricing feedback. Decide the next push.',          'percent_complete': 0, 'depends_on': [12]},
+        ],
+    },
+    'key_hire': {
+        'name': 'Hire a Key Role',
+        'description': 'A seven-week structured hiring process: scorecard and job description, sourcing, screens, work sample, onsite loop, references, and a signed offer.',
+        'categories': [
+            {'name': 'Define',    'color': '#818cf8'},
+            {'name': 'Source',    'color': '#ffd84a'},
+            {'name': 'Interview', 'color': '#4a88ff'},
+            {'name': 'Close',     'color': '#34d399'},
+        ],
+        'tasks': [
+            {'title': 'Write the scorecard',                        'category': 'Define',    'start_offset_minutes': 0,        'duration_minutes': 2 * DAY,  'notes': 'Mission for the role, 3-5 measurable outcomes for year one, and the competencies that predict them.', 'percent_complete': 0, 'depends_on': []},
+            {'title': 'Job description & compensation band',        'category': 'Define',    'start_offset_minutes': 2 * DAY,  'duration_minutes': 2 * DAY,  'notes': 'Written from the scorecard. Publish the band; it saves everyone time.',                              'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Interview plan & panel',                     'category': 'Define',    'start_offset_minutes': 4 * DAY,  'duration_minutes': 1 * DAY,  'notes': 'Each interviewer owns specific competencies. Shared rubric, no repeated questions.',                  'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Post the role & activate referrals',         'category': 'Source',    'start_offset_minutes': 5 * DAY,  'duration_minutes': 1 * DAY,  'notes': 'Job boards, the company page, and a personal ask to the whole team.',                                 'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Outbound sourcing: 50 targeted reach-outs',  'category': 'Source',    'start_offset_minutes': 6 * DAY,  'duration_minutes': 2 * WEEK, 'notes': 'Personal notes from the hiring manager convert far better than recruiter templates.',                'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Recruiter screens',                          'category': 'Interview', 'start_offset_minutes': 8 * DAY,  'duration_minutes': 10 * DAY, 'notes': '20 minutes: motivation, logistics, compensation fit.',                                                'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Hiring-manager screens',                     'category': 'Interview', 'start_offset_minutes': 18 * DAY, 'duration_minutes': 10 * DAY, 'notes': '45 minutes on the scorecard outcomes and the candidate\'s track record against them.',               'percent_complete': 0, 'depends_on': [5]},
+            {'title': 'Work sample / take-home',                    'category': 'Interview', 'start_offset_minutes': 28 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'A 2-3 hour exercise that mirrors the real job. Pay for their time if it runs longer.',               'percent_complete': 0, 'depends_on': [6]},
+            {'title': 'Onsite loop',                                'category': 'Interview', 'start_offset_minutes': 35 * DAY, 'duration_minutes': 5 * DAY,  'notes': 'Half a day with the panel, including a work-sample review and a team lunch.',                        'percent_complete': 0, 'depends_on': [2, 7]},
+            {'title': 'Debrief & decision',                         'category': 'Close',     'start_offset_minutes': 40 * DAY, 'duration_minutes': 1 * DAY,  'notes': 'Written scores submitted before the meeting. Decide the same day.',                                  'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Reference checks',                           'category': 'Close',     'start_offset_minutes': 41 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Three references, including one former manager. Ask about the scorecard outcomes.',                  'percent_complete': 0, 'depends_on': [9]},
+            {'title': 'Offer & negotiation',                        'category': 'Close',     'start_offset_minutes': 44 * DAY, 'duration_minutes': 4 * DAY,  'notes': 'Call first, then the written offer. Set a decision date and stay in touch daily.',                   'percent_complete': 0, 'depends_on': [10]},
+            {'title': 'Signed: start date & onboarding plan',       'category': 'Close',     'start_offset_minutes': 48 * DAY, 'duration_minutes': 1 * DAY,  'notes': 'Equipment, accounts, a buddy, and a written 30-60-90 plan ready before day one.',                     'percent_complete': 0, 'depends_on': [11]},
+        ],
+    },
+    'okr_quarter': {
+        'name': 'Quarterly OKR Cycle',
+        'description': 'A 13-week quarter run on OKRs: set and align objectives, execute in two-week sprints, check in at weeks 4, 7 and 10, then score, retro, and draft the next quarter.',
+        'categories': [
+            {'name': 'Planning',  'color': '#818cf8'},
+            {'name': 'Execution', 'color': '#4a88ff'},
+            {'name': 'Check-ins', 'color': '#ffd84a'},
+            {'name': 'Review',    'color': '#34d399'},
+        ],
+        'tasks': [
+            {'title': 'Draft company objectives',                    'category': 'Planning',  'start_offset_minutes': 0,                   'duration_minutes': 3 * DAY,  'notes': 'Three at most. Qualitative, ambitious, and tied to the annual plan.',                                 'percent_complete': 0, 'depends_on': []},
+            {'title': 'Teams draft key results',                     'category': 'Planning',  'start_offset_minutes': 3 * DAY,             'duration_minutes': 4 * DAY,  'notes': '2-4 measurable KRs per objective. Outcomes, not task lists.',                                        'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Alignment review & finalize',                 'category': 'Planning',  'start_offset_minutes': 1 * WEEK,            'duration_minutes': 3 * DAY,  'notes': 'Resolve overlaps and dependencies between teams. Cut anything nobody owns.',                          'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Publish OKRs & scoring rules',                'category': 'Planning',  'start_offset_minutes': 10 * DAY,            'duration_minutes': 1 * DAY,  'notes': 'Everyone can see every OKR. Agree up front what 0.3, 0.7, and 1.0 mean.',                              'percent_complete': 0, 'depends_on': [2]},
+            {'title': 'Sprint 1',                                    'category': 'Execution', 'start_offset_minutes': 11 * DAY,            'duration_minutes': 2 * WEEK, 'notes': 'Each sprint goal maps to a key result.',                                                              'percent_complete': 0, 'depends_on': [3]},
+            {'title': 'Sprint 2',                                    'category': 'Execution', 'start_offset_minutes': 25 * DAY,            'duration_minutes': 2 * WEEK, 'notes': '',                                                                                                    'percent_complete': 0, 'depends_on': [4]},
+            {'title': 'Sprint 3',                                    'category': 'Execution', 'start_offset_minutes': 39 * DAY,            'duration_minutes': 2 * WEEK, 'notes': '',                                                                                                    'percent_complete': 0, 'depends_on': [5]},
+            {'title': 'Sprint 4',                                    'category': 'Execution', 'start_offset_minutes': 53 * DAY,            'duration_minutes': 2 * WEEK, 'notes': '',                                                                                                    'percent_complete': 0, 'depends_on': [6]},
+            {'title': 'Sprint 5',                                    'category': 'Execution', 'start_offset_minutes': 67 * DAY,            'duration_minutes': 2 * WEEK, 'notes': 'Last full sprint before scoring. Protect it from new asks.',                                          'percent_complete': 0, 'depends_on': [7]},
+            {'title': 'Week-4 check-in',                             'category': 'Check-ins', 'start_offset_minutes': 4 * WEEK,            'duration_minutes': 1 * DAY,  'notes': 'Confidence score per KR (on track / at risk / off track). Blockers to leadership.',                  'percent_complete': 0, 'depends_on': [4]},
+            {'title': 'Mid-quarter review',                          'category': 'Check-ins', 'start_offset_minutes': 7 * WEEK,            'duration_minutes': 1 * DAY,  'notes': 'Re-prioritize at-risk KRs. Drop or re-scope anything that no longer matters.',                        'percent_complete': 0, 'depends_on': [5]},
+            {'title': 'Week-10 check-in',                            'category': 'Check-ins', 'start_offset_minutes': 10 * WEEK,           'duration_minutes': 1 * DAY,  'notes': 'Final push list: what can still move a KR in three weeks.',                                           'percent_complete': 0, 'depends_on': [7]},
+            {'title': 'Final scoring',                               'category': 'Review',    'start_offset_minutes': 12 * WEEK,           'duration_minutes': 2 * DAY,  'notes': 'Score every KR with evidence. A 0.7 average means the goals were set right.',                         'percent_complete': 0, 'depends_on': [8]},
+            {'title': 'Quarter retrospective',                       'category': 'Review',    'start_offset_minutes': 12 * WEEK + 2 * DAY, 'duration_minutes': 1 * DAY,  'notes': 'What helped, what hurt, what to change about the process itself.',                                    'percent_complete': 0, 'depends_on': [12]},
+            {'title': "Draft next quarter's objectives",             'category': 'Review',    'start_offset_minutes': 12 * WEEK + 3 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Carry forward unfinished KRs deliberately or drop them; never by default.',                            'percent_complete': 0, 'depends_on': [13]},
+        ],
+    },
+    'company_setup': {
+        'name': 'Incorporate & Set Up the Company',
+        'description': 'Six weeks from "we should start a company" to a running entity: incorporation, founder equity, banking and accounting, core tools, insurance, payroll, and an equity plan. Work through the legal steps with counsel.',
+        'categories': [
+            {'name': 'Legal',      'color': '#c44aff'},
+            {'name': 'Finance',    'color': '#34d399'},
+            {'name': 'Operations', 'color': '#4a88ff'},
+            {'name': 'People',     'color': '#ffd84a'},
+        ],
+        'tasks': [
+            {'title': 'Choose the entity type & state',               'category': 'Legal',      'start_offset_minutes': 0,        'duration_minutes': 3 * DAY,  'notes': 'Decide with counsel. Investors typically expect a C corporation; the state matters for taxes and governance.', 'percent_complete': 0, 'depends_on': []},
+            {'title': 'File incorporation & adopt bylaws',            'category': 'Legal',      'start_offset_minutes': 3 * DAY,  'duration_minutes': 1 * WEEK, 'notes': 'Certificate of incorporation, bylaws, initial board consent, registered agent.',                       'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Founder stock, vesting & tax elections',       'category': 'Legal',      'start_offset_minutes': 10 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Stock purchase agreements with vesting. Some tax elections have short filing deadlines; confirm them with counsel.', 'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'IP assignment & confidentiality agreements',   'category': 'Legal',      'start_offset_minutes': 10 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Every founder assigns prior and future work product to the company.',                                  'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Obtain the tax ID',                            'category': 'Finance',    'start_offset_minutes': 10 * DAY, 'duration_minutes': 1 * DAY,  'notes': 'Needed before the bank account and payroll.',                                                          'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Open the business bank account',               'category': 'Finance',    'start_offset_minutes': 11 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Keep company and personal money separate from day one.',                                              'percent_complete': 0, 'depends_on': [4]},
+            {'title': 'Set up accounting & bookkeeping',              'category': 'Finance',    'start_offset_minutes': 14 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Accounting software connected to the bank, a chart of accounts, and a monthly close routine.',           'percent_complete': 0, 'depends_on': [5]},
+            {'title': 'Cap table & board records',                    'category': 'Legal',      'start_offset_minutes': 17 * DAY, 'duration_minutes': 2 * DAY,  'notes': 'Cap table software with every issuance recorded, plus a folder for board consents.',                  'percent_complete': 0, 'depends_on': [2]},
+            {'title': 'Domain, email & core tools',                   'category': 'Operations', 'start_offset_minutes': 3 * DAY,  'duration_minutes': 2 * DAY,  'notes': 'Domain, company email, password manager, shared drive, chat. Company-owned accounts, not personal ones.', 'percent_complete': 0, 'depends_on': [0]},
+            {'title': 'Business insurance',                           'category': 'Operations', 'start_offset_minutes': 17 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'General liability at minimum; add D&O before the first outside investor.',                             'percent_complete': 0, 'depends_on': [1]},
+            {'title': 'Payroll provider & employer registrations',    'category': 'People',     'start_offset_minutes': 21 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Payroll service, state employer registrations, and a benefits baseline.',                              'percent_complete': 0, 'depends_on': [4, 5]},
+            {'title': 'Equity incentive plan & hiring templates',     'category': 'People',     'start_offset_minutes': 24 * DAY, 'duration_minutes': 1 * WEEK, 'notes': 'Option pool sized for the first year of hires; offer letter and contractor agreement templates.',       'percent_complete': 0, 'depends_on': [7]},
+            {'title': 'Founder agreement & 90-day plan',              'category': 'People',     'start_offset_minutes': 31 * DAY, 'duration_minutes': 3 * DAY,  'notes': 'Roles, decision rights, and what happens if a founder leaves. Then the first 90 days of goals.',         'percent_complete': 0, 'depends_on': [2, 10]},
         ],
     },
 }
