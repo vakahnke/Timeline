@@ -164,3 +164,7 @@ frontend `npm ci && npm run build`.
 - `index.html` at the repo root is a **legacy standalone prototype** kept for reference —
   it is not part of the built app (the real frontend lives in `frontend/`).
 - This started as a single-user prototype and grew into the multi-tenant app documented here.
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE).
