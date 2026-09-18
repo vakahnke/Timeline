@@ -1,10 +1,10 @@
 # Timeline
 
-A self-hosted, team-based project planner built around a fast, interactive
-Gantt-style timeline. Create a project, invite teammates with roles, and plan it
-on a canvas you can drag, resize, zoom, and pan. Dependencies draw as arrows,
-the critical path is computed for you, and every project is isolated to its
-members.
+A self-hosted team project planner whose Gantt-style timeline is drawn on
+canvas, so dragging, zooming, dependency arrows, and the critical path stay
+smooth with hundreds of events on screen, including in Safari. Create a
+project, invite teammates with roles, and plan it on a surface you can drag,
+resize, zoom, and pan. Every project is isolated to its members.
 
 ![The timeline view: dependency arrows, the critical path in red, the now-line, and a minimap](docs/images/timeline.png)
 
@@ -233,8 +233,10 @@ Some directions that would be good contributions, roughly in order of effort:
 
 If you find a vulnerability, please report it privately rather than in a public
 issue. Use GitHub's "Report a vulnerability" button on the Security tab of this
-repository.
+repository. [SECURITY.md](SECURITY.md) has the details.
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE).
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Third-party
+dependencies and their licenses are listed in
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
