@@ -16,4 +16,9 @@ if [ "${RUN_COLLECTSTATIC:-1}" = "1" ]; then
   python manage.py collectstatic --noinput
 fi
 
+if [ "${SEED_DEMO:-0}" = "1" ]; then
+  # Idempotent: load_sample skips projects that already exist.
+  python manage.py load_sample
+fi
+
 exec "$@"

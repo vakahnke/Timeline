@@ -1,11 +1,20 @@
+from datetime import date, timedelta
+
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from events.models import Category, Event
+from events.models import Category, Comment, Event, Task
 from projects.models import Project, ProjectMembership, Role
+from projects.templates import create_project_from_spec
+from projects.templates_builtin import BUILTIN_TEMPLATES
 
 User = get_user_model()
+
+# The single-day sample below was authored for this date; it is shifted to "today"
+# at load time so the timeline opens on something current.
+SAMPLE_DAY = date(2026, 3, 7)
 
 SAMPLE_EVENTS = [
     # ── Engineering ──────────────────────────────────────────────────────────
@@ -44,9 +53,31 @@ DEMO_USERS = [
     ('viewer', 'viewer@example.com', 'demo12345', Role.VIEWER),
 ]
 
+# Multi-week projects instantiated from built-in templates, anchored relative to
+# today (in weeks) so some work is done, some is in flight, and some is upcoming.
+TEMPLATE_PROJECTS = [
+    # template slug,        start offset in weeks
+    ('startup_mvp',         -5),
+    ('seed_round',          -8),
+    ('gtm_launch',          +1),
+]
+
+# Sub-tasks and a comment thread added to the first in-flight event of each
+# template project, so the task panel, board, and comments have content.
+SAMPLE_TASKS = [
+    ('Outline the approach',      Task.Status.DONE,        'demo'),
+    ('Review with the team',      Task.Status.IN_PROGRESS, 'editor'),
+    ('Write up the result',       Task.Status.TODO,        'editor'),
+    ('Confirm the next step',     Task.Status.TODO,        'demo'),
+]
+SAMPLE_COMMENTS = [
+    ('editor', 'Started on this today. First pass is in the shared doc if anyone wants to look early.'),
+    ('demo',   'Looks good so far. Let\'s keep the scope tight and review on Thursday.'),
+]
+
 
 class Command(BaseCommand):
-    help = 'Seed a demo user, a demo project (with members) and a sample timeline.'
+    help = 'Seed demo users, a one-day Demo Project, and three template-based startup projects.'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -71,9 +102,10 @@ class Command(BaseCommand):
         owner = users['demo']
 
         if options['clear']:
-            deleted, _ = Project.objects.filter(name='Demo Project', owner=owner).delete()
+            names = ['Demo Project'] + [BUILTIN_TEMPLATES[slug]['name'] for slug, _ in TEMPLATE_PROJECTS]
+            deleted, _ = Project.objects.filter(name__in=names, owner=owner).delete()
             if deleted:
-                self.stdout.write(self.style.WARNING('Cleared existing Demo Project.'))
+                self.stdout.write(self.style.WARNING('Cleared existing sample projects.'))
 
         project, created = Project.objects.get_or_create(
             name='Demo Project', owner=owner,
@@ -96,14 +128,15 @@ class Command(BaseCommand):
         for name, color in cat_colors.items():
             Category.objects.get_or_create(project=project, name=name, defaults={'color': color})
 
-        # Events
+        # Events (shifted from SAMPLE_DAY to today)
+        shift = timezone.localdate() - SAMPLE_DAY
         created_events = 0
         for data in SAMPLE_EVENTS:
             Event.objects.create(
                 project=project,
                 title=data['title'],
-                start=parse_datetime(data['start']),
-                end=parse_datetime(data['end']),
+                start=parse_datetime(data['start']) + shift,
+                end=parse_datetime(data['end']) + shift,
                 category=data['category'],
                 color=data['color'],
                 notes=data.get('notes', ''),
@@ -114,3 +147,57 @@ class Command(BaseCommand):
             f'Seeded "Demo Project" with {len(cat_colors)} categories and {created_events} events. '
             f'Owner: demo / Editor: editor / Viewer: viewer (password: demo12345).'
         ))
+
+        self._seed_template_projects(users)
+
+    def _seed_template_projects(self, users):
+        """Instantiate a few built-in templates for the demo owner, relative to today."""
+        now = timezone.now()
+        anchor = timezone.localtime(now).replace(hour=9, minute=0, second=0, microsecond=0)
+        owner = users['demo']
+
+        for slug, weeks in TEMPLATE_PROJECTS:
+            spec = BUILTIN_TEMPLATES[slug]
+            if Project.objects.filter(name=spec['name'], owner=owner).exists():
+                self.stdout.write(self.style.WARNING(f'"{spec["name"]}" already exists; skipping.'))
+                continue
+
+            project = create_project_from_spec(
+                spec, name=spec['name'], description=spec['description'],
+                start=anchor + timedelta(weeks=weeks), owner=owner,
+            )
+            for username, _email, _password, role in DEMO_USERS:
+                ProjectMembership.objects.get_or_create(
+                    project=project, user=users[username], defaults={'role': role},
+                )
+
+            # Progress: finished events are 100%, in-flight ones proportional to elapsed time.
+            events = list(Event.objects.filter(project=project).order_by('start', 'id'))
+            in_flight = None
+            for ev in events:
+                if ev.end <= now:
+                    ev.percent_complete = 100
+                elif ev.start <= now:
+                    elapsed = (now - ev.start) / (ev.end - ev.start)
+                    ev.percent_complete = max(5, min(95, int(100 * elapsed)))
+                    in_flight = in_flight or ev
+                else:
+                    continue
+                ev.save(update_fields=['percent_complete'])
+
+            # Sub-tasks and a comment thread on one event so the board and panels have content.
+            target = in_flight or next((ev for ev in events if ev.start > now), None)
+            if target is not None:
+                for order, (title, status, assignee) in enumerate(SAMPLE_TASKS):
+                    Task.objects.create(
+                        event=target, title=title, status=status, order=order,
+                        owner=owner, assignee=users[assignee],
+                        due_date=(timezone.localdate() + timedelta(days=2 + order)),
+                    )
+                for author, body in SAMPLE_COMMENTS:
+                    Comment.objects.create(event=target, author=users[author], body=body)
+
+            self.stdout.write(self.style.SUCCESS(
+                f'Seeded "{spec["name"]}" from template ({len(events)} events, '
+                f'starting {weeks:+d} weeks from today).'
+            ))

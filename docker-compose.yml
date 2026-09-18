@@ -27,8 +27,16 @@ services:
     environment:
       RUN_COLLECTSTATIC: "0"
       POSTGRES_HOST: db
+      # Dev defaults so `docker compose up` works with no .env; a .env overrides them.
+      DATABASE_URL: ${DATABASE_URL:-postgres://timeline:timeline@db:5432/timeline}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      # SEED_DEMO=1 loads demo users + sample projects on first start (see README).
+      SEED_DEMO: ${SEED_DEMO:-0}
     env_file:
-      - .env
+      # Optional: dev defaults work with no .env at all (see .env.example).
+      - path: .env
+        required: false
     volumes:
       - ./backend:/app
     ports:
