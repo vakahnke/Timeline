@@ -38,8 +38,9 @@ need approval in the Django admin unless you set `REQUIRE_ACCOUNT_APPROVAL=0`
 
 ## What you get
 
-**The timeline.** Drag events to move them, drag their edges to reschedule, and
-drag across tracks to recategorize. Zoom smoothly from months down to minutes with
+**The timeline.** Hold Ctrl (⌘ on a Mac) and drag an event to move it, drag its
+edge to resize it, or drag it onto another track to recategorize. A plain drag
+pans the canvas, so you never nudge an event by accident. Zoom smoothly from months down to minutes with
 Ctrl/⌘ + scroll or a pinch. Pan by dragging empty space. Press `0` to fit the
 whole project. A minimap at the bottom shows the whole plan and lets you jump
 around long projects. Dependencies draw as arrows and the critical path is
