@@ -1,119 +1,181 @@
 # Timeline
 
-A multi-user, team-based **project-planning** app built around a fast, designed
-Gantt-style timeline. Sign up, create projects, invite teammates with roles, and plan
-each project on its own isolated, interactive timeline — with dependency arrows, a
-critical path, templates, and reusable teams.
+A self-hosted, team-based project planner built around a fast, interactive
+Gantt-style timeline. Create a project, invite teammates with roles, and plan it
+on a canvas you can drag, resize, zoom, and pan. Dependencies draw as arrows,
+the critical path is computed for you, and every project is isolated to its
+members.
 
-![Timeline](docs/images/timeline.png)
+![The timeline view: dependency arrows, the critical path in red, the now-line, and a minimap](docs/images/timeline.png)
 
----
+Timeline is free and open source under the [Apache 2.0 license](LICENSE). You can
+use it, modify it, and redistribute it, including commercially.
 
-## Highlights
+## Try it in two minutes
 
-- **Interactive timeline** — drag to move events, resize to reschedule, drag across tracks
-  to recategorize, smooth cursor-anchored zoom (sub-pixel-per-hour to minute detail), a
-  draggable **minimap** for long projects, dependency arrows, and an automatic **critical
-  path** (CPM).
-- **Multi-tenant & team-based** — every project is isolated; you only ever see projects
-  you're a member of. Per-project roles: **owner / editor / viewer**.
-- **Templates** — spin up a fully-formed project (categories + timed, dependency-linked
-  tasks) anchored to a start date. Built-ins include *Two-Week Sprint*, *Product Launch*,
-  *Event Plan*, *Custom Shop Build*, *MTA Rapid Prototyping (OTA)*, *Research Other
-  Transaction (10 USC 4021)*, and *Prototype Other Transaction (10 USC 4022)*. Save any
-  project as your own reusable template.
-- **Teams** — reusable groups of users; add a whole team to a project at a chosen role in
-  one click.
-- **JWT auth** with **admin-approved sign-ups** — new accounts stay inactive until you approve
-  them in Django admin (you're emailed on each registration; the user is emailed when activated).
-  Sign in with **email or username**.
-- **Self-documenting API** — Swagger UI, ReDoc, and an OpenAPI schema generated from the code.
+Requires [Docker](https://docs.docker.com/get-docker/). No other setup: no `.env`,
+no database to install.
 
-## Tech stack
+```bash
+git clone https://github.com/vakahnke/Timeline.git
+cd Timeline
+SEED_DEMO=1 docker compose up --build
+```
 
-| Layer | Stack |
-|------|-------|
-| **Backend** | Django 4.2 · Django REST Framework · SimpleJWT · drf-spectacular · drf-nested-routers · PostgreSQL 16 |
-| **Frontend** | React 18 · Vite 5 · React Router 6 (plain JSX, no UI framework — small & fast) |
-| **Infra** | Docker (dev) · nginx + gunicorn + Postgres (prod) · GitHub Actions CI |
+Open **http://localhost:5173** and sign in as `demo` with password `demo12345`.
+The seed creates three users and four projects, including two startup plans that
+are already in flight so the timeline, board, and task panels have content.
+
+| Username | Password    | Role on the sample projects |
+|----------|-------------|-----------------------------|
+| `demo`   | `demo12345` | Owner                       |
+| `editor` | `demo12345` | Editor                      |
+| `viewer` | `demo12345` | Viewer                      |
+
+Leave `SEED_DEMO` off for an empty instance. The first account you register will
+need approval in the Django admin unless you set `REQUIRE_ACCOUNT_APPROVAL=0`
+(see [`.env.example`](.env.example)).
+
+## What you get
+
+**The timeline.** Drag events to move them, drag their edges to reschedule, and
+drag across tracks to recategorize. Zoom smoothly from months down to minutes with
+Ctrl/⌘ + scroll or a pinch. Pan by dragging empty space. Press `0` to fit the
+whole project. A minimap at the bottom shows the whole plan and lets you jump
+around long projects. Dependencies draw as arrows and the critical path is
+highlighted automatically.
+
+**Three views of one plan.** Timeline for planning, a board grouped by task
+status for day-to-day work, and a list view that works on a phone.
+
+![The board view: tasks grouped into To do, In progress, Blocked, and Done](docs/images/board.png)
+
+**Events with substance.** Each event has notes, a percent-complete slider,
+predecessors and successors you pick from a list, sub-tasks with owners and due
+dates, and a comment thread.
+
+![The event editor with predecessors, successors, and percent complete](docs/images/event.png)
+
+**Templates.** Start a project from a built-in plan anchored to a date you choose,
+or save any project of your own as a template. Built-ins cover business,
+engineering, and hobby projects:
+
+- Business: Startup MVP: Idea to Launch, Seed Fundraising Round, Customer
+  Discovery Sprint, Go-to-Market Launch, Hire a Key Role, Quarterly OKR Cycle,
+  Incorporate & Set Up the Company
+- Work: Two-Week Sprint, Product Launch, Event Plan, Custom Shop Build
+- Hobby: Homebrew a Batch of Ale, Backyard Raised-Bed Garden, First Marathon,
+  Solid-Wood Dining Table Build, Record & Release a Song, Write Your First Novel,
+  Frame-Off Classic Car Restore, Hand-Knit Sweater, Open Water Diver
+  Certification, Build a Steel-String Acoustic
+
+![The template picker](docs/images/templates.png)
+
+**Teams and roles.** Every project is private to its members. Roles are owner,
+editor, commenter, and viewer. Reusable teams let you add a whole group to a
+project at one role in a click, and team membership changes flow through to
+projects live.
+
+**A dashboard that knows what you owe.** Your projects with progress bars, and a
+"My tasks" list across all of them sorted by due date.
+
+![The dashboard: project cards with progress, and your tasks across projects](docs/images/dashboard.png)
+
+**An API you can build on.** Everything the UI does goes through a documented
+REST API with JWT auth. Swagger UI lives at `/api/docs/` and ReDoc at
+`/api/redoc/` on any running instance.
 
 ## Documentation
 
-- 📐 [Architecture](docs/ARCHITECTURE.md) — tenancy model, data model, auth flow, frontend design, request flow
-- 📖 [User Guide](docs/USER_GUIDE.md) — accounts, projects, the timeline (gestures & shortcuts), templates, teams, roles
-- 🚀 [Deployment](docs/DEPLOYMENT.md) — Docker dev & prod, environment variables, nginx/gunicorn, CI
-- ☁️ [AWS Deployment](docs/AWS_DEPLOYMENT.md) — EC2 + elastic IP + Cloudflare + HTTPS via Terraform, and instance sizing
+- [User Guide](docs/USER_GUIDE.md): accounts, projects, the timeline (gestures
+  and shortcuts), templates, teams, roles, the admin console
+- [Architecture](docs/ARCHITECTURE.md): tenancy model, data model, auth flow,
+  frontend design, request flow
+- [Deployment](docs/DEPLOYMENT.md): production stack, environment variables,
+  nginx and gunicorn, CI
+- [AWS Deployment](docs/AWS_DEPLOYMENT.md): a worked example on EC2 with
+  Terraform, Cloudflare, and HTTPS
+- [Design docs](docs/design/): how larger features are designed before they are
+  built, plus the designs for the [board](docs/KANBAN.md) and
+  [permissions](docs/PERMISSIONS.md)
 
-## Quick start (development)
+## Tech stack
 
-Requires Docker. Postgres, the Django API, and the Vite dev server (with hot reload) all
-run in containers — one command brings the whole stack up.
+| Layer    | Stack                                                                                   |
+|----------|-----------------------------------------------------------------------------------------|
+| Backend  | Python, Django 4.2, Django REST Framework, SimpleJWT, drf-spectacular, PostgreSQL 16     |
+| Frontend | React 18, Vite 5, React Router 6, @dnd-kit for the board. Plain JSX and CSS, no UI kit  |
+| Infra    | Docker Compose for dev and prod, nginx + gunicorn in prod, GitHub Actions CI            |
+
+The timeline canvas, dependency arrows, lane backgrounds, and minimap are drawn on
+HTML canvas rather than the DOM, which is what keeps panning and zooming smooth
+with hundreds of events, including on Safari.
+
+## Development
+
+The dev stack runs Postgres, the Django API, and the Vite dev server with hot
+reload in containers. Source directories are mounted, so edits show up
+immediately.
 
 ```bash
-cp .env.example .env          # dev defaults work out of the box
 docker compose up --build
 ```
 
-| Surface | URL |
-|---------|-----|
-| App (SPA, hot reload) | http://localhost:5173 |
-| API | http://localhost:8000/api/ |
-| API docs (Swagger) | http://localhost:8000/api/docs/ |
-| Django admin | http://localhost:8000/admin/ |
+| Surface               | URL                             |
+|-----------------------|---------------------------------|
+| App (hot reload)      | http://localhost:5173           |
+| API                   | http://localhost:8000/api/      |
+| API docs (Swagger)    | http://localhost:8000/api/docs/ |
+| Django admin          | http://localhost:8000/admin/    |
 
-> The dev database is published on host port **5433** (override with `POSTGRES_HOST_PORT`)
-> so it won't clash with a local Postgres on 5432.
+Postgres is published on host port 5433 so it does not collide with a local
+Postgres. Copy `.env.example` to `.env` if you want to change any setting; the
+defaults work without it.
 
-Seed demo data and an admin (migrations run automatically on backend start):
+Useful commands:
 
 ```bash
-docker compose exec backend python manage.py load_sample      # demo project + users
-docker compose exec backend python manage.py createsuperuser  # for /admin
+docker compose exec backend python manage.py load_sample          # seed demo users and projects
+docker compose exec backend python manage.py load_sample --clear  # reseed from scratch
+docker compose exec backend python manage.py createsuperuser      # for /admin
+docker compose exec backend python manage.py test                 # backend test suite
 ```
 
-### Demo accounts
+CI runs on every push and pull request: Django system checks, a missing-migration
+check, migrations and tests against a Postgres service, and a production build of
+the frontend. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-`load_sample` creates a **Demo Project** and three users (password `demo12345`):
+## Production
 
-| Username | Role on the demo project |
-|----------|--------------------------|
-| `demo`   | owner  |
-| `editor` | editor |
-| `viewer` | viewer |
+The production stack is a single origin behind nginx: it serves the built SPA and
+proxies `/api`, `/admin`, and static files to gunicorn, with Postgres alongside,
+all in Docker.
 
-## Using it
+```bash
+cp .env.example .env    # set DJANGO_DEBUG=0, a real DJANGO_SECRET_KEY, your domain, RUN_COLLECTSTATIC=1
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-A 60-second tour (full details in the [User Guide](docs/USER_GUIDE.md)):
+[Deployment](docs/DEPLOYMENT.md) covers the environment variables, TLS options,
+and backups. [AWS Deployment](docs/AWS_DEPLOYMENT.md) is a complete worked
+example with Terraform.
 
-1. **Register** (an admin approves new accounts — you'll be emailed when yours is ready) or
-   **log in** with your email or username.
-2. **Create a project** — blank, or **From Template** to get a ready-made plan.
-3. **Open the timeline.** Drag events to move them, drag edges to resize, drag across tracks
-   to recategorize. Zoom with **Ctrl/⌘ + scroll** (or pinch) or the toolbar; **pan** by
-   dragging empty space; **Fit** (or press `0`) to frame the whole project. Use the
-   **minimap** at the bottom to jump around long projects.
-4. **Invite teammates** (owner) via the **Members** panel — by email/username, or add a
-   whole **Team** at a role.
+## API overview
 
-**Keyboard:** `+`/`−` zoom · `0` fit · `←`/`→`/`↑`/`↓` pan · `Home`/`End` jump to start/end.
+All endpoints take a JWT in the `Authorization` header. The live schema at
+`/api/docs/` is the reference; this is the shape.
 
-## API
-
-Nested, per-project REST API (JWT in the `Authorization` header). Browse it live at
-`/api/docs/` (Swagger) or `/api/redoc/`.
-
-| Method | Path | Notes |
-|--------|------|-------|
-| POST | `/api/auth/register/` · `/api/auth/token/` · `/api/auth/token/refresh/` · `/api/auth/logout/` | register · log in · refresh · revoke refresh |
-| GET | `/api/me/` | current user |
-| GET/POST/PATCH/DELETE | `/api/projects/` · `…/<id>/` | your projects |
-| GET/POST/PATCH/DELETE | `/api/projects/<id>/members/` · `…/<mid>/` | members (owner-only) |
-| GET/POST/PATCH/DELETE | `/api/projects/<id>/events/` · `…/categories/` | viewer reads, editor writes |
-| POST | `/api/projects/<id>/events/bulk/` | bulk-create events |
-| GET/POST/DELETE | `/api/templates/` · `…/<id>/` | built-in + saved templates |
-| POST | `/api/templates/instantiate/` | create a project from a template |
-| GET/POST/PATCH/DELETE | `/api/teams/` · `…/<id>/` · `…/members/` | reusable teams |
-| POST | `/api/projects/<id>/add-team/` | add a team's members at a role (owner-only) |
+| Method                | Path                                                          | Notes                              |
+|-----------------------|---------------------------------------------------------------|------------------------------------|
+| POST                  | `/api/auth/register/`, `/api/auth/token/`, `/api/auth/token/refresh/`, `/api/auth/logout/` | register, sign in, refresh, revoke |
+| GET                   | `/api/me/`                                                    | current user                       |
+| GET/POST/PATCH/DELETE | `/api/projects/`, `/api/projects/<id>/`                       | your projects                      |
+| GET/POST/PATCH/DELETE | `/api/projects/<id>/members/`                                 | members (owner only)               |
+| GET/POST/PATCH/DELETE | `/api/projects/<id>/events/`, `/api/projects/<id>/categories/` | viewers read, editors write       |
+| POST                  | `/api/projects/<id>/events/bulk/`                             | bulk-create events                 |
+| GET/POST/DELETE       | `/api/templates/`, `/api/templates/instantiate/`              | built-in and saved templates       |
+| GET/POST/PATCH/DELETE | `/api/teams/`, `/api/teams/<id>/members/`                     | reusable teams                     |
+| POST                  | `/api/projects/<id>/add-team/`                                | add a team at a role (owner only)  |
 
 ## Project structure
 
@@ -122,49 +184,56 @@ Timeline/
 ├── backend/                 # Django + DRF
 │   ├── timeline_project/     # settings, root urls, wsgi
 │   ├── projects/             # tenancy: Project, Membership, Team, Template, auth, permissions
-│   ├── events/               # timeline domain: Category, Event (+ load_sample)
-│   ├── Dockerfile · entrypoint.sh · requirements.txt
+│   ├── events/               # timeline domain: Category, Event, Task, Comment, load_sample
+│   └── Dockerfile · entrypoint.sh · requirements.txt
 ├── frontend/                # React + Vite SPA
 │   └── src/
-│       ├── pages/            # LoginPage, RegisterPage, ProjectsDashboard, ProjectTimeline, TeamsPage
-│       ├── components/       # Timeline, EventBlock, Minimap, Toolbar, modals (Event/Category/Members/Team/...)
-│       ├── auth/ · routes/ · ui/   # AuthContext + token store, ProtectedRoute, ToastProvider
-│       └── api.js            # JWT client with single-flight refresh
-├── nginx/nginx.conf         # prod reverse proxy + SPA serving
+│       ├── pages/            # Login, Register, ProjectsDashboard, ProjectTimeline, Teams
+│       ├── components/       # Timeline, EventBlock, Minimap, Board, Toolbar, modals and panels
+│       ├── auth/ · routes/ · ui/
+│       └── api.js            # JWT client with single-flight token refresh
+├── nginx/                   # prod reverse proxy + SPA serving
+├── terraform/               # optional AWS infrastructure
 ├── docker-compose.yml       # dev stack
-├── docker-compose.prod.yml  # prod stack (nginx + gunicorn + postgres)
-└── docs/                    # architecture, user guide, deployment
+├── docker-compose.prod.yml  # prod stack
+└── docs/                    # user guide, architecture, deployment, design docs
 ```
 
-## Production
+`index.html` at the repo root is the original single-file prototype the app grew
+out of. It is kept for reference and is not part of the build.
 
-Single-origin, **HTTPS**: the app runs behind Cloudflare's proxy, which terminates the
-browser-facing TLS at its edge. nginx presents a **Cloudflare Origin Certificate** so the
-Cloudflare→origin leg is encrypted and validated (SSL/TLS mode **Full (strict)**), serves the
-built SPA, and reverse-proxies `/api`, `/admin`, `/static`, `/media` to gunicorn — all in Docker.
+## Contributing
 
-```bash
-cp .env.example .env   # set DJANGO_DEBUG=0, secrets, DOMAIN, RUN_COLLECTSTATIC=1
-# Create a Cloudflare Origin Certificate and save it to nginx/certs/origin.pem + origin.key
-docker compose -f docker-compose.prod.yml up -d --build
-```
+Contributions are welcome, from typo fixes to new views. The short version:
 
-- **On AWS** (EC2 + elastic IP + Cloudflare + Terraform) with **instance sizing**, follow
-  **[AWS Deployment](docs/AWS_DEPLOYMENT.md)**. Infra lives in [`terraform/`](terraform/).
-- General prod details: **[Deployment](docs/DEPLOYMENT.md)**.
+1. Fork the repo and create a branch from `main`.
+2. Run the dev stack and make your change. Add or update tests in `backend/`
+   when you touch the API or data model.
+3. Make sure `python manage.py test` passes and the frontend builds
+   (`npm run build` in `frontend/`). CI runs the same checks on your pull request.
+4. Open a pull request that says what changed and why. Screenshots help for
+   anything visual.
 
-## Continuous integration
+For a larger feature, open an issue or a design doc first. The
+[design docs README](docs/design/README.md) describes the process: a short
+document that captures the current state, prior art, and the proposed design,
+so the discussion happens before the code.
 
-`.github/workflows/ci.yml` runs, on every push/PR: Django system checks, a
-missing-migration check, `migrate` and tests against a Postgres service container, plus a
-frontend `npm ci && npm run build`.
+Some directions that would be good contributions, roughly in order of effort:
 
-## Notes
+- iCalendar export of a project's events (RFC 5545)
+- Import and export for Microsoft Project XML
+- Manual card ordering within board columns
+- Guest access for people outside the team, read-only, without an account
+- A schedule-health check over the dependency graph: missing links, dangling
+  tasks, unusually high float
 
-- `index.html` at the repo root is a **legacy standalone prototype** kept for reference —
-  it is not part of the built app (the real frontend lives in `frontend/`).
-- This started as a single-user prototype and grew into the multi-tenant app documented here.
+## Security
+
+If you find a vulnerability, please report it privately rather than in a public
+issue. Use GitHub's "Report a vulnerability" button on the Security tab of this
+repository.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0. See [LICENSE](LICENSE).
