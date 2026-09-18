@@ -8,7 +8,7 @@ It's sized for a small team now and has a clear path to ~3000 users (see
 [Scaling](#scaling-to-3000-users)).
 
 ```
-Cloudflare proxy (timeline.vakahnke.com → Elastic IP) — edge TLS, Full (strict)
+Cloudflare proxy (timeline.example.com → Elastic IP) — edge TLS, Full (strict)
         │  HTTPS
         ▼
    EC2 instance ── nginx (Origin Cert, SPA + reverse proxy) ── gunicorn (Django) ── Postgres
@@ -20,7 +20,7 @@ Cloudflare proxy (timeline.vakahnke.com → Elastic IP) — edge TLS, Full (stri
 - An **AWS account** and the AWS CLI configured (`aws configure`) — Terraform uses these creds.
 - **Terraform ≥ 1.5** installed locally.
 - An **SSH key pair** locally (e.g. `~/.ssh/id_ed25519[.pub]`).
-- The **Cloudflare** domain (`timeline.vakahnke.com`) you control.
+- The **Cloudflare** domain (`timeline.example.com`) you control.
 
 ## 1. Provision the infrastructure (Terraform)
 
@@ -43,7 +43,7 @@ terraform output next_steps
 
 ## 2. DNS (Cloudflare)
 
-Create an **A record**: `timeline.vakahnke.com → <elastic IP>`.
+Create an **A record**: `timeline.example.com → <elastic IP>`.
 
 > While testing, you can leave the record **DNS only** (grey cloud) to hit the origin directly.
 > Once it's working, switch the proxy **on** (orange cloud) and set Cloudflare's SSL/TLS mode to
@@ -58,7 +58,7 @@ Create an **A record**: `timeline.vakahnke.com → <elastic IP>`.
 ```bash
 ssh ec2-user@<elastic IP>
 cd /opt/timeline
-git clone https://github.com/vakahnke/Timeline.git .     # (private repo: use a deploy key / PAT)
+git clone https://github.com/vakahnke/Timeline.git .
 cp .env.example .env
 ```
 
@@ -69,16 +69,16 @@ DJANGO_DEBUG=0
 DJANGO_SECRET_KEY=<python -c "import secrets; print(secrets.token_urlsafe(64))">
 POSTGRES_PASSWORD=<a strong password>
 DATABASE_URL=postgres://timeline:<that password>@db:5432/timeline
-DJANGO_ALLOWED_HOSTS=timeline.vakahnke.com
-DJANGO_CSRF_TRUSTED_ORIGINS=https://timeline.vakahnke.com
+DJANGO_ALLOWED_HOSTS=timeline.example.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://timeline.example.com
 DJANGO_CORS_ALLOWED_ORIGINS=
 RUN_COLLECTSTATIC=1
-DOMAIN=timeline.vakahnke.com
+DOMAIN=timeline.example.com
 WEB_CONCURRENCY=3
 
 # Account approval + email (new sign-ups stay inactive until you approve them)
 REQUIRE_ACCOUNT_APPROVAL=1
-SITE_URL=https://timeline.vakahnke.com
+SITE_URL=https://timeline.example.com
 ACCOUNT_NOTIFY_EMAIL=you@gmail.com
 EMAIL_HOST_USER=you@gmail.com
 EMAIL_HOST_PASSWORD=your-16-char-app-password
@@ -93,7 +93,7 @@ Install the origin certificate, then bring the stack up:
 
 ```bash
 # In the Cloudflare dashboard: SSL/TLS → Origin Server → Create Certificate
-#   (defaults: RSA, hostnames *.vakahnke.com + vakahnke.com, 15-year validity).
+#   (defaults: RSA, hostnames *.example.com + example.com, 15-year validity).
 # Copy the Origin Certificate and Private Key onto the box:
 mkdir -p nginx/certs
 # paste the Origin Certificate into  nginx/certs/origin.pem
@@ -104,7 +104,7 @@ docker compose -f docker-compose.prod.yml exec backend python manage.py createsu
 
 `migrate` + `collectstatic` run automatically on backend start. nginx mounts
 `nginx/certs/origin.pem` + `origin.key` read-only (both are gitignored). The app is now live at
-**https://timeline.vakahnke.com** once the Cloudflare proxy is on (orange) with SSL/TLS mode
+**https://timeline.example.com** once the Cloudflare proxy is on (orange) with SSL/TLS mode
 **Full (strict)**.
 
 ## 4. Backups
@@ -195,7 +195,7 @@ from ECR, TLS via ACM. Rough cost ~$200–400/mo depending on instance count and
 - **Security group:** SSH is restricted to `allowed_ssh_cidr` (set it!); 80/443 are public. IMDSv2
   is enforced and the EBS root volume is encrypted.
 - **Logs:** `docker compose -f docker-compose.prod.yml logs -f backend` (gunicorn logs to stdout).
-- **Admin:** `https://timeline.vakahnke.com/admin/` (after `createsuperuser`).
+- **Admin:** `https://timeline.example.com/admin/` (after `createsuperuser`).
 - **Health check:** `GET /api/health/` returns `200` (`{"status":"ok"}`) — use it for monitoring or
   an ALB target-group health check later.
 - **Approving accounts:** new sign-ups are inactive; you're emailed when one registers. Approve in

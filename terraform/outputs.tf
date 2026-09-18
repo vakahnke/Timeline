@@ -1,5 +1,5 @@
 output "public_ip" {
-  description = "Elastic IP — point the Cloudflare A record (timeline.vakahnke.com) at this."
+  description = "Elastic IP — point the Cloudflare A record (timeline.example.com) at this."
   value       = aws_eip.app.public_ip
 }
 

@@ -22,7 +22,7 @@ Full walkthrough, TLS, backups, and **instance sizing**: see [`../docs/AWS_DEPLO
 | `root_volume_size` | `30` | GiB, gp3 |
 | `ssh_public_key_path` | `~/.ssh/id_ed25519.pub` | installed for `ec2-user` |
 | `allowed_ssh_cidr` | `0.0.0.0/0` | **set to your IP/32** |
-| `domain` | `timeline.vakahnke.com` | used in outputs |
+| `domain` | `timeline.example.com` | used in outputs |
 
 > State is local by default (`terraform.tfstate`, gitignored). For team use, configure an S3
 > backend + DynamoDB lock.

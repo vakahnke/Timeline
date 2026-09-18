@@ -43,5 +43,5 @@ variable "allowed_ssh_cidr" {
 variable "domain" {
   description = "Domain the app is served at (DNS is managed in Cloudflare; used in outputs/tags)."
   type        = string
-  default     = "timeline.vakahnke.com"
+  default     = "timeline.example.com"
 }

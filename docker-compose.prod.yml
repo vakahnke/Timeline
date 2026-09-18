@@ -1,7 +1,7 @@
 # Production stack: nginx (TLS via Cloudflare Origin Certificate, serves built SPA +
 # reverse-proxies) -> gunicorn -> Postgres.
 #
-#   1) Point DNS (e.g. timeline.vakahnke.com) at the server's elastic IP (Cloudflare,
+#   1) Point DNS (e.g. timeline.example.com) at the server's elastic IP (Cloudflare,
 #      proxied / orange-cloud), and set the SSL/TLS mode to "Full (strict)".
 #   2) Set prod secrets + DOMAIN in .env.
 #   3) Place the Cloudflare Origin Certificate at nginx/certs/origin.pem + origin.key.
