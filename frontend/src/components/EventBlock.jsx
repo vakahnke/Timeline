@@ -27,7 +27,7 @@ function snap(ms, snapMinutes) {
   return Math.round(ms / grid) * grid
 }
 
-function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, labelMaxWidth = Infinity, labelSide = 'above', selected = false, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks }) {
+function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, labelMaxWidth = Infinity, labelSide = 'above', selected = false, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks, onPlainDrag }) {
   const blockRef = useRef(null)
 
   // Lane/category is the source of truth for color, so an event can never visually
@@ -63,12 +63,14 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     // Events are "sticky": without a modifier, a plain drag pans the timeline (handled by
     // the scroll container — we don't stopPropagation) and a clean click opens the editor.
-    // Hold Ctrl/⌘ to actually move the event.
+    // Hold Ctrl/⌘ to actually move the event. A plain drag that started on an event is
+    // almost always someone trying to move it, so report it (the timeline shows a hint).
     if (!(e.ctrlKey || e.metaKey)) {
       const cx = e.clientX, cy = e.clientY
       const clickUp = (up) => {
         document.removeEventListener('mouseup', clickUp)
         if (Math.abs(up.clientX - cx) < 5 && Math.abs(up.clientY - cy) < 5) onEdit(event.id)
+        else onPlainDrag?.()
       }
       document.addEventListener('mouseup', clickUp)
       return

@@ -1307,6 +1307,16 @@ fieldset.modal-body:disabled { opacity: 1; }
 .toast.saving { color: var(--warn);   border-color: rgba(251,191,36,0.35); }
 .toast.saved  { color: var(--success); border-color: rgba(52,211,153,0.35); }
 .toast.error  { color: var(--danger);  border-color: rgba(248,113,113,0.35); }
+.toast.hint   { color: var(--text-bright); border-color: rgba(129,140,248,0.45); }
+.tt-hint kbd {
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 5px;
+}
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (prefers-reduced-motion: reduce) {

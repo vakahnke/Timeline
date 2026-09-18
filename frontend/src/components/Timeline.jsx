@@ -2,6 +2,10 @@ import { useRef, useEffect, useLayoutEffect, useCallback, useState, useMemo, for
 import { RULER_HEIGHT, TRACK_HEIGHT, TICK_INTERVALS, MIN_PX_PER_HR, MAX_PX_PER_HR } from '../constants'
 import EventBlock from './EventBlock'
 import Minimap from './Minimap'
+import { useToast } from '../ui/ToastProvider'
+
+// Label for the modifier that arms event dragging, matching what the keyboard says.
+const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘' : 'Ctrl'
 
 const clampPx = (px) => Math.max(MIN_PX_PER_HR, Math.min(MAX_PX_PER_HR, px))
 
@@ -440,6 +444,17 @@ const Timeline = forwardRef(function Timeline(
     el.addEventListener('scroll', onScroll)
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
+
+  // A plain drag on an event pans instead of moving it; that is nearly always someone
+  // who does not know about the modifier yet, so teach it right then (at most every 20s).
+  const { flash } = useToast()
+  const lastHintRef = useRef(0)
+  const handlePlainDrag = useCallback(() => {
+    const now = Date.now()
+    if (now - lastHintRef.current < 20000) return
+    lastHintRef.current = now
+    flash(`Hold ${MOD_KEY} while dragging to move an event · a plain drag pans`, 'hint')
+  }, [flash])
 
   const handleTooltip = useCallback((event, x, y) => {
     if (marqueeingRef.current) { setTooltip(null); return }
@@ -957,6 +972,7 @@ const Timeline = forwardRef(function Timeline(
                       onEdit={onOpenEdit}
                       onDelete={handleDeleteEvent}
                       onTooltip={handleTooltip}
+                      onPlainDrag={handlePlainDrag}
                       onOpenTasks={onOpenTasks}
                       selected={selectedIds.has(ev.id)}
                       selectedIds={selectedIds}
@@ -1010,7 +1026,7 @@ const Timeline = forwardRef(function Timeline(
           </div>
           {tooltip.event.notes && <div className="tt-notes">{tooltip.event.notes}</div>}
           <div className="tt-track">{tooltip.event.category}</div>
-          {canEdit && <div className="tt-hint">Click to edit · ⌘/Ctrl-drag to move</div>}
+          {canEdit && <div className="tt-hint"><kbd>{MOD_KEY}</kbd>-drag to move · click to edit</div>}
         </div>
       )}
     </div>
