@@ -62,14 +62,27 @@ TEMPLATE_PROJECTS = [
     ('gtm_launch',          +1),
 ]
 
-# Sub-tasks and a comment thread added to the first in-flight event of each
-# template project, so the task panel, board, and comments have content.
-SAMPLE_TASKS = [
-    ('Outline the approach',      Task.Status.DONE,        'demo'),
-    ('Review with the team',      Task.Status.IN_PROGRESS, 'editor'),
-    ('Write up the result',       Task.Status.TODO,        'editor'),
-    ('Confirm the next step',     Task.Status.TODO,        'demo'),
+# Sub-task sets spread over the in-flight and next upcoming events of each template
+# project (one set per event, cycling), so the board and task panels have content.
+SAMPLE_TASK_SETS = [
+    [
+        ('Outline the approach',          Task.Status.DONE,        'demo'),
+        ('Review with the team',          Task.Status.IN_PROGRESS, 'editor'),
+        ('Write up the result',           Task.Status.TODO,        'editor'),
+        ('Confirm the next step',         Task.Status.TODO,        'demo'),
+    ],
+    [
+        ('Draft the checklist',           Task.Status.DONE,        'editor'),
+        ('Collect feedback from the team', Task.Status.IN_PROGRESS, 'demo'),
+        ('Waiting on the vendor quote',   Task.Status.BLOCKED,     'editor'),
+    ],
+    [
+        ('Book the kickoff meeting',      Task.Status.TODO,        'demo'),
+        ('Prepare the one-page brief',    Task.Status.TODO,        'editor'),
+        ('Share the numbers with finance', Task.Status.IN_PROGRESS, 'demo'),
+    ],
 ]
+# A short comment thread on the first in-flight event.
 SAMPLE_COMMENTS = [
     ('editor', 'Started on this today. First pass is in the shared doc if anyone wants to look early.'),
     ('demo',   'Looks good so far. Let\'s keep the scope tight and review on Thursday.'),
@@ -185,17 +198,21 @@ class Command(BaseCommand):
                     continue
                 ev.save(update_fields=['percent_complete'])
 
-            # Sub-tasks and a comment thread on one event so the board and panels have content.
-            target = in_flight or next((ev for ev in events if ev.start > now), None)
-            if target is not None:
-                for order, (title, status, assignee) in enumerate(SAMPLE_TASKS):
+            # Sub-tasks on the in-flight events and the next few upcoming ones, plus a
+            # comment thread on the first in-flight event, so the board and panels have content.
+            active = [ev for ev in events if ev.start <= now < ev.end]
+            upcoming = [ev for ev in events if ev.start > now]
+            targets = (active + upcoming)[:len(SAMPLE_TASK_SETS)]
+            for n, target in enumerate(targets):
+                for order, (title, status, assignee) in enumerate(SAMPLE_TASK_SETS[n]):
                     Task.objects.create(
                         event=target, title=title, status=status, order=order,
                         owner=owner, assignee=users[assignee],
-                        due_date=(timezone.localdate() + timedelta(days=2 + order)),
+                        due_date=(timezone.localdate() + timedelta(days=2 + order + 3 * n)),
                     )
+            if in_flight is not None:
                 for author, body in SAMPLE_COMMENTS:
-                    Comment.objects.create(event=target, author=users[author], body=body)
+                    Comment.objects.create(event=in_flight, author=users[author], body=body)
 
             self.stdout.write(self.style.SUCCESS(
                 f'Seeded "{spec["name"]}" from template ({len(events)} events, '
