@@ -389,6 +389,46 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
 .timeline-scroll { touch-action: pan-x pan-y; overscroll-behavior: contain; }
 .minimap, .drag-handle { touch-action: none; }     /* these drags are ours from the first pixel */
 .event-block { -webkit-touch-callout: none; }      /* no iOS callout on a long touch */
+
+/* ── Touch editing (long-press to move, grab dots to resize) ───────────────── */
+/* While the finger is held down the block eases up, so the 400ms wait reads as feedback. */
+.event-block.pressing { transition: transform 0.25s ease 0.12s, box-shadow 0.25s ease 0.12s; transform: scale(1.04); z-index: 9; }
+.event-block.lifted   { transform: scale(1.04); box-shadow: 0 16px 44px rgba(0,0,0,0.7), 0 0 0 2px rgba(255,255,255,0.22); }
+.event-block.touch-selected { box-shadow: 0 0 0 2px rgba(255,255,255,0.35); z-index: 8; }
+.grab-dot {
+  position: absolute;
+  width: 44px; height: 44px;          /* finger-sized hit area; the visible dot is the ::after */
+  z-index: 12;
+  touch-action: none;                 /* the drag is ours from the first pixel */
+  cursor: ew-resize;
+}
+.grab-dot::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 18px; height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--dot, #818cf8);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+.touch-coach {
+  position: absolute;
+  left: 12px; right: 12px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 45;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px 10px 14px;
+  font-size: 12px; line-height: 1.45;
+  color: var(--text-bright);
+  background: var(--bg-elevated);
+  border: 1px solid rgba(129,140,248,0.45);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+}
+.touch-coach span   { flex: 1 1 auto; }
+.touch-coach button { flex: 0 0 auto; min-height: 40px; }
 .timeline-scroll.panning * { cursor: grabbing !important; }
 
 .timeline-scroll::-webkit-scrollbar         { width: 5px; height: 5px; }

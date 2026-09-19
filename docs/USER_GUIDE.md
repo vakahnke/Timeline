@@ -47,6 +47,10 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
   drag** to reschedule (drag onto another track to recategorize). A plain drag pans the
   timeline instead. The cursor turns into a move arrow over events while Ctrl/⌘ is held.
 - **Resize:** **Ctrl/⌘-drag** either edge.
+- **On a phone or tablet:** drag to pan and **pinch to zoom**. **Press and hold** an event to pick it
+  up, then drag it to a new time or track. A press and hold also selects the event and shows two
+  **dots** at its ends; drag a dot to resize. A quick swipe that starts on an event still pans, so
+  nothing moves by accident, and **Undo** is in the toolbar. Tap elsewhere to deselect.
 - **Delete:** from the inline ✕ or the editor's **Delete** button.
 
 ### Categories (tracks)

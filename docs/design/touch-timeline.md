@@ -1,6 +1,6 @@
 # Touch Timeline — Design Document
 
-**Status:** Building — Phase 1 shipped 2026-09-19 (pointer events, pinch zoom, touch minimap). Phases 2 and 3 not started.
+**Status:** Building — Phases 1 and 2 shipped 2026-09-19 (navigate and edit by touch). Phase 3 (header rail, landscape toolbar, timeline as the phone default) not started.
 **Last updated:** 2026-09-19
 **Scope:** Make the timeline view itself fully usable by touch (phones and tablets): pan, pinch-zoom, move, resize, select, and the minimap.
 
@@ -206,7 +206,11 @@ open on the timeline like every other device. A saved preference still wins.
   resize strips no longer swallow taps on touch (they covered most of a narrow event). Original scope: Mechanical conversion of the
   three files, `touch-action`, pinch zoom, touch minimap. No behavior change for mouse
   users. After this the timeline is fully *navigable* on a phone.
-- **Phase 2 — long-press move + grab-dot resize (R3, R4, R7).** The lifted state, grab
+- **Phase 2 — long-press move + grab-dot resize (R3, R4, R7). SHIPPED.** As built: open
+  question 1 was settled as "a tap opens the editor, as on desktop"; the grab dots appear
+  after a long-press (with or without a drag), so there is no tap-to-select step and no
+  floating action bar. Native scrolling is held off during a lifted drag by a non-passive
+  `touchmove` listener rather than by toggling `overflow`. Original scope: The lifted state, grab
   dots, tap-to-select bar, coach mark. After this the timeline is fully *editable*.
 - **Phase 3 — canvas room + default view (R9).** The 32px header rail, landscape
   toolbar, timeline as the phone default.

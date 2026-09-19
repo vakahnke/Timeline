@@ -51,7 +51,7 @@ all docs, what's designed-but-unbuilt vs. shipped.
 
 <!-- Optional index. Update as docs are added so parked ideas stay visible. -->
 
-- [touch-timeline.md](touch-timeline.md) — **Building** (phase 1 shipped). Make the timeline itself usable by touch: pointer
+- [touch-timeline.md](touch-timeline.md) — **Building** (phases 1-2 shipped). Make the timeline itself usable by touch: pointer
   events, pinch zoom, long-press to move, grab-dot resize, touch minimap.
 - [probabilistic-schedule.md](probabilistic-schedule.md) — **Draft**. On-time probability/health that
   decays as deadlines near, + the factors driving it. Key constraint: needs a data foundation (task

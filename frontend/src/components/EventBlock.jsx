@@ -1,4 +1,11 @@
-import { useRef, useCallback, memo } from 'react'
+import { useRef, useCallback, useState, useEffect, memo } from 'react'
+
+// Touch: press and hold this long (without moving more than the slop) to pick an event up.
+// The touch counterpart of the Ctrl/⌘ modifier: a quick swipe that starts on an event still pans.
+const LONG_PRESS_MS = 400
+const PRESS_SLOP_PX = 8
+const DOT_HALF = 22   // half of the 44px grab-dot hit area
+const DOT_OUT  = 8    // how far outside the event's edge a dot is centred
 
 function fmtTime(ms) {
   return new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -29,6 +36,19 @@ function snap(ms, snapMinutes) {
 
 function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, isCritical, snapMinutes, top = 8, canEdit = true, autoPanSpeed = 64, labelMaxWidth = Infinity, labelSide = 'above', selected = false, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit, onDelete, onTooltip, onOpenTasks, onPlainDrag }) {
   const blockRef = useRef(null)
+
+  // Touch-selected: set after a long-press (or a touch move). Shows the two grab dots used
+  // to resize by touch. Any touch/click elsewhere clears it.
+  const [touchSel, setTouchSel] = useState(false)
+  useEffect(() => {
+    if (!touchSel) return
+    const off = (ev) => {
+      if (blockRef.current?.contains(ev.target) || ev.target.closest?.('.grab-dot')) return
+      setTouchSel(false)
+    }
+    document.addEventListener('pointerdown', off, true)
+    return () => document.removeEventListener('pointerdown', off, true)
+  }, [touchSel])
 
   // Lane/category is the source of truth for color, so an event can never visually
   // drift from its category (a per-event color is only a fallback for the rare event
@@ -76,23 +96,10 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       return
     }
 
-    // Events are "sticky": without a modifier, a plain drag pans the timeline (handled by
-    // the scroll container — we don't stopPropagation) and a clean click opens the editor.
-    // Hold Ctrl/⌘ to actually move the event. A plain drag that started on an event is
-    // almost always someone trying to move it, so report it (the timeline shows a hint).
-    // Touch has no modifier key: a tap opens the editor and a drag is the browser's native
-    // scroll (touch moves arrive with long-press — docs/design/touch-timeline.md, phase 2).
-    if (isTouch || !(e.ctrlKey || e.metaKey)) {
-      const cx = e.clientX, cy = e.clientY
-      onRelease((up) => {
-        if (Math.abs(up.clientX - cx) < 8 && Math.abs(up.clientY - cy) < 8) onEdit(event.id)
-        else if (!isTouch) onPlainDrag?.()      // the Ctrl/⌘ hint only makes sense with a keyboard
-      })
-      return
-    }
-
-    e.preventDefault()
-    e.stopPropagation()
+    const beginMove = (e, viaTouch = false) => {
+    e.preventDefault?.()
+    e.stopPropagation?.()
+    const pid = e.pointerId
     const noCtx = (ev) => ev.preventDefault()   // suppress the macOS Ctrl-click context menu
     document.addEventListener('contextmenu', noCtx)
 
@@ -127,6 +134,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     let ghosts = []   // faded placeholders left at each start position so the move is easy to eyeball / undo
 
     el.classList.add('dragging')
+    if (viaTouch) el.classList.add('lifted')
     document.body.style.cursor = 'grabbing'
 
     // Find the track lane under the cursor without hitting the dragged block
@@ -185,6 +193,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     }
 
     const onMove = (e) => {
+      if (viaTouch && e.pointerId !== pid) return   // ignore a second finger
       const dx = e.clientX - mouseX0
       const dy = e.clientY - mouseY0
       if (!moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return
@@ -205,21 +214,37 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       updateAutoScroll(e.clientX)
     }
 
-    const onUp = async (e) => {
+    const finish = () => {
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
       document.removeEventListener('contextmenu', noCtx)
       autoVel = 0
       if (raf) cancelAnimationFrame(raf)
       ghosts.forEach(g => g.remove())
-      el.classList.remove('dragging')
+      el.classList.remove('dragging', 'lifted')
       el.style.top = top + 'px'
       document.body.style.cursor = ''
       activeLane?.classList.remove('drag-over')
+    }
 
+    // The browser took the pointer away mid-drag (rare: a system gesture). Put everything back.
+    const onCancel = (e) => {
+      if (viaTouch && e.pointerId !== pid) return
+      finish()
+      for (const o of orig) o.n.style.left = o.left + 'px'
+      if (timeEl) timeEl.textContent = fmtSpan(s0, e0)
+    }
+
+    const onUp = async (e) => {
+      if (viaTouch && e.pointerId !== pid) return
+      finish()
+
+      // Touch: a long-press always ends selected, so the grab dots are there to resize with.
+      if (viaTouch) setTouchSel(true)
       // A click (no drag) opens the editor — so even a tiny block is editable
-      // without having to hit the small action button.
-      if (!moved) { onEdit(event.id); return }
+      // without having to hit the small action button. (A long-press that didn't move just selects.)
+      if (!moved) { if (!viaTouch) onEdit(event.id); return }
 
       const scrollDelta = scroller ? scroller.scrollLeft - scroll0 : 0
       const dx = (e.clientX - mouseX0) + scrollDelta
@@ -251,14 +276,79 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
 
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
+    }   // beginMove
+
+    // Touch has no modifier key. A tap opens the editor; a swipe is the browser's native scroll;
+    // press-and-hold picks the event up, and the same finger then drags it (time + track).
+    if (isTouch) {
+      const el = blockRef.current
+      const pid = e.pointerId, cx = e.clientX, cy = e.clientY
+      let last = e, lifted = false, timer = 0
+      const far = (p) => Math.hypot(p.clientX - cx, p.clientY - cy) > PRESS_SLOP_PX
+      // Once lifted, keep the browser from turning the drag into a scroll. The finger has not
+      // left the slop yet, so no scroll has begun and these touchmoves are still cancelable.
+      const blockScroll = (te) => { if (lifted) te.preventDefault() }
+      const noMenu = (ev) => ev.preventDefault()          // Android long-press context menu
+      const endTouch = (ev) => {
+        if (ev.pointerId !== pid) return
+        document.removeEventListener('pointerup', endTouch)
+        document.removeEventListener('pointercancel', endTouch)
+        el.removeEventListener('touchmove', blockScroll)
+        el.removeEventListener('contextmenu', noMenu)
+        el.classList.remove('pressing')
+      }
+      const stopWaiting = () => {
+        clearTimeout(timer)
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+        document.removeEventListener('pointercancel', stopWaiting)
+        el.classList.remove('pressing')
+      }
+      const move = (m) => { if (m.pointerId === pid) { last = m; if (far(m)) stopWaiting() } }   // it is a pan
+      const up   = (u) => { if (u.pointerId === pid) { stopWaiting(); if (!far(u)) onEdit(event.id) } }   // a tap
+      el.addEventListener('touchmove', blockScroll, { passive: false })
+      el.addEventListener('contextmenu', noMenu)
+      el.classList.add('pressing')                        // CSS eases the lift in, so the wait reads as feedback
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+      document.addEventListener('pointercancel', stopWaiting)
+      document.addEventListener('pointerup', endTouch)
+      document.addEventListener('pointercancel', endTouch)
+      timer = setTimeout(() => {
+        stopWaiting()
+        lifted = true
+        try { navigator.vibrate?.(10) } catch { /* not supported (iOS) */ }
+        beginMove({ clientX: last.clientX, clientY: last.clientY, pointerId: pid }, true)
+      }, LONG_PRESS_MS)
+      return
+    }
+
+    // Events are "sticky": without a modifier, a plain drag pans the timeline (handled by
+    // the scroll container — we don't stopPropagation) and a clean click opens the editor.
+    // Hold Ctrl/⌘ to actually move the event. A plain drag that started on an event is
+    // almost always someone trying to move it, so report it (the timeline shows a hint).
+    if (!(e.ctrlKey || e.metaKey)) {
+      const cx = e.clientX, cy = e.clientY
+      onRelease((up) => {
+        if (Math.abs(up.clientX - cx) < 5 && Math.abs(up.clientY - cy) < 5) onEdit(event.id)
+        else onPlainDrag?.()
+      })
+      return
+    }
+    beginMove(e)
   }, [event, pxPerHour, rangeStart, trackColorMap, top, snapMinutes, autoPanSpeed, color, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit])
 
   // ── Resize handles ────────────────────────────────────────────────────────
-  const handleResizeDown = useCallback((e, edge) => {
-    // Sticky: only resize while holding Ctrl/⌘ (otherwise let the timeline pan).
-    if (!(e.ctrlKey || e.metaKey)) return
+  const handleResizeDown = useCallback((e, edge, force = false) => {
+    // Sticky: only resize while holding Ctrl/⌘ (otherwise let the timeline pan). The touch
+    // grab dots pass `force`: they only exist on an event the user deliberately selected.
+    if (!force && !(e.ctrlKey || e.metaKey)) return
     e.stopPropagation()
     e.preventDefault()
+    const pid = e.pointerId
+    const dot = force ? e.currentTarget : null      // keep the dot under the finger while dragging
+    const dotAt = (edgeX) => (edge === 'left' ? edgeX - DOT_OUT : edgeX + DOT_OUT) - DOT_HALF
 
     const el      = blockRef.current
     const mouseX0 = e.clientX
@@ -273,23 +363,39 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     document.body.style.cursor = 'ew-resize'
 
     const onMove = (e) => {
+      if (e.pointerId !== pid) return
       const dtMs = ((e.clientX - mouseX0) / capPx) * 3_600_000
       if (edge === 'left') {
         const newS = Math.min(snap(s0 + dtMs, capSnap), e0 - 300_000)
         el.style.left  = msToX(newS) + 'px'
         el.style.width = Math.max(4, msToX(e0) - msToX(newS)) + 'px'
+        if (dot) dot.style.left = dotAt(msToX(newS)) + 'px'
         if (timeEl) timeEl.textContent = fmtSpan(newS, e0)
       } else {
         const newE = Math.max(snap(e0 + dtMs, capSnap), s0 + 300_000)
         el.style.width = Math.max(4, msToX(newE) - msToX(s0)) + 'px'
+        if (dot) dot.style.left = dotAt(msToX(newE)) + 'px'
         if (timeEl) timeEl.textContent = fmtSpan(s0, newE)
       }
     }
 
-    const onUp = async (e) => {
+    const revert = () => {
+      el.style.left  = msToX(s0) + 'px'
+      el.style.width = Math.max(4, msToX(e0) - msToX(s0)) + 'px'
+      if (dot) dot.style.left = dotAt(edge === 'left' ? msToX(s0) : msToX(e0)) + 'px'
+      if (timeEl) timeEl.textContent = fmtSpan(s0, e0)
+    }
+    const stop = () => {
       document.removeEventListener('pointermove', onMove)
       document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onCancel)
       document.body.style.cursor = ''
+    }
+    const onCancel = (e) => { if (e.pointerId === pid) { stop(); revert() } }
+
+    const onUp = async (e) => {
+      if (e.pointerId !== pid) return
+      stop()
 
       const dtMs = ((e.clientX - mouseX0) / capPx) * 3_600_000
       let newS = s0, newE = e0
@@ -302,14 +408,13 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
           end:   new Date(newE).toISOString(),
         })
       } catch {
-        el.style.left  = msToX(s0) + 'px'
-        el.style.width = Math.max(4, msToX(e0) - msToX(s0)) + 'px'
-        if (timeEl) timeEl.textContent = fmtSpan(s0, e0)
+        revert()
       }
     }
 
     document.addEventListener('pointermove', onMove)
     document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onCancel)
   }, [event, pxPerHour, rangeStart, snapMinutes, onUpdate])
 
   return (
@@ -317,7 +422,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     <div
       ref={blockRef}
       data-event-id={event.id}
-      className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}${event.task_count > 0 ? ' has-tasks' : ''}${selected ? ' selected' : ''}`}
+      className={`event-block${isCritical ? ' critical-path' : ''}${canEdit ? '' : ' readonly'}${event.task_count > 0 ? ' has-tasks' : ''}${selected ? ' selected' : ''}${touchSel ? ' touch-selected' : ''}`}
       style={{
         left:        x + 'px',
         top:         top + 'px',
@@ -372,6 +477,16 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         className="event-label-above"
         style={{ left: x + 'px', top: (labelSide === 'below' ? top + 48 : top - 12) + 'px', color, maxWidth: Number.isFinite(labelMaxWidth) ? labelMaxWidth + 'px' : undefined }}
       >{event.title}</div>
+    )}
+    {/* Touch resize handles: only on an event the user long-pressed. 44px hit area, centred
+        just outside each edge so they don't sit on top of each other on a narrow event. */}
+    {canEdit && touchSel && (
+      <>
+        <div className="grab-dot left"  style={{ left: (x - DOT_OUT - DOT_HALF) + 'px', top: (top + 2) + 'px', '--dot': color }}
+             onPointerDown={e => handleResizeDown(e, 'left', true)} />
+        <div className="grab-dot right" style={{ left: (x + w + DOT_OUT - DOT_HALF) + 'px', top: (top + 2) + 'px', '--dot': color }}
+             onPointerDown={e => handleResizeDown(e, 'right', true)} />
+      </>
     )}
     </>
   )

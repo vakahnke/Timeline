@@ -541,6 +541,17 @@ const Timeline = forwardRef(function Timeline(
     flash(`Hold ${MOD_KEY} while dragging to move an event · a plain drag pans`, 'hint')
   }, [flash])
 
+  // First visit on a touch device: say what the gestures are (the touch twin of the Ctrl/⌘ hint).
+  const [showCoach, setShowCoach] = useState(() => {
+    try {
+      return !!window.matchMedia?.('(hover: none)').matches && !localStorage.getItem('timeline:touchCoach')
+    } catch { return false }
+  })
+  const dismissCoach = useCallback(() => {
+    setShowCoach(false)
+    try { localStorage.setItem('timeline:touchCoach', '1') } catch { /* private mode */ }
+  }, [])
+
   const handleTooltip = useCallback((event, x, y) => {
     if (marqueeingRef.current) { setTooltip(null); return }
     setTooltip(event ? { event, x, y } : null)
@@ -1095,6 +1106,13 @@ const Timeline = forwardRef(function Timeline(
       {/* Marquee selection box (shift-drag) */}
       {marquee && (
         <div className="marquee" style={{ left: marquee.left + 'px', top: marquee.top + 'px', width: marquee.width + 'px', height: marquee.height + 'px' }} />
+      )}
+
+      {showCoach && canEdit && (
+        <div className="touch-coach" role="note">
+          <span>Drag to pan · pinch to zoom · <b>press and hold</b> an event to move it, then use the dots to resize</span>
+          <button type="button" onClick={dismissCoach}>Got it</button>
+        </div>
       )}
 
       {/* Tooltip */}
