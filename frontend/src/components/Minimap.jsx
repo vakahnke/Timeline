@@ -119,7 +119,11 @@ export default function Minimap({ scrollRef, range, pxPerHour, events, trackColo
     el.addEventListener('scroll', onScroll, { passive: true })
     const onResize = () => { drawRef.current(); updateRef.current() }
     window.addEventListener('resize', onResize)
-    return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize) }
+    // Rotation and layout changes settle after the window's resize event: watch the real boxes.
+    let raf = 0
+    const ro = window.ResizeObserver ? new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(onResize) }) : null
+    ro?.observe(el); if (wrapRef.current) ro?.observe(wrapRef.current)
+    return () => { el.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ro?.disconnect(); cancelAnimationFrame(raf) }
   }, [scrollRef])
 
   const navTo = (clientX) => {

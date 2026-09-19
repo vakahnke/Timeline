@@ -2156,6 +2156,18 @@ fieldset.modal-body:disabled { opacity: 1; }
   .minimap { height: 44px; }
   .toolbar { padding-right: 56px; }
   .toolbar .settings-wrap { top: 7px; right: 10px; }   /* pinned gear, slimmer landscape row */
+  /* A landscape phone has about 340px of height: the first-use hint becomes a slim strip at the
+     right instead of a banner across a third of the screen. */
+  .touch-coach { left: auto; right: 10px; max-width: min(62vw, 520px); bottom: calc(50px + env(safe-area-inset-bottom)); padding: 5px 6px 5px 12px; gap: 8px; font-size: 11.5px; line-height: 1.3; border-radius: 10px; }
+  .touch-coach button { min-height: 32px; padding: 0 10px; }
+  /* Dialogs: use the full height and keep the pinned header and footer slim, so the form in
+     between gets the room. */
+  .modal-overlay { padding: 6px; align-items: stretch; }
+  .modal { max-height: calc(100dvh - 12px); margin: auto; }
+  .modal-head { padding: 8px 16px; }
+  .modal-head h2 { font-size: 15px; }
+  .modal-foot { padding: 8px 16px; }
+  .modal-body { padding-top: 10px; padding-bottom: 10px; }
 }
 
 /* Export dialog */

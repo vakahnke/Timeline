@@ -215,6 +215,7 @@ const Timeline = forwardRef(function Timeline(
   const [tooltip, setTooltip] = useState(null)   // { event, x, y }
   const cursorLabelRef = useRef(null)  // updated imperatively on mouse-move (no re-render)
   const [now, setNow] = useState(Date.now())
+  const [viewTick, setViewTick] = useState(0)    // bumps when the scroll container changes size (rotation, rail, keyboard)
 
   // Multi-select: Shift-click events into a set; Ctrl/⌘-drag any of them moves the group.
   const [selectedIds, setSelectedIds] = useState(() => new Set())
@@ -399,7 +400,7 @@ const Timeline = forwardRef(function Timeline(
   }, [])
 
   // Redraw in the layout phase so they stay in sync with the blocks while zooming/range-changing.
-  useLayoutEffect(() => { paintLaneBg(); paintRuler(); paintArrows() }, [range, pxPerHour, paintRuler, paintArrows, paintLaneBg])
+  useLayoutEffect(() => { paintLaneBg(); paintRuler(); paintArrows() }, [range, pxPerHour, viewTick, paintRuler, paintArrows, paintLaneBg])
 
   // Redraw the (viewport-sized) lane backgrounds + ruler + arrows as you scroll, and on resize.
   useEffect(() => {
@@ -408,7 +409,20 @@ const Timeline = forwardRef(function Timeline(
     const redraw = () => { paintLaneBg(); paintRuler(); paintArrows() }
     el.addEventListener('scroll', redraw, { passive: true })
     window.addEventListener('resize', redraw)
-    return () => { el.removeEventListener('scroll', redraw); window.removeEventListener('resize', redraw) }
+    // The window's resize event is not enough. When a phone rotates, the layout also changes (the
+    // header rail, the toolbar wrapping), so this container reaches its final size AFTER that event
+    // has fired and the viewport-sized canvases were left at the old size and position. Watching the
+    // container itself catches rotation, the rail opening, the on-screen keyboard and split view.
+    let lastW = el.clientWidth, raf = 0
+    const ro = window.ResizeObserver ? new ResizeObserver(() => {
+      const w = el.clientWidth
+      if (w && lastW && w !== lastW) el.scrollLeft += (lastW - w) / 2   // keep the same moment centred
+      lastW = w || lastW
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => { redraw(); setViewTick(t => t + 1) })   // re-render: total width is clamped to the container
+    }) : null
+    ro?.observe(el)
+    return () => { el.removeEventListener('scroll', redraw); window.removeEventListener('resize', redraw); ro?.disconnect(); cancelAnimationFrame(raf) }
   }, [paintRuler, paintArrows, paintLaneBg])
 
   // Re-anchor scroll synchronously BEFORE paint so zoom doesn't visibly snap then correct.
