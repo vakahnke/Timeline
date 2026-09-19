@@ -67,7 +67,12 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     if (!canEdit) return
     if (e.button !== 0) return
     const isTouch = e.pointerType === 'touch'
-    if (e.target.closest('.event-actions') || e.target.closest('.event-tasks-badge')) return
+    // The hover buttons (tasks / edit / delete) are ordinary buttons, so a plain press on one must
+    // not start a drag. But on an event about 140px wide they begin at the centre and cover nearly
+    // half of it, so with Ctrl/⌘ held (an explicit "I am moving this") a press there moves the
+    // event like anywhere else. Only the buttons count, never the gaps in the strip around them.
+    const onButton = e.target.closest('.event-actions button') || e.target.closest('.event-tasks-badge')
+    if (onButton && !(e.ctrlKey || e.metaKey)) return
     // The edge strips are a mouse affordance (Ctrl/⌘-drag to resize). A finger that lands on
     // one still means "this event" — on a narrow block the strips are most of its width.
     if (!isTouch && e.target.closest('.resize-handle')) return
@@ -97,6 +102,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     }
 
     const beginMove = (e, viaTouch = false) => {
+    // A Ctrl/⌘ press may begin on one of the hover buttons (see handleMoveDown).
+    const startedOnButton = !!e.target?.closest?.('.event-actions button, .event-tasks-badge')
     e.preventDefault?.()
     e.stopPropagation?.()
     const pid = e.pointerId
@@ -244,7 +251,15 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       if (viaTouch) setTouchSel(true)
       // A click (no drag) opens the editor — so even a tiny block is editable
       // without having to hit the small action button. (A long-press that didn't move just selects.)
-      if (!moved) { if (!viaTouch) onEdit(event.id); return }
+      // …unless the press began on a hover button: then the button's own click does its job.
+      if (!moved) { if (!viaTouch && !startedOnButton) onEdit(event.id); return }
+      // It was a real drag. If it began on a button, the browser still sends that button a click
+      // when the mouse comes up; swallow that one click so moving an event never opens a panel.
+      if (startedOnButton) {
+        const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault() }
+        window.addEventListener('click', swallow, { capture: true, once: true })
+        setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0)
+      }
 
       const scrollDelta = scroller ? scroller.scrollLeft - scroll0 : 0
       const dx = (e.clientX - mouseX0) + scrollDelta
