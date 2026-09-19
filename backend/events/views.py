@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 
-from projects.models import Project, ProjectMembership, Role
+from projects.models import Project, ProjectMembership, ProjectTeam, Role
 from projects.permissions import IsAnyProjectMember, IsProjectCommenter, IsProjectMember, get_role
 
 from .models import Baseline, Category, Comment, Event, StatusReport, Task
@@ -193,9 +193,14 @@ class MyTasksView(generics.ListAPIView):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Task.objects.none()
-        my_projects = ProjectMembership.objects.filter(user=self.request.user).values('project')
+        # The same two access sources as everywhere else: a direct membership, or a team assigned
+        # to the project that the user is on right now.
+        user = self.request.user
+        direct = ProjectMembership.objects.filter(user=user).values('project')
+        via_team = ProjectTeam.objects.filter(Q(team__members=user) | Q(team__owner=user)).values('project')
         qs = (Task.objects
-              .filter(event__project__in=my_projects)
+              .filter(Q(event__project__in=direct) | Q(event__project__in=via_team))
+              .distinct()
               .select_related('event', 'event__project', 'owner', 'assignee'))
         if self.request.query_params.get('scope') != 'all':
             qs = qs.filter(assignee=self.request.user)

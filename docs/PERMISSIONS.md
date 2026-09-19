@@ -6,6 +6,35 @@
 
 ---
 
+## Where authority comes from
+
+One rule, enforced on the server for every request:
+
+> **Can this caller do this action on this project?** The access token says who the caller is.
+> The permission class then loads that person's *current* access to *that* project from the
+> database and allows or denies. Nothing the client sends is a source of authority.
+
+- **The project is the unit.** Teams are only a way to grant project access in bulk. A team grant
+  is resolved live through `get_role`, the highest grant wins, and a team can grant at most Editor.
+- **Roles in a request are data, never credentials.** The member endpoints accept a `role` because
+  an Owner is setting *someone else's* role; the caller's own right to do so is checked first,
+  from the database. A `role`, `is_admin`, `is_staff`, `owner` or `project` field in any other
+  body, a header such as `X-Role`, a query string, or an extra claim in a validly signed token is
+  ignored. A tampered token is rejected outright.
+- **Identity fields come from the token.** Comment authors, report authors, baseline creators and
+  new-project owners are set by the server.
+- **Access is read on every request.** Demoting or removing a member, taking someone off a team,
+  removing staff status or deactivating an account takes effect on their very next request, even
+  though their token is still valid. Tokens carry identity only, never permissions.
+- **People on a task must have access to its project.** Owners and assignees are checked with the
+  same `get_role`.
+- **The React app hides controls as a courtesy, not as security.** `my_role` is sent to the client
+  so it can grey out buttons; the server never reads it back.
+- **The one global override:** staff accounts (`is_staff`) are org-admins and count as Owner on
+  every project. That is a flag in the database, set only in the Django admin.
+
+`backend/projects/tests_authority.py` attacks each of these points and must keep passing.
+
 ## 0. Motivating requirements
 
 1. **Live team access.** When a project is assigned to a team, *every current member of

@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from projects.permissions import get_role
 from projects.serializers import UserSerializer
 
 from .models import Baseline, Category, Comment, Event, StatusReport, Task
@@ -163,6 +164,15 @@ class TaskSerializer(serializers.ModelSerializer):
             # Default: the task is assigned for action to its owner.
             data['assignee'] = data['owner']
 
+        # People on a task must be able to open the project it lives in. Without this an editor
+        # could put any account in the system on a task, which both misleads ("assigned" to someone
+        # who cannot see it) and turns the endpoint into a probe for who has an account.
+        event = self.context.get('event') or getattr(self.instance, 'event', None)
+        if event is not None:
+            for field, label in (('owner', 'owner_identifier'), ('assignee', 'assignee_identifier')):
+                person = data.get(field)
+                if person is not None and get_role(person, event.project_id) is None:
+                    raise serializers.ValidationError({label: 'That person is not a member of this project. Add them to the project first.'})
         return data
 
     def create(self, validated_data):
