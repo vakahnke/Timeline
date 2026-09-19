@@ -65,7 +65,21 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
   // is free it shortens to just the date and tries again. Milestones of a hidden track are not
   // drawn (they still appear in the handout's table).
   const charW = fs * 0.95 * 0.54
+  // Seeded with what a label must never cover: each row's percent figure and every diamond
+  // (as a bar-height box, so a diamond does not block its own label just above or below it).
   const placed = []
+  rows.forEach((r, i) => {
+    const cy = top + rowH * i + rowH / 2, xs = x(r.start), w = Math.max(2, x(r.end) - xs)
+    const done = Math.max(0, Math.min(1, (r.progress || 0) / 100))
+    if (showProgress && done > 0 && done < 1 && w * (1 - done) > fs * 3)
+      placed.push({ x0: xs + w * done + fs * 0.4, x1: xs + w * done + fs * 3, y0: cy - fs * 0.6, y1: cy + fs * 0.6 })
+  })
+  milestones.forEach(m => {
+    const row = rowIndex[m.category] ?? rowIndex.Other
+    if (row == null) return
+    const mx = x(m.date), cy = top + rowH * row + rowH / 2
+    placed.push({ x0: mx - dia, x1: mx + dia, y0: cy - barH / 2, y1: cy + barH / 2 })
+  })
   const clear = (b) => b.x0 >= L - fs && b.x1 <= W - 2 && b.y0 >= fs * 1.6 && b.y1 <= H - legendH + fs * 0.4 &&
     !placed.some(o => b.x0 < o.x1 + fs * 0.4 && b.x1 > o.x0 - fs * 0.4 && b.y0 < o.y1 && b.y1 > o.y0)
   const marks = milestones.filter(m => rowIndex[m.category] != null || rowIndex.Other != null).map(m => {

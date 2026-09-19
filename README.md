@@ -6,10 +6,52 @@ smooth with hundreds of events on screen, including in Safari. Create a
 project, invite teammates with roles, and plan it on a surface you can drag,
 resize, zoom, and pan. Every project is isolated to its members.
 
+When leadership asks where the project stands, one click turns that same schedule
+into a one-page status report you can print, save as a PDF, or download as a
+native, fully editable PowerPoint slide.
+
 ![The timeline view: dependency arrows, the critical path in red, the now-line, and a minimap](docs/images/timeline.png)
 
 Timeline is free and open source under the [Apache 2.0 license](LICENSE). You can
 use it, modify it, and redistribute it, including commercially.
+
+## The status report: your schedule as a leadership slide
+
+Most project managers rebuild the same slide by hand every week or two: copy the
+dates into PowerPoint, pick a color, and hope the numbers still match the plan.
+Timeline writes that page from the schedule itself. Click **Status report** in a
+project's toolbar and it opens already filled in.
+
+![The status report print tool: the page on the right, what it shows on the left](docs/images/status-report-tool.png)
+
+- **A status you can defend.** On track, At risk, or Off track is derived by rule
+  from the forecast finish against your committed date, missed milestones, and
+  blocked work on the critical path. The rule that fired is printed in the
+  footer. You can overrule it, but only with a reason, and the reason prints too.
+- **Written for the reader.** A one-sentence headline drafted from the numbers, a
+  path to green, the one decision you need and who it is from, five numbers each
+  shown against a reference, a simplified timeline with your key milestones, what
+  finished, what is next, and the top risks.
+- **Edited where you print.** Click any text on the page to reword it. Switch
+  blocks on and off, add your own numbers and text blocks, hide tracks, and pick
+  the milestones for this audience. If the page gets too full it tells you what
+  to cut; it never shrinks the type.
+- **A real PowerPoint, not a picture.** **Download PowerPoint** produces a `.pptx`
+  made of native text boxes, a grouped timeline drawn from shapes, and a real
+  table. Everything stays editable, and pasting the slide into your own deck picks
+  up that deck's fonts.
+- **Or a PDF.** Print a single vector page as a 16:9 slide, or as a portrait
+  handout on Letter or A4 that adds a milestone table.
+- **History.** Save a dated copy. The next report starts from its shape and shows
+  whether the status moved since last time.
+- **Built on an API.** The page reads one versioned, documented endpoint, so
+  scripts and other tools can consume the same facts.
+
+<p align="center"><img src="docs/images/status-report-handout.png" width="520" alt="The portrait handout, with its milestone table"></p>
+
+Try it on the [live demo](#live-demo): open **Startup MVP: Idea to Launch** and
+click **Status report**. Details are in the [user guide](docs/USER_GUIDE.md) and
+the [design doc](docs/design/status-one-pager.md).
 
 ## Live demo
 
@@ -70,14 +112,6 @@ predecessors and successors you pick from a list, sub-tasks with owners and due
 dates, and a comment thread.
 
 ![The event editor with predecessors, successors, and percent complete](docs/images/event.png)
-
-**A status page for leadership, in one click.** Timeline fills in a one-page report from the
-schedule: a status derived by rule, a headline, the numbers against your committed date, a
-simplified timeline with your key milestones, what finished and what is next, and your risks. Click
-any text to reword it, switch blocks on and off, then print a single vector page as a 16:9 slide or
-a portrait handout, or download it as a native, editable PowerPoint file.
-
-![The status report: a one-page slide generated from the schedule](docs/images/status-report.png)
 
 **Templates.** Start a project from a built-in plan anchored to a date you choose,
 or save any project of your own as a template. Built-ins cover business,
