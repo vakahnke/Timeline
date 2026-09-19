@@ -53,6 +53,27 @@ project's toolbar and it opens already filled in.
 
 <p align="center"><img src="docs/images/status-report-handout.png" width="520" alt="The portrait handout: slip against the baseline, the milestone table, and the milestone trend chart"></p>
 
+### Baselines: showing what slipped
+
+A schedule changes every time someone drags an event, so "are we late?" has no
+answer unless you remember what the plan *was*. A baseline is that memory: a
+frozen copy of every event's dates, taken at the moment the plan was approved.
+
+1. Open **Status report** from a project's toolbar.
+2. In the left panel, open **Baseline and limits**.
+3. Type a name such as "Approved plan" and click **Set baseline**.
+
+Nothing on the page changes yet, because the plan and the baseline are identical.
+The difference appears later. When an event moves, the next report shows it:
+
+- a thin outlined strip above the track, where the track used to be
+- a hollow diamond where a milestone used to be, and a label such as "Oct 6 (+3d)"
+- on the handout, a table of baseline date, forecast date, and slip for each milestone
+
+When the plan is formally changed and everyone agrees to new dates, click
+**Re-baseline**. Old baselines are kept. The same panel holds the project's
+**limits**: how many days late counts as Off track, agreed before anything slips.
+
 Try it on the [live demo](#live-demo): open **Startup MVP: Idea to Launch** and
 click **Status report**. Details are in the [user guide](docs/USER_GUIDE.md) and
 the [design doc](docs/design/status-one-pager.md).
