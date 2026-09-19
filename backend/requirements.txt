@@ -1,6 +1,6 @@
 django>=6.1,<6.2
 djangorestframework>=3.18,<3.19
-django-cors-headers>=4.3
+django-cors-headers>=4.9.0
 djangorestframework-simplejwt>=5.3,<6.0
 drf-nested-routers>=0.95,<0.96
 drf-spectacular>=0.30,<0.31
