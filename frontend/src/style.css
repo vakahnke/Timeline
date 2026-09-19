@@ -29,6 +29,7 @@ body {
   font-size: 12px;
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;   /* iOS: exclude the area behind the browser chrome */
   user-select: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -37,7 +38,9 @@ body {
 .app {
   display: flex;
   flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);   /* keep the minimap above the home indicator */
   height: 100vh;
+  height: 100dvh;   /* iOS: exclude the area behind the browser chrome */
   overflow: hidden;
 }
 
@@ -217,6 +220,7 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
 
 /* Toolbar actions tucked into the ⚙ menu on phones (revealed in the mobile query). */
 .settings-mobile { display: none; }
+.tb-break, .tb-phone { display: none; }   /* phone-only toolbar helpers (see the 640px block) */
 .settings-action {
   width: 100%;
   text-align: left;
@@ -948,6 +952,7 @@ canvas.ruler {
    body's overflow:hidden / user-select:none; these pages opt back in. */
 .scroll-page {
   height: 100vh;
+  height: 100dvh;   /* iOS: exclude the area behind the browser chrome */
   overflow-y: auto;
   user-select: text;
 }
@@ -962,6 +967,7 @@ fieldset.modal-body:disabled { opacity: 1; }
 /* ── Loading / spinner ────────────────────────────────────────────────────── */
 .route-fallback {
   height: 100vh;
+  height: 100dvh;   /* iOS: exclude the area behind the browser chrome */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -979,6 +985,7 @@ fieldset.modal-body:disabled { opacity: 1; }
 /* ── Generic centered message (404, access denied) ────────────────────────── */
 .centered-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1001,6 +1008,7 @@ fieldset.modal-body:disabled { opacity: 1; }
 /* ── Auth screens ─────────────────────────────────────────────────────────── */
 .auth-screen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1047,7 +1055,7 @@ fieldset.modal-body:disabled { opacity: 1; }
 .btn-block { width: 100%; justify-content: center; padding: 9px 14px; font-size: 12.5px; margin-top: 4px; }
 
 /* ── Dashboard ────────────────────────────────────────────────────────────── */
-.dashboard { background: var(--bg); min-height: 100vh; }
+.dashboard { background: var(--bg); min-height: 100vh; min-height: 100dvh; }
 .dash-header {
   display: flex;
   align-items: center;
@@ -1292,7 +1300,7 @@ fieldset.modal-body:disabled { opacity: 1; }
 /* ── Toast (global status pill) ───────────────────────────────────────────── */
 .toast {
   position: fixed;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
   right: 20px;
   z-index: 300;
   font-size: 12px;
@@ -1410,11 +1418,12 @@ fieldset.modal-body:disabled { opacity: 1; }
    card/event actions are unreachable), drop hover-only affordances, and enlarge the
    icon-button targets. Applies at any width. */
 @media (hover: none) {
-  .project-card-actions,
-  .event-block .event-actions { opacity: 1; pointer-events: auto; }
-  .card-action          { width: 32px; height: 32px; font-size: 13px; }
-  .event-actions button { width: 26px; height: 26px; font-size: 12px; }
+  .project-card-actions { opacity: 1; pointer-events: auto; }
+  /* No hover on touch, so always-on action buttons would sit on top of the event title.
+     A tap already opens the editor (edit, delete, tasks), and the ≡ badge opens tasks. */
+  .event-block .event-actions { display: none; }
   .cursor-label         { display: none; }
+  .card-action          { width: 40px; height: 40px; font-size: 14px; }
 }
 
 @media (max-width: 640px) {
@@ -1433,10 +1442,37 @@ fieldset.modal-body:disabled { opacity: 1; }
     max-width: 45vw;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .toolbar button { min-height: 36px; padding: 7px 11px; font-size: 12px; }
-  .btn-back, .btn-gear { min-height: 36px; min-width: 36px; }
-  .tb-collapsible { display: none; }             /* Today/Week/Month + Save-as-Template move into ⚙ */
+  .toolbar button { min-height: 44px; padding: 7px 11px; font-size: 12px; }
+  .btn-back, .btn-gear { min-height: 44px; min-width: 44px; }
+  .tb-collapsible { display: none; }             /* secondary actions move into the ⚙ menu */
   .settings-mobile { display: block; }
+
+  /* Two fixed rows so the canvas keeps the screen:
+       row 1:  ←  Project name ………………  ↶ ↷  ⚙
+       row 2:  [Timeline|List|Board]  − + Fit ……  + Event                     */
+  .toolbar .tb-break  { display: block; flex-basis: 100%; height: 0; order: 5; }
+  .toolbar .btn-back  { order: 1; }
+  .toolbar h1         { order: 2; flex: 1 1 0; min-width: 0; max-width: none; }
+  .toolbar .ro-badge  { order: 2; }
+  .toolbar .tb-undo   { order: 3; min-width: 40px; padding: 7px 8px; }
+  .toolbar .settings-wrap { order: 4; }
+  .toolbar .view-toggle   { order: 10; }
+  .toolbar .tb-zoom   { order: 11; min-width: 40px; }
+  /* "+ Event" floats bottom-right in thumb reach instead of costing a third toolbar row. */
+  .toolbar .btn-new {
+    position: fixed;
+    right: 14px;
+    bottom: calc(62px + env(safe-area-inset-bottom));   /* clears the 46px minimap */
+    z-index: 40;
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: 24px;
+    font-size: 13px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+  }
+  .view-toggle-btn    { padding: 7px 10px; }
+  .tb-desktop { display: none; }
+  .tb-phone   { display: inline; }
   /* keep right:0 (base) so the menu opens leftward from the gear and stays on-screen */
   .settings-popover { max-height: 76vh; overflow-y: auto; max-width: calc(100vw - 24px); }
 
@@ -1446,6 +1482,8 @@ fieldset.modal-body:disabled { opacity: 1; }
   .minimap       { height: 46px; margin-left: 112px; }   /* match the slimmer header panel */
 
   /* ── Dashboard ── */
+  .dash-canvas  { padding: 12px 0 calc(32px + env(safe-area-inset-bottom)); }
+  .dash-userbox button { min-height: 40px; }
   .dash-header  { height: 52px; padding: 0 14px; gap: 8px; }
   .dash-user    { display: none; }            /* username label eats width on phones */
   .dash-userbox { gap: 8px; }
@@ -1462,6 +1500,8 @@ fieldset.modal-body:disabled { opacity: 1; }
     width: 100%;
     max-width: 100%;
     max-height: 92vh;
+    max-height: 92dvh;
+    padding-bottom: env(safe-area-inset-bottom);
     border-radius: 16px 16px 0 0;
     overflow-y: auto;                /* scroll the whole sheet — robust vs the <fieldset> body quirk */
   }
@@ -1479,7 +1519,6 @@ fieldset.modal-body:disabled { opacity: 1; }
 }
 
 @media (max-width: 400px) {
-  .toolbar h1 { flex: 1 0 100%; max-width: none; }  /* project name gets its own row */
   .auth-card   { padding: 24px 18px; }
   .dash-header { padding: 0 12px; }
 }
@@ -1764,6 +1803,19 @@ fieldset.modal-body:disabled { opacity: 1; }
 }
 .mpanel-resize:hover { opacity: 1; }
 
+/* Docked (phones): an ordinary full-width section in the page flow — see MovablePanel. */
+.mpanel--docked {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0 12px 16px;
+  box-shadow: none;
+}
+.mpanel--docked .mpanel-head { cursor: default; flex-wrap: wrap; row-gap: 8px; }
+.mpanel--docked .mpanel-actions { flex: 1 1 auto; justify-content: flex-end; }
+.mpanel--docked .mpanel-actions button { min-height: 40px; }
+.mpanel--docked .mpanel-body { overflow: visible; padding: 12px; }
+
 /* My-tasks panel internals */
 .mytasks { margin: 0; }
 .mytasks-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 12px; }
@@ -1990,3 +2042,16 @@ fieldset.modal-body:disabled { opacity: 1; }
 .el-task-due { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .el-tasks-manage { margin-top: 2px; align-self: flex-start; background: transparent; border: 0; color: var(--accent); font-size: 12px; padding: 8px 2px; cursor: pointer; }
 .el-tasks-manage:hover { background: transparent; color: var(--text-bright); }
+
+/* ── Touch targets ────────────────────────────────────────────────────────────
+   Kept at the very end of the file so these win over the component rules above
+   (same specificity, later wins). 44px is the platform guideline; nothing
+   tappable goes under 40px on a touch device. */
+@media (hover: none) {
+  .el-task-check     { width: 40px; height: 40px; }
+  .el-tasks-manage   { min-height: 44px; }
+  .board-move-btn    { min-width: 44px; min-height: 44px; }
+  .btn-icon          { min-width: 40px; min-height: 40px; }
+  .modal-footer button,
+  .settings-action   { min-height: 44px; }
+}

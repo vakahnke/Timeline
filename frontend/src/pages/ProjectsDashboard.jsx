@@ -8,6 +8,7 @@ import TemplateModal from '../components/TemplateModal'
 import MembersPanel from '../components/MembersPanel'
 import MyTasksPanel from '../components/MyTasksPanel'
 import MovablePanel from '../components/MovablePanel'
+import useIsNarrow from '../ui/useIsNarrow'
 
 function RoleBadge({ role }) {
   if (!role) return null
@@ -126,7 +127,9 @@ export default function ProjectsDashboard() {
     }
   }
 
-  const canvasMinH = Math.max(560, ...Object.values(layouts).map(l => l.y + l.h + 24))
+  // Phones: the windows dock into a plain stacked column (see MovablePanel `docked`).
+  const narrow = useIsNarrow()
+  const canvasMinH = narrow ? undefined : Math.max(560, ...Object.values(layouts).map(l => l.y + l.h + 24))
 
   const projectsBody = (
     <>
@@ -215,9 +218,13 @@ export default function ProjectsDashboard() {
       <header className="dash-header">
         <div className="dash-brand">Timeline</div>
         <div className="dash-userbox">
-          <button onClick={() => arrange('side')} title="Place the windows side by side">Side by side</button>
-          <button onClick={() => arrange('stack')} title="Stack the windows">Stack</button>
-          <button onClick={resetLayout} title="Reset window positions, sizes & zoom">Reset</button>
+          {!narrow && (
+            <>
+              <button onClick={() => arrange('side')} title="Place the windows side by side">Side by side</button>
+              <button onClick={() => arrange('stack')} title="Stack the windows">Stack</button>
+              <button onClick={resetLayout} title="Reset window positions, sizes & zoom">Reset</button>
+            </>
+          )}
           <button onClick={() => navigate('/teams')}>Teams</button>
           <span className="dash-user">{user?.username}</span>
           <button onClick={logout}>Log out</button>
@@ -230,6 +237,7 @@ export default function ProjectsDashboard() {
           layout={layouts.projects}
           onChange={setPanel('projects')}
           minHeight={220}
+          docked={narrow}
           actions={
             <>
               <button className="btn-template" onClick={() => setTemplating(true)}>From Template</button>
@@ -245,6 +253,7 @@ export default function ProjectsDashboard() {
           layout={layouts.tasks}
           onChange={setPanel('tasks')}
           minHeight={200}
+          docked={narrow}
         >
           <MyTasksPanel />
         </MovablePanel>

@@ -45,6 +45,8 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       <button className="btn-back" onClick={onBack} title="Back to projects">←</button>
       <h1>{projectName || 'Timeline'}</h1>
       {!canEdit && <span className="ro-badge" title="You have view-only access">View only</span>}
+      {/* Phones: forces a line break so row 1 = back/title/undo/gear, row 2 = views/zoom/new. */}
+      <div className="tb-break" aria-hidden="true" />
       <div className="view-toggle" role="group" aria-label="View mode">
         <button className={`view-toggle-btn${view === 'timeline' ? ' active' : ''}`}
                 onClick={() => onViewChange?.('timeline')} title="Timeline view">Timeline</button>
@@ -56,10 +58,10 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       {view === 'timeline' && (
         <>
           <div className="toolbar-sep" />
-          <button onClick={onZoomOut} title="Zoom out  ·  −  or  Ctrl/⌘ + scroll">−</button>
-          <span className="zoom-label" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
-          <button onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
-          <button onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
+          <button className="tb-zoom" onClick={onZoomOut} title="Zoom out  ·  −  or  Ctrl/⌘ + scroll">−</button>
+          <span className="zoom-label tb-desktop" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
+          <button className="tb-zoom" onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
+          <button className="tb-zoom" onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
           <button className="tb-collapsible" onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
           <button className="tb-collapsible" onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
           <button className="tb-collapsible" onClick={() => onViewPeriod?.('month')} title="Frame this month">Month</button>
@@ -68,8 +70,8 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       {canEdit && (
         <>
           <div className="toolbar-sep" />
-          <button onClick={onUndo} disabled={!canUndo} title="Undo  ·  Ctrl/⌘ + Z">↶</button>
-          <button onClick={onRedo} disabled={!canRedo} title="Redo  ·  Ctrl/⌘ + Shift + Z">↷</button>
+          <button className="tb-undo" onClick={onUndo} disabled={!canUndo} title="Undo  ·  Ctrl/⌘ + Z">↶</button>
+          <button className="tb-undo" onClick={onRedo} disabled={!canRedo} title="Redo  ·  Ctrl/⌘ + Shift + Z">↷</button>
         </>
       )}
       <div className="toolbar-sep" />
@@ -101,14 +103,16 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       )}
       <div className="toolbar-spacer" />
       {isOwner && (
-        <button className="btn-members" onClick={onOpenMembers} title="Manage members">Members</button>
+        <button className="btn-members tb-collapsible" onClick={onOpenMembers} title="Manage members">Members</button>
       )}
-      <button className="btn-workloads" onClick={onManageWorkloads} title="View workload by member and reassign tasks">Manage Workloads</button>
+      <button className="btn-workloads tb-collapsible" onClick={onManageWorkloads} title="View workload by member and reassign tasks">Manage Workloads</button>
       {canEdit && (
         <>
           <button className="btn-save-tpl tb-collapsible" onClick={onSaveTemplate} title="Save this project as a reusable template">Save as Template</button>
-          <button className="btn-new-cat" onClick={onNewCategory}>+ New Category</button>
-          <button className="btn-new" onClick={onNew}>+ New Event</button>
+          <button className="btn-new-cat tb-collapsible" onClick={onNewCategory}>+ New Category</button>
+          <button className="btn-new" onClick={onNew} title="New event">
+            <span className="tb-desktop">+ New Event</span><span className="tb-phone">+ Event</span>
+          </button>
         </>
       )}
       <div className="settings-wrap">
@@ -171,9 +175,16 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                   <button className="settings-action" onClick={() => { onViewPeriod?.('month'); setShowSettings(false) }}>This month</button>
                 </>
               )}
+              <div className="settings-title">Project</div>
+              {canEdit && (
+                <button className="settings-action" onClick={() => { onNewCategory?.(); setShowSettings(false) }}>+ New category</button>
+              )}
+              {isOwner && (
+                <button className="settings-action" onClick={() => { onOpenMembers?.(); setShowSettings(false) }}>Members</button>
+              )}
+              <button className="settings-action" onClick={() => { onManageWorkloads?.(); setShowSettings(false) }}>Manage workloads</button>
               {canEdit && (
                 <>
-                  <div className="settings-title">Project</div>
                   <button className="settings-action" onClick={() => { onEditStart?.(); setShowSettings(false) }}>Change start date</button>
                   <button className="settings-action" onClick={() => { onSaveTemplate?.(); setShowSettings(false) }}>Save as Template</button>
                 </>

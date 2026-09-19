@@ -5,12 +5,17 @@ const clampZoom = z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 10) 
 
 // A controlled panel you can drag (by its header), resize (bottom-right handle), and
 // zoom (content scale). The parent owns `layout` ({ x, y, w, h, zoom }) and persists it.
-export default function MovablePanel({ title, actions, children, layout, onChange, minWidth = 300, minHeight = 180 }) {
+//
+// `docked` (phones): render as an ordinary full-width section in document flow — no
+// dragging, resizing or zoom. Free-floating windows don't fit a 390px screen, and the
+// saved desktop layout is left untouched for when the same account is used on a laptop.
+export default function MovablePanel({ title, actions, children, layout, onChange, minWidth = 300, minHeight = 180, docked = false }) {
   const ref = useRef(null)
   const zoom = layout.zoom ?? 1
 
   // Keep the panel within its container's width on mount (narrow screens / stale layouts).
   useEffect(() => {
+    if (docked) return
     const maxW = ref.current?.parentElement?.clientWidth
     if (!maxW) return
     if (layout.w > maxW || layout.x + layout.w > maxW) {
@@ -42,6 +47,18 @@ export default function MovablePanel({ title, actions, children, layout, onChang
   }
 
   const setZoom = z => onChange({ ...layout, zoom: clampZoom(z) })
+
+  if (docked) {
+    return (
+      <section ref={ref} className="mpanel mpanel--docked">
+        <header className="mpanel-head">
+          <span className="mpanel-title">{title}</span>
+          <div className="mpanel-actions">{actions}</div>
+        </header>
+        <div className="mpanel-body">{children}</div>
+      </section>
+    )
+  }
 
   return (
     <section ref={ref} className="mpanel" style={{ left: layout.x, top: layout.y, width: layout.w, height: layout.h }}>
