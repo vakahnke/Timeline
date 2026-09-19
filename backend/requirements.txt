@@ -1,4 +1,4 @@
-django>=6.1,<6.2
+django>=6.1.1,<6.2
 djangorestframework>=3.18,<3.19
 django-cors-headers>=4.3
 djangorestframework-simplejwt>=5.3,<6.0
