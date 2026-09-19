@@ -136,7 +136,13 @@ By default (`REQUIRE_ACCOUNT_APPROVAL=1`) nobody can use the app until **you** a
    person is automatically emailed that their account is ready.
 4. They sign in with **email or username** + password.
 
-**Email backend** is configured via the `EMAIL_HOST_*` vars. In dev, with no SMTP credentials
+**Email** carries two things: account approval notices and **password reset links** (the
+"Forgot your password?" link on the sign-in page). Without working email a reset link is only
+written to the backend log, so nobody can recover an account by themselves.
+
+**Email backend** is configured via the `EMAIL_HOST_*` vars. (Django 6.1 replaced its `EMAIL_*`
+settings with `MAILERS`; `settings.py` builds that from these same variable names, so an existing
+`.env` keeps working.) In dev, with no SMTP credentials
 set, it falls back to the console backend (messages print to the backend container logs —
 `docker compose logs backend`), so nothing is actually sent. For prod, set the Gmail SMTP
 credentials — an **App Password** (not your account password; requires 2-Step Verification):
@@ -161,16 +167,36 @@ SITE_URL=https://yourdomain
   `makemigrations --check`, `migrate`, and `test` (ruff lint is advisory).
 - **frontend** — `npm ci` + `npm run build`.
 
+## Keeping it current
+
+- **Requirements:** Python 3.12, Django 6.1, PostgreSQL **15 or newer** (Django 6.1 refuses older).
+- **Dependencies:** Dependabot alerts, security updates and secret scanning are enabled on the
+  repository and `.github/dependabot.yml` opens grouped update pull requests. Before a release,
+  `pip-audit` in the backend image and `npm audit` in the frontend should both be clean.
+- **The host:** patch the operating system regularly, not just the containers. A host that has
+  been up for months is running an old kernel. Upgrading usually restarts Docker (a short
+  outage) and needs a reboot; all three services use `restart: always`, so they return alone.
+  Take a disk snapshot first.
+- **PostgreSQL minor releases** (16.x → 16.y) share a data format: `docker compose pull db`, then
+  `up -d --no-deps db`, with a fresh `pg_dump` beforehand. A **major** upgrade needs dump and restore.
+- **Before swapping containers,** try the new images against the real `.env` while the old ones
+  still serve: `docker compose -f docker-compose.prod.yml run --rm --no-deps --entrypoint python
+  backend manage.py check --deploy` and `… migrate --plan`, and `… run --rm --no-deps nginx nginx -T`
+  (the command must start with `nginx`, or the image skips rendering your config template).
+- **Disk:** every deploy leaves the previous images behind. `docker image prune` now and then,
+  keeping the last rollback tag.
+
 ## Operational notes
 
 - **Apple silicon / arm64:** all base images (`python:3.12-slim`, `postgres:16-alpine`,
-  `node:20-alpine`, `nginx:1.27-alpine`) are multi-arch — no emulation needed. Building for
+  `node:24-alpine`, `nginx:1.30-alpine`) are multi-arch — no emulation needed. Building for
   an amd64 server from a Mac: `--platform linux/amd64` (buildx).
 - **Port collisions:** dev publishes `5433` (db), `8000` (api), `5173` (web). Override via
   env or stop the conflicting service.
 - **Secrets:** `.env` is gitignored — never commit it. Use strong `DJANGO_SECRET_KEY` and
   `POSTGRES_PASSWORD` in prod; consider Docker secrets / a secrets manager for real deploys.
-- **gunicorn** runs `--workers 3 --timeout 60` by default (tune for your box;
+- **gunicorn** (26.x; its local control socket is switched off in `gunicorn.conf.py`) runs
+  `--workers 3 --timeout 60` by default (tune for your box;
   `2 × CPU + 1` is a common starting point).
 - **JWT refresh tokens** are revocable: logout (`POST /api/auth/logout/`) blacklists the
   refresh token, and rotation blacklists the one it replaces (`token_blacklist` app). The

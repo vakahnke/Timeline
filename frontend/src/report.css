@@ -188,3 +188,35 @@ div.sr-edit, p.sr-edit { display: block; }
 .sr-thresh { display: grid; grid-template-columns: 1fr 64px; gap: 6px 8px; align-items: center; font-size: 12.5px; color: var(--text-dim); }
 .sr-thresh input { width: 64px; }
 .sr-note--tip { display: block; margin: 0; font-size: 12.5px; line-height: 1.45; }
+
+/* ── Phones ─────────────────────────────────────────────────────────────────────
+   Two views of one report. First the real page, whole, scaled to the screen: a slide on a
+   portrait phone is a thumbnail, but you can see what it is, pinch into it, or turn the phone.
+   Then the same report as one readable column.
+
+   The readable column uses a trick instead of a second set of type sizes. Every size on the page is
+   in cqw (1% of the page's width). The page element is made 2.3x wider than the screen and clipped,
+   while its content is laid out in the visible 1/2.3 of it. So each cqw is 2.3x larger relative to
+   the column: 1.75cqw body text comes out near 14px on a 390px phone, and everything else keeps
+   its proportions. */
+.sr-read-h { margin: 6px 0 -2px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); align-self: flex-start; }
+.sr-readwrap { width: 100%; overflow: hidden; border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 30px rgba(0,0,0,.45); }
+.sr-page--read { width: 230%; aspect-ratio: auto !important; overflow: visible; box-shadow: none; border-radius: 0; }
+.sr-page--read .sr-in { position: static; width: 43.478%; box-sizing: border-box; padding: 2.2cqw 1.9cqw 2cqw; gap: 1.7cqw; }
+.sr-page--read .sr-top { flex-wrap: wrap; row-gap: .9cqw; font-size: 1.45cqw; }
+.sr-page--read .sr-chip { font-size: 1.4cqw; } .sr-page--read .sr-trend { font-size: 1.3cqw; }
+.sr-page--read .sr-headline { font-size: 2.75cqw; line-height: 1.15; }
+.sr-page--read .sr-kpis { grid-template-columns: 1fr 1fr !important; }
+.sr-page--read .sr-kpi, .sr-page--read .sr-kpis--wrap .sr-kpi:nth-child(3n+1) { border-left: .18cqw solid var(--p-rule); padding: 1.1cqw 1.1cqw; border-top: 0; }
+.sr-page--read .sr-kpi:nth-child(odd) { border-left: 0 !important; padding-left: 0 !important; }
+.sr-page--read .sr-kpi:nth-child(n+3) { border-top: .18cqw solid var(--p-rule) !important; }
+.sr-page--read .sr-tl { height: 27cqw; }
+.sr-page--read .sr-cols { grid-template-columns: minmax(0, 1fr); }
+.sr-page--read .sr-ms { font-size: 1.5cqw; } .sr-page--read .sr-ms th { font-size: 1.2cqw; }
+.sr-page--read .sr-ms td:not(:first-child), .sr-page--read .sr-ms th:not(:first-child) { white-space: nowrap; }
+.sr-page--read .sr-ms th:nth-last-child(2), .sr-page--read .sr-ms td:nth-last-child(2) { display: none; }   /* "Done" gives way first */
+.sr-page--read .sr-foot { margin-top: 1cqw; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .sr-fit--slide, .sr-fit--handout { min-width: 0; }
+  .sr-caption--desk { display: none; }
+}

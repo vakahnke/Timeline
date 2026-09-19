@@ -37,7 +37,7 @@ const SEV = { high: { shape: 'square', tone: 'bad' }, medium: { shape: 'diamond'
 
 /** The printable page. `doc` is the report document, `report` the status fields, `facts` the
  *  schedule snapshot. `set(path, value)` updates the document; omit it for a read-only page. */
-export default function StatusPage({ doc, report, facts, layout, previous, set, paper = 'letter', onFit }) {
+export default function StatusPage({ doc, report, facts, layout, previous, set, paper = 'letter', onFit, read = false }) {
   const ro = !set
   const innerRef = useRef(null)
 
@@ -67,7 +67,9 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
   const trend = previous && previous.status !== report.status
     ? `${(['on_track', 'at_risk', 'off_track'].indexOf(report.status) > ['on_track', 'at_risk', 'off_track'].indexOf(previous.status)) ? '▼' : '▲'} was ${STATUS[previous.status]?.label} · ${fmtDay(previous.as_of)}`
     : previous ? `● unchanged since ${fmtDay(previous.as_of)}` : ''
-  const handout = layout === 'handout'
+  // `read`: the same report as one readable column for a phone. It flows like the handout, at
+  // type sizes you can read without zooming, and its height follows the content.
+  const handout = layout === 'handout' || read
   const withBase = !!facts?.baseline && show.baseline === true      // slip is opt-in, per report
   const cols = (doc.columns || []).filter(c => !c.hidden)
 
@@ -124,7 +126,7 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
   )
 
   return (
-    <div className={`sr-page sr-page--${layout} sr-paper--${paper}`} data-status={report.status}>
+    <div className={`sr-page sr-page--${read ? 'handout' : layout} sr-paper--${paper}${read ? ' sr-page--read' : ''}`} data-status={report.status}>
       <div className="sr-in" ref={innerRef}>
         <div className="sr-top">
           <span className="sr-ident">
@@ -159,7 +161,7 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
           </div>
         )}
 
-        {show.timeline && <ReportTimeline facts={facts} rows={rows} milestones={milestones} dense={handout}
+        {show.timeline && <ReportTimeline facts={facts} rows={rows} milestones={milestones} dense={handout} read={read}
                                           showCritical={doc.timeline?.showCritical !== false} showProgress={doc.timeline?.showProgress !== false}
                                           showBaseline={show.baseline === true} />}
 

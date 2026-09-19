@@ -14,7 +14,7 @@ const W = 1000
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 const INK = '#16202E', INK3 = '#7C8797', RULE = '#D9DEE6', ACCENT = '#2B50C8', WARN = '#B86E00', BAD = '#B3362B'
 
-export default function ReportTimeline({ facts, rows, milestones, showCritical = true, showProgress = true, showBaseline = false, dense = false }) {
+export default function ReportTimeline({ facts, rows, milestones, showCritical = true, showProgress = true, showBaseline = false, dense = false, read = false }) {
   const wrapRef = useRef(null)
   const [aspect, setAspect] = useState(dense ? 0.4 : 0.2)
 
@@ -34,8 +34,8 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
   }
 
   const H = Math.max(120, W * aspect)
-  const fs = dense ? 19 : 11.5                      // text size in drawing units
-  const L = dense ? 172 : 118, R = fs * 1.2, top = fs * 3.1, legendH = fs * 2.2
+  const fs = read ? 31 : dense ? 19 : 11.5          // text size in drawing units (read: a phone-width column)
+  const L = read ? 262 : dense ? 172 : 118, R = fs * 1.2, top = fs * 3.1, legendH = fs * 2.2
   const rowH = (H - top - legendH) / rows.length
   const barH = Math.min(rowH * 0.42, fs * 1.7)
   const dia = fs * 0.58
@@ -97,7 +97,8 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
   const marks = milestones.filter(m => rowIndex[m.category] != null || rowIndex.Other != null).map(m => {
     const row = rowIndex[m.category] ?? rowIndex.Other
     const mx = x(m.date), cy = top + rowH * row + rowH / 2
-    const title = m.title.length > (dense ? 26 : 34) ? m.title.slice(0, dense ? 25 : 33) + '…' : m.title
+    const maxT = read ? 14 : dense ? 26 : 34
+    const title = m.title.length > maxT ? m.title.slice(0, maxT - 1) + '…' : m.title
     const yAbove = cy - barH / 2 - fs * 0.45, yBelow = cy + barH / 2 + fs * 1.5
     let chosen = null
     const short = m.title.length > 16 ? m.title.slice(0, 15) + '…' : m.title
@@ -121,13 +122,13 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
 
   const diamond = (cx, cy, s) => `M${cx} ${cy - s} L${cx + s} ${cy} L${cx} ${cy + s} L${cx - s} ${cy}Z`
   const legend = [
-    showCritical && { k: 'crit', t: 'Critical path' },
-    { k: 'done', t: 'Milestone met' },
-    { k: 'up', t: 'Milestone ahead' },
-    { k: 'late', t: 'Past due' },
+    showCritical && { k: 'crit', t: read ? 'Critical' : 'Critical path' },
+    { k: 'done', t: read ? 'Met' : 'Milestone met' },
+    { k: 'up', t: read ? 'Ahead' : 'Milestone ahead' },
+    { k: 'late', t: read ? 'Late' : 'Past due' },
     anyGhost && { k: 'base', t: 'Baseline' },
   ].filter(Boolean)
-  const step = fs * 10.2
+  const step = fs * (read ? 5.6 : 10.2)
   const lx0 = W - R - legend.length * step
 
   return (
@@ -152,7 +153,7 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
             <g key={r.name}>
               {i > 0 && <line x1="0" x2={W - R} y1={top + rowH * i} y2={top + rowH * i} stroke="#EDF0F4" strokeWidth="1" />}
               <rect x="0" y={cy - barH / 2} width={fs * 0.36} height={barH} fill={r.color} />
-              <text x={fs * 0.95} y={cy + fs * 0.36} fontSize={fs * 1.06} fill={INK} fontWeight="600">{r.name.length > 17 ? r.name.slice(0, 16) + '…' : r.name}</text>
+              <text x={fs * 0.95} y={cy + fs * 0.36} fontSize={fs * 1.06} fill={INK} fontWeight="600">{r.name.length > (read ? 13 : 17) ? r.name.slice(0, read ? 12 : 16) + '…' : r.name}</text>
               <rect x={xs} y={cy - barH / 2} width={w} height={barH} fill={r.color} fillOpacity=".2" rx="2" />
               {showProgress && done > 0 && <rect x={xs} y={cy - barH / 2} width={w * done} height={barH} fill={r.color} rx="2" />}
               <rect x={xs} y={cy - barH / 2} width={w} height={barH} fill="none" stroke={r.color} strokeWidth="1" rx="2" />

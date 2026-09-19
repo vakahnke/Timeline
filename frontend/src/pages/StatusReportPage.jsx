@@ -4,6 +4,7 @@ import { api, ApiError } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../ui/ToastProvider'
 import StatusPage from '../components/report/StatusPage'
+import useIsNarrow from '../ui/useIsNarrow'
 import { BLOCK_KINDS, LIMITS, STATUS, fmtLong, newBlock, newDocument, refreshFromSchedule, uid } from '../components/report/reportModel'
 import '../report.css'
 
@@ -57,6 +58,7 @@ export default function StatusReportPage() {
   const [fit, setFit]           = useState('ok')     // 'ok' | 'overflow' | 'squeezed'
 
   const canEdit = project && (project.my_role === 'owner' || project.my_role === 'editor')
+  const narrow = useIsNarrow('(max-width: 640px)')
 
   const load = useCallback(async ({ keepDoc = false } = {}) => {
     try {
@@ -372,9 +374,21 @@ export default function StatusReportPage() {
 
         <main className="sr-stage">
           <div className={`sr-fit sr-fit--${layout}${fit === 'overflow' ? ' sr-fit--over' : ''}`}>
-            <StatusPage doc={doc} report={report} facts={facts} layout={layout} previous={previous} set={canEdit ? set : undefined} paper={paper} onFit={setFit} />
+            {/* On a phone the page is shown whole, as it prints. It is far too small to type into
+                there, so editing happens in the readable version below. */}
+            <StatusPage doc={doc} report={report} facts={facts} layout={layout} previous={previous} set={canEdit && !narrow ? set : undefined} paper={paper} onFit={setFit} />
           </div>
-          <p className="sr-caption">{layout === 'slide' ? 'Prints as a 16:9 page: drop the PDF straight into a deck.' : `Prints on ${paper === 'a4' ? 'A4' : 'Letter'}, portrait.`} In the print dialog choose “Save as PDF”, margins “None”, and turn on background graphics.</p>
+          {narrow && (
+            <>
+              <p className="sr-caption">This is the {layout === 'slide' ? 'slide' : 'handout'} exactly as it prints and exports. Pinch to zoom, or turn your phone sideways.</p>
+              <h2 className="sr-read-h">The same report, sized for reading</h2>
+              <div className="sr-readwrap">
+                <StatusPage doc={doc} report={report} facts={facts} layout={layout} previous={previous} set={canEdit ? set : undefined} paper={paper} read />
+              </div>
+              {canEdit && <p className="sr-caption">Tap any text above to reword it. The slide follows.</p>}
+            </>
+          )}
+          <p className={`sr-caption${narrow ? ' sr-caption--desk' : ''}`}>{layout === 'slide' ? 'Prints as a 16:9 page: drop the PDF straight into a deck.' : `Prints on ${paper === 'a4' ? 'A4' : 'Letter'}, portrait.`} In the print dialog choose “Save as PDF”, margins “None”, and turn on background graphics.</p>
         </main>
       </div>
     </div>

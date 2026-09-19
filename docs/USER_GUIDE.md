@@ -83,6 +83,13 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
 Zoom is cursor-anchored and eases smoothly, and a project auto-fits when you open it, so
 even multi-year plans are easy to navigate.
 
+### The status report on a phone
+
+In a project, the **Report** tab beside Timeline, List and Board opens the status report. You see
+the slide whole, exactly as it prints and exports (pinch to zoom, or turn the phone sideways), and
+below it the same report sized for reading. Tap any text in that readable version to reword it;
+the slide follows. Download PowerPoint and Print work from a phone too.
+
 ### Forgot your password
 
 On the sign-in page choose **Forgot your password?**, enter the email on your account, and open

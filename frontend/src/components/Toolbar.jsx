@@ -54,13 +54,17 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                 onClick={() => onViewChange?.('list')} title="List view (agenda)">List</button>
         <button className={`view-toggle-btn${view === 'board' ? ' active' : ''}`}
                 onClick={() => onViewChange?.('board')} title="Board view (Kanban by status)">Board</button>
+        {/* Compact layouts hide the "Status report" button, which left the report buried at the
+            bottom of the gear menu. It is a fourth way of looking at the project, so it lives here. */}
+        <button className="view-toggle-btn view-toggle-report" onClick={onStatusReport}
+                title="One-page status report for leadership">Report</button>
       </div>
       {view === 'timeline' && (
         <>
           <div className="toolbar-sep" />
-          <button className="tb-zoom" onClick={onZoomOut} title="Zoom out  ·  −  or  Ctrl/⌘ + scroll">−</button>
+          <button className="tb-zoom tb-zoom-step" onClick={onZoomOut} title="Zoom out  ·  −  or  Ctrl/⌘ + scroll">−</button>
           <span className="zoom-label tb-desktop" title="Drag to pan · Ctrl/⌘+scroll or pinch to zoom · arrows to move · 0 to fit">{label}</span>
-          <button className="tb-zoom" onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
+          <button className="tb-zoom tb-zoom-step" onClick={onZoomIn} title="Zoom in  ·  +  or  Ctrl/⌘ + scroll">+</button>
           <button className="tb-zoom" onClick={onFit} title="Fit entire timeline  ·  0">Fit</button>
           <button className="tb-collapsible" onClick={() => onViewPeriod?.('day')}   title="Frame today">Today</button>
           <button className="tb-collapsible" onClick={() => onViewPeriod?.('week')}  title="Frame this week">Week</button>
