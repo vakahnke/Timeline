@@ -11,7 +11,7 @@
 # PORT (defaults to 8000), WEB_CONCURRENCY.
 
 # ---- 1. Build the SPA ----
-FROM node:24-alpine AS spa
+FROM node:25-alpine AS spa
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
