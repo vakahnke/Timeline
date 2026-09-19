@@ -75,7 +75,7 @@ dates, and a comment thread.
 schedule: a status derived by rule, a headline, the numbers against your committed date, a
 simplified timeline with your key milestones, what finished and what is next, and your risks. Click
 any text to reword it, switch blocks on and off, then print a single vector page as a 16:9 slide or
-a portrait handout.
+a portrait handout, or download it as a native, editable PowerPoint file.
 
 ![The status report: a one-page slide generated from the schedule](docs/images/status-report.png)
 

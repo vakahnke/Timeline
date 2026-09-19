@@ -117,6 +117,25 @@ export default function StatusReportPage() {
     finally { setBusy(false) }
   }
 
+  // An editable PowerPoint of exactly what is on the page now, edits included. Nothing is saved.
+  const downloadPptx = async () => {
+    setBusy(true)
+    try {
+      const { blob, filename } = await api.statusReports.exportPptx(projectId, {
+        layout, paper, ...report, content: doc, snapshot: facts,
+        previous: previous ? { status: previous.status, as_of: previous.as_of } : null,
+        tz_offset: -new Date().getTimezoneOffset(),
+      })
+      const href = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = href; a.download = filename || 'status-report.pptx'
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(href), 1000)
+      flash('PowerPoint downloaded', 'saved')
+    } catch { flash('Could not build the PowerPoint file.', 'error') }
+    finally { setBusy(false) }
+  }
+
   const openSaved = async (id) => {
     if (!id) { load(); return }
     setBusy(true)
@@ -166,6 +185,7 @@ export default function StatusReportPage() {
         )}
         <span className="sr-grow" />
         {canEdit && <button onClick={save} disabled={busy}>{savedId ? 'Save changes' : 'Save report'}</button>}
+        <button onClick={downloadPptx} disabled={busy} title="An editable .pptx: native text, shapes and table, no pictures">Download PowerPoint</button>
         <button className="sr-primary" onClick={() => window.print()}>Print / Save as PDF</button>
       </header>
 

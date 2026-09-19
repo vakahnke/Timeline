@@ -245,3 +245,39 @@ class StatusReportListSerializer(serializers.ModelSerializer):
 
     def get_headline(self, obj) -> str:
         return (obj.content or {}).get('headline', '')
+
+
+class StatusReportExportSerializer(serializers.Serializer):
+    """What the print tool has on screen, sent as-is so the exported file matches it (saved or not)."""
+    layout = serializers.ChoiceField(choices=StatusReport.Layout.choices, default=StatusReport.Layout.SLIDE)
+    paper = serializers.ChoiceField(choices=[('letter', 'Letter'), ('a4', 'A4')], default='letter')
+    status = serializers.ChoiceField(choices=StatusReport.Status.choices)
+    status_source = serializers.ChoiceField(choices=StatusReport.Source.choices, default=StatusReport.Source.RULE)
+    override_reason = serializers.CharField(max_length=200, allow_blank=True, default='')
+    rule_fired = serializers.CharField(max_length=200, allow_blank=True, default='')
+    content = serializers.JSONField()
+    snapshot = serializers.JSONField()
+    previous = serializers.JSONField(required=False, allow_null=True, default=None)
+    tz_offset = serializers.IntegerField(min_value=-840, max_value=840, default=0)
+
+    def _bounded_dict(self, value, name):
+        import json
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(f'{name} must be an object.')
+        if len(json.dumps(value)) > _MAX_JSON_CHARS:
+            raise serializers.ValidationError(f'{name} is too large.')
+        return value
+
+    def validate_content(self, value):
+        return self._bounded_dict(value, 'content')
+
+    def validate_snapshot(self, value):
+        value = self._bounded_dict(value, 'snapshot')
+        if 'as_of' not in value:
+            raise serializers.ValidationError('snapshot is missing as_of.')
+        return value
+
+    def validate_previous(self, value):
+        if value is not None and not isinstance(value, dict):
+            raise serializers.ValidationError('previous must be an object or null.')
+        return value

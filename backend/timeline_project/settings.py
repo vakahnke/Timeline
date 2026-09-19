@@ -114,6 +114,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ── CORS ─────────────────────────────────────────────────────────────────────
 # Same-origin in prod (nginx) -> empty. Dev (Vite :5173 -> API :8000) -> set via env.
 CORS_ALLOWED_ORIGINS = env('DJANGO_CORS_ALLOWED_ORIGINS')
+CORS_EXPOSE_HEADERS = ['Content-Disposition']   # lets a cross-origin SPA read a download's filename
 
 # ── Django REST Framework ────────────────────────────────────────────────────
 REST_FRAMEWORK = {

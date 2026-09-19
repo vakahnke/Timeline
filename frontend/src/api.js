@@ -87,6 +87,10 @@ async function req(path, opts = {}, withAuth = true, _retried = false) {
 
   if (!res.ok) throw new ApiError(res.status, await res.text())
   if (res.status === 204) return null
+  if (opts.blob) {                           // a file: hand back the bytes and the server's filename
+    const name = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') || '')
+    return { blob: await res.blob(), filename: name ? name[1] : null }
+  }
   return res.json()
 }
 
@@ -146,6 +150,7 @@ export const api = {
     create: (pid, d)     => req(url.statusReports(pid), { method: 'POST', body: body(d) }),
     update: (pid, id, d) => req(url.statusReport(pid, id), { method: 'PATCH', body: body(d) }),
     remove: (pid, id)    => req(url.statusReport(pid, id), { method: 'DELETE' }),
+    exportPptx: (pid, d) => req(`${url.statusReports(pid)}export-pptx/`, { method: 'POST', body: body(d), blob: true }),
   },
 
   // Same method names as the old prototype, now project-scoped.

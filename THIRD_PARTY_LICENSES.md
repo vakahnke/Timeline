@@ -26,6 +26,11 @@ ranges.
 | psycopg (with `binary` extra) | LGPL-3.0-only | Daniele Varrazzo and the Psycopg Team | https://github.com/psycopg/psycopg |
 | gunicorn | MIT | Benoit Chesneau | https://github.com/benoitc/gunicorn |
 | whitenoise | MIT | David Evans | https://github.com/evansd/whitenoise |
+| python-pptx | MIT | Steve Canny | https://github.com/scanny/python-pptx |
+| lxml (via python-pptx) | BSD-3-Clause | lxml dev team; bundles libxml2 and libxslt (MIT) | https://github.com/lxml/lxml |
+| Pillow (via python-pptx) | MIT-CMU (HPND) | Jeffrey A. Clark and contributors; Secret Labs AB; Fredrik Lundh | https://github.com/python-pillow/Pillow |
+| XlsxWriter (via python-pptx) | BSD-2-Clause | John McNamara | https://github.com/jmcnamara/XlsxWriter |
+| typing_extensions (via python-pptx) | PSF-2.0 | Python Software Foundation | https://github.com/python/typing_extensions |
 
 psycopg is used unmodified as a library. Its LGPL terms apply to psycopg
 itself; Timeline's own code is not derived from it. If you redistribute a build
@@ -64,5 +69,8 @@ Full texts of the licenses referenced above:
 - Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
 - BSD 3-Clause: https://opensource.org/license/bsd-3-clause
 - MIT: https://opensource.org/license/mit
+- BSD 2-Clause: https://opensource.org/license/bsd-2-clause
+- MIT-CMU (HPND): https://spdx.org/licenses/MIT-CMU.html
+- PSF 2.0: https://spdx.org/licenses/PSF-2.0.html
 - GNU LGPL 3.0: https://www.gnu.org/licenses/lgpl-3.0.html
 - PostgreSQL License: https://www.postgresql.org/about/licence/

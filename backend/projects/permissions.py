@@ -72,6 +72,15 @@ class IsProjectMember(BasePermission):
         return self._allows(get_role(request.user, obj.project_id), request.method)
 
 
+class IsAnyProjectMember(IsProjectMember):
+    """Any role may call this, whatever the HTTP method. For read-only operations that need a
+    request body (e.g. exporting the report a viewer has on screen as a file): they change
+    nothing, so they should not require Editor just because they are a POST."""
+
+    def _allows(self, role, method):
+        return role is not None
+
+
 class IsProjectCommenter(IsProjectMember):
     """Comments: SAFE methods -> any member; writes -> Commenter+ (can comment without being
     able to edit the timeline). This is what the Commenter role unlocks."""

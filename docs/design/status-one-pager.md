@@ -1,6 +1,6 @@
 # Status One-Pager — Design Document
 
-**Status:** Building — Phase 1 (the page, the print tool, print/PDF) shipped 2026-09-19. Phase 2 (native PowerPoint) and phase 3 (baselines, trends) not started.
+**Status:** Building — Phase 1 (the page, the print tool, print/PDF) and phase 2 (native PowerPoint) shipped 2026-09-19. Phase 3 (baselines, trends) not started.
 **Last updated:** 2026-09-19
 **Scope:** A per-project status report composed inside Timeline and exported as a native, editable PowerPoint slide and a print-ready PDF handout. Touches the data model (reports, baselines, milestones), the API, a new composer page, and two export renderers.
 
@@ -218,7 +218,8 @@ and should not be smuggled in here.
   suggested status with the rule that fired, drafted headline, suggested lists, simplified
   timeline with positions normalized to 0..1. All date math and truncation happen here, once.
 - `GET/POST /api/projects/<id>/status-reports/`, `GET/PATCH/DELETE …/<rid>/`: saved reports.
-- `GET  /api/projects/<id>/status-reports/<rid>/export.pptx`: the PowerPoint file.
+- `POST /api/projects/<id>/status-reports/export-pptx/`: the PowerPoint file, built from the page
+  exactly as posted (see the phase 2 as-built notes in section 5).
 - **Server-side critical path.** A small Python port of the forward/backward pass now in
   `Timeline.jsx`, in a new `backend/events/schedule.py`, with tests that pin it to the same
   answers as the client on the template projects. The client keeps its own copy for interaction
@@ -296,8 +297,24 @@ saved reports. No new roles; it follows [PERMISSIONS.md](../PERMISSIONS.md).
   payload, the composer with live preview, `Event.is_milestone`, saved reports, print / PDF through
   the print stylesheet. Without a baseline the page shows forecast dates and progress but no
   variance, and says so. Useful on its own.
-- **Phase 2 — the deck.** The python-pptx renderer for both layouts, native shapes, tested in
-  PowerPoint (Windows and Mac), Keynote and Google Slides.
+- **Phase 2 — the deck. SHIPPED.** As built (`backend/events/pptx_export.py`):
+  - **Download PowerPoint** sits next to Print in the print tool. The file is built from the page
+    *as it stands in the browser*, unsaved edits included: the client posts the same document,
+    status fields and facts snapshot it would save, and the server returns the file and stores
+    nothing. So the endpoint is `POST …/status-reports/export-pptx/`, not a GET on a saved report,
+    and it is open to every project member, the same people who can print.
+  - **Everything is native and editable**: text boxes, a grouped "Timeline" of rectangles and
+    diamonds with alt text, a real five-column table on the handout, status and severity as text
+    glyphs. No pictures. Theme fonts, fixed sizes, no autofit. Provenance (as-of date, rule fired)
+    travels in the speaker notes.
+  - **The slide is 13.333 × 7.5 in; the handout is a Letter or A4 portrait page.** Heights are
+    derived from the wording, so a long headline takes space from the timeline, not from the footer.
+  - **Milestone labels use the same collision search as the page** and also avoid percent figures
+    and other diamonds; a label that cannot fit shortens to its date.
+  - Verified by 13 backend tests (geometry, content, permissions, nothing saved), a browser test
+    that clicks the button and inspects the downloaded file, and an independent renderer used to
+    look at the result. **Not yet opened in PowerPoint, Keynote or Google Slides by a person**:
+    QuickLook and Keynote scripting both hung on the build machine.
 - **Phase 3 — the truth.** Baselines and a committed date, slip as ghost bars and variance, the
   milestone table's baseline column, per-project thresholds, trend arrows and automatic "what
   moved since last report", a milestone trend chart once three reports exist.

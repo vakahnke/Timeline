@@ -1,6 +1,8 @@
 from django.db import transaction
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils.text import slugify
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +11,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 
 from projects.models import Project, ProjectMembership, Role
-from projects.permissions import IsProjectCommenter, IsProjectMember, get_role
+from projects.permissions import IsAnyProjectMember, IsProjectCommenter, IsProjectMember, get_role
 
 from .models import Category, Comment, Event, StatusReport, Task
 from .serializers import (
@@ -17,10 +19,12 @@ from .serializers import (
     CommentSerializer,
     EventSerializer,
     MyTaskSerializer,
+    StatusReportExportSerializer,
     StatusReportListSerializer,
     StatusReportSerializer,
     TaskSerializer,
 )
+from .pptx_export import build_pptx
 from .status_report import build_facts, suggest
 
 
@@ -200,6 +204,12 @@ class StatusReportViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
     def get_serializer_class(self):
         return StatusReportListSerializer if self.action == 'list' else StatusReportSerializer
 
+    def get_permissions(self):
+        # Exporting changes nothing, so it is open to every member even though it is a POST.
+        if self.action == 'export_pptx':
+            return [IsAuthenticated(), IsAnyProjectMember()]
+        return super().get_permissions()
+
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return StatusReport.objects.none()
@@ -228,3 +238,31 @@ class StatusReportViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
             'suggestion': suggest(facts),
             'previous': StatusReportSerializer(previous, context=self.get_serializer_context()).data if previous else None,
         })
+
+    @extend_schema(
+        summary='Export the status report as a native PowerPoint file',
+        description=(
+            'Returns a .pptx built from exactly what the print tool holds: the report document '
+            '(`content`), the status fields, and the facts it was drawn from (`snapshot`), so the '
+            'file matches the page on screen whether or not it has been saved. Every element is a '
+            'native, editable PowerPoint object (text boxes, shapes, a table); nothing is an image. '
+            'Open to every project member.'),
+        request=StatusReportExportSerializer,
+        responses={(200, 'application/vnd.openxmlformats-officedocument.presentationml.presentation'): OpenApiTypes.BINARY},
+    )
+    @action(detail=False, methods=['post'], url_path='export-pptx')
+    def export_pptx(self, request, project_pk=None):
+        ser = StatusReportExportSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        data = build_pptx(
+            doc=d['content'], facts=d['snapshot'], layout=d['layout'], paper=d['paper'], previous=d['previous'],
+            tz_offset_minutes=d['tz_offset'],
+            report={'status': d['status'], 'status_source': d['status_source'],
+                    'override_reason': d['override_reason'], 'rule_fired': d['rule_fired']},
+        )
+        name = f"{slugify(self.project.name) or 'project'}-status-{str(d['snapshot'].get('as_of', ''))[:10]}.pptx"
+        resp = HttpResponse(data, content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+        resp['Content-Disposition'] = f'attachment; filename="{name}"'
+        resp['Content-Length'] = str(len(data))
+        return resp

@@ -101,11 +101,15 @@ next, and your top risks.
 - **Two layouts:** a 16:9 slide and a portrait handout (Letter or A4) that adds a milestone table.
 - **Print / Save as PDF** produces a single vector page. In the print dialog choose "Save as PDF",
   margins "None", and turn on background graphics. The slide PDF drops straight into a deck.
+- **Download PowerPoint** gives you an editable `.pptx` of the page exactly as you see it, edits
+  included: real text boxes, a grouped timeline made of shapes, and a real table on the handout.
+  Paste the slide into your own deck and it picks up that deck's fonts. Nothing is saved by
+  downloading.
 - **Save report** keeps a dated copy. The next report for that project starts from its shape and
   shows whether the status moved. If the page gets too full it tells you what to cut; it never
   shrinks the type.
 
-Viewers and commenters can open and print a report; owners and editors can edit and save.
+Viewers and commenters can open, print and download a report; owners and editors can edit and save.
 
 ## 4. Templates
 
