@@ -1,6 +1,6 @@
 # Touch Timeline — Design Document
 
-**Status:** Building — Phases 1 and 2 shipped 2026-09-19 (navigate and edit by touch). Phase 3 (header rail, landscape toolbar, timeline as the phone default) not started.
+**Status:** Shipped 2026-09-19 — all three phases (navigate, edit, canvas room + timeline as the phone default). Verified with injected touch events in Chromium; a pass on physical iOS Safari is still owed.
 **Last updated:** 2026-09-19
 **Scope:** Make the timeline view itself fully usable by touch (phones and tablets): pan, pinch-zoom, move, resize, select, and the minimap.
 
@@ -212,7 +212,10 @@ open on the timeline like every other device. A saved preference still wins.
   floating action bar. Native scrolling is held off during a lifted drag by a non-passive
   `touchmove` listener rather than by toggling `overflow`. Original scope: The lifted state, grab
   dots, tap-to-select bar, coach mark. After this the timeline is fully *editable*.
-- **Phase 3 — canvas room + default view (R9).** The 32px header rail, landscape
+- **Phase 3 — canvas room + default view (R9). SHIPPED.** As built: the rail is 36px (colour bar +
+  event count), class-driven from `Timeline.jsx` so a phone in landscape gets it too; the open
+  panel is 230px and uses `clip-path` rather than `overflow` so the scroll-synced list still clips
+  vertically. Landscape gets a single slim toolbar row. Original scope: The 32px header rail, landscape
   toolbar, timeline as the phone default.
 - **Later / maybe:** touch multi-select mode, a vertical agenda-with-bars view, haptics
   on snap, iPad split-view polish.

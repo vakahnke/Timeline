@@ -57,7 +57,11 @@ around long projects. Dependencies draw as arrows and the critical path is
 highlighted automatically.
 
 **Three views of one plan.** Timeline for planning, a board grouped by task
-status for day-to-day work, and a list view that works on a phone.
+status for day-to-day work, and an agenda-style list.
+
+**Works on a phone, timeline included.** Drag to pan, pinch to zoom, press and
+hold an event to pick it up and move it, and drag the dots at its ends to resize.
+A quick swipe never moves anything, which is the touch version of the Ctrl/⌘ rule.
 
 ![The board view: tasks grouped into To do, In progress, Blocked, and Done](docs/images/board.png)
 

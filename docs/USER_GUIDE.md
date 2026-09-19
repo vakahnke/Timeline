@@ -50,7 +50,8 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
 - **On a phone or tablet:** drag to pan and **pinch to zoom**. **Press and hold** an event to pick it
   up, then drag it to a new time or track. A press and hold also selects the event and shows two
   **dots** at its ends; drag a dot to resize. A quick swipe that starts on an event still pans, so
-  nothing moves by accident, and **Undo** is in the toolbar. Tap elsewhere to deselect.
+  nothing moves by accident, and **Undo** is in the toolbar. Tap elsewhere to deselect. The track names collapse
+  to a thin colour rail on the left to give the timeline the screen; tap the rail to slide them out.
 - **Delete:** from the inline ✕ or the editor's **Delete** button.
 
 ### Categories (tracks)

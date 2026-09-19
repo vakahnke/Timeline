@@ -308,6 +308,33 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
   overflow: hidden;
 }
 
+/* Compact rail (phones): 36px in the layout — colour bar + event count — and the full headers
+   slide out over the canvas when tapped. clip-path (not overflow) clips the scroll-synced list
+   vertically while letting the open panel extend to the right. Class-driven: Timeline.jsx
+   decides when (COMPACT_QUERY), so portrait and landscape phones both get it. */
+.headers-panel.rail {
+  width: 36px;
+  overflow: visible;
+  clip-path: inset(0 -280px 0 0);
+  cursor: pointer;
+}
+.headers-panel.rail .ruler-spacer,
+.headers-panel.rail .header-list { width: 36px; background: var(--bg-mid); }
+.headers-panel.rail .track-header { padding: 0 4px; gap: 4px; justify-content: center; }
+.headers-panel.rail:not(.rail-open) .drag-handle,
+.headers-panel.rail:not(.rail-open) .track-name { display: none; }
+.headers-panel.rail:not(.rail-open) .track-count { min-width: 0; padding: 0 5px; }
+.headers-panel.rail-open { cursor: default; z-index: 30; }
+.headers-panel.rail-open .ruler-spacer,
+.headers-panel.rail-open .header-list {
+  width: 230px;
+  border-right: 1px solid var(--border-mid);
+  box-shadow: 18px 0 40px rgba(0,0,0,0.6);
+}
+.headers-panel.rail-open .track-header { padding: 0 12px; gap: 9px; justify-content: flex-start; min-height: 44px; }
+.headers-panel.rail-open .track-name   { flex: 1 1 auto; min-width: 0; }
+.has-rail .minimap { margin-left: 36px; }
+
 .ruler-spacer {
   height: 38px;
   flex-shrink: 0;
@@ -2100,4 +2127,16 @@ fieldset.modal-body:disabled { opacity: 1; }
   .btn-icon          { min-width: 40px; min-height: 40px; }
   .modal-footer button,
   .settings-action   { min-height: 44px; }
+}
+
+/* ── Phone in landscape (short viewport) ─────────────────────────────────────
+   ~390px tall: the toolbar gets one slim row and secondary actions move into ⚙, as in portrait. */
+@media (max-height: 500px) and (min-width: 641px) {
+  .toolbar { height: auto; min-height: 44px; padding: 4px 10px; gap: 5px; flex-wrap: nowrap; }
+  .toolbar-range, .toolbar-sep, .zoom-label, .tb-collapsible { display: none; }
+  .settings-mobile { display: block; }
+  .toolbar h1 { max-width: 26vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toolbar button { min-height: 40px; }
+  .settings-popover { max-height: 70vh; overflow-y: auto; }
+  .minimap { height: 44px; }
 }

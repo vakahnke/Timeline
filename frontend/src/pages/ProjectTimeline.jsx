@@ -111,10 +111,11 @@ export default function ProjectTimeline() {
   const [taskPanelId,    setTaskPanelId]  = useState(null)  // event id whose task panel is open
   const [tasksReload,    setTasksReload]  = useState(0)     // bumped on task panel close
   // 'timeline' (pan/zoom) vs 'list' (mobile-friendly agenda) vs 'board' (Kanban by status).
-  // Defaults to list on a phone-sized viewport; remembered per browser.
+  // The timeline is the default on every device, phones included, now that it works by touch
+  // (docs/design/touch-timeline.md). The choice is remembered per browser.
   const [view,           setView]         = useState(() => {
     try { const v = localStorage.getItem('timeline:view'); if (v === 'list' || v === 'timeline' || v === 'board') return v } catch { /* ignore */ }
-    return (typeof window !== 'undefined' && window.innerWidth <= 720) ? 'list' : 'timeline'
+    return 'timeline'
   })
   const [catModal,       setCatModal]     = useState(null)
   const [showMembers,    setShowMembers]  = useState(false)
@@ -174,7 +175,9 @@ export default function ProjectTimeline() {
         // first renders at the zoomed-in default — which would draw a huge ruler/canvas.
         if (r) {
           const spanHrs = (r.end - r.start) / 3_600_000
-          const avail   = (window.innerWidth || 1200) - 180
+          // Track headers: 170px panel on desktop, a 36px rail on phones (see Timeline COMPACT_QUERY).
+          const compact = window.innerWidth <= 640 || window.innerHeight <= 500
+          const avail   = (window.innerWidth || 1200) - (compact ? 46 : 180)
           setPxPerHour(Math.max(MIN_PX_PER_HR, Math.min(MAX_PX_PER_HR, (avail / spanHrs) * 0.92)))
         }
         setApiCategories(catData)

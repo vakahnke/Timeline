@@ -3,6 +3,11 @@ import { RULER_HEIGHT, TRACK_HEIGHT, TICK_INTERVALS, MIN_PX_PER_HR, MAX_PX_PER_H
 import EventBlock from './EventBlock'
 import Minimap from './Minimap'
 import { useToast } from '../ui/ToastProvider'
+import useIsNarrow from '../ui/useIsNarrow'
+
+// Phones (portrait or landscape): the track headers shrink to a thin colour rail so the
+// canvas gets the screen; tapping the rail slides the full headers over the canvas.
+const COMPACT_QUERY = '(max-width: 640px), (max-height: 500px)'
 
 // Label for the modifier that arms event dragging, matching what the keyboard says.
 const MOD_KEY = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘' : 'Ctrl'
@@ -192,6 +197,15 @@ const Timeline = forwardRef(function Timeline(
   const laneColorsRef   = useRef(null)
   const headerListRef   = useRef(null)
   const headersRef      = useRef(null)
+  const compact = useIsNarrow(COMPACT_QUERY)
+  const [railOpen, setRailOpen] = useState(false)
+  useEffect(() => { if (!compact) setRailOpen(false) }, [compact])
+  useEffect(() => {
+    if (!railOpen) return
+    const off = (ev) => { if (!headersRef.current?.contains(ev.target)) setRailOpen(false) }
+    document.addEventListener('pointerdown', off, true)
+    return () => document.removeEventListener('pointerdown', off, true)
+  }, [railOpen])
   const tracksLenRef    = useRef(tracks.length)
   const tracksRef       = useRef(tracks)
   const pxRef           = useRef(pxPerHour)
@@ -956,10 +970,15 @@ const Timeline = forwardRef(function Timeline(
   }, [displayedTracks, layout, paintLaneBg])
 
   return (
-    <div className="timeline-main">
+    <div className={`timeline-main${compact ? ' has-rail' : ''}`}>
       <div className="timeline-wrapper">
-      {/* Track header panel */}
-      <div className="headers-panel" ref={headersRef}>
+      {/* Track header panel (a thin rail on phones; tap it to slide the full headers out) */}
+      <div
+        className={`headers-panel${compact ? ' rail' : ''}${compact && railOpen ? ' rail-open' : ''}`}
+        ref={headersRef}
+        onClick={compact && !railOpen ? (() => setRailOpen(true)) : undefined}
+        title={compact && !railOpen ? 'Show track names' : undefined}
+      >
         <div className="ruler-spacer" />
         <div className="header-list" ref={headerListRef}>
           {displayedTracks.map((t, i) => {
@@ -981,7 +1000,7 @@ const Timeline = forwardRef(function Timeline(
                 <div className="track-swatch" style={{ background: t.color }} />
                 <span
                   className={canEdit ? 'track-name' : 'track-name track-name--static'}
-                  onClick={canEdit ? (() => onEditCategory(t)) : undefined}
+                  onClick={canEdit ? (() => { setRailOpen(false); onEditCategory(t) }) : undefined}
                 >{t.name}</span>
                 <span className="track-count">{(eventsByCategory[t.name] || []).length}</span>
               </div>

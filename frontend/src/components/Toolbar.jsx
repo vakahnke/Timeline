@@ -51,7 +51,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
         <button className={`view-toggle-btn${view === 'timeline' ? ' active' : ''}`}
                 onClick={() => onViewChange?.('timeline')} title="Timeline view">Timeline</button>
         <button className={`view-toggle-btn${view === 'list' ? ' active' : ''}`}
-                onClick={() => onViewChange?.('list')} title="List view (best on phones)">List</button>
+                onClick={() => onViewChange?.('list')} title="List view (agenda)">List</button>
         <button className={`view-toggle-btn${view === 'board' ? ' active' : ''}`}
                 onClick={() => onViewChange?.('board')} title="Board view (Kanban by status)">Board</button>
       </div>
