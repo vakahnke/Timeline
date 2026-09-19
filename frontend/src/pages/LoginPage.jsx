@@ -6,7 +6,11 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from?.pathname || '/'
+  // Where to go after sign-in comes from the URL the visitor arrived on, so treat it as untrusted:
+  // only a plain in-app path is accepted. "//host" and "/\host" are read by browsers as another
+  // site, which would turn a crafted link into a redirect off this site right after signing in.
+  const wanted = location.state?.from?.pathname
+  const from = typeof wanted === 'string' && /^\/(?![/\\])[^\\]*$/.test(wanted) ? wanted : '/'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

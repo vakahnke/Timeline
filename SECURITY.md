@@ -31,3 +31,10 @@ note here is still useful if Timeline's usage makes the issue exploitable.
 ## Supported versions
 
 Only the current `main` branch receives fixes.
+
+## How dependencies are kept current
+
+Dependabot alerts, Dependabot security updates, secret scanning and push protection are enabled
+on this repository, and `.github/dependabot.yml` opens routine update pull requests. Before a
+release the Python packages are checked with `pip-audit` and the frontend with `npm audit`; both
+were clean as of 2026-09-19.
