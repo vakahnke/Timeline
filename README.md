@@ -195,7 +195,7 @@ REST API with JWT auth. Swagger UI lives at `/api/docs/` and ReDoc at
 
 | Layer    | Stack                                                                                   |
 |----------|-----------------------------------------------------------------------------------------|
-| Backend  | Python, Django 4.2, Django REST Framework, SimpleJWT, drf-spectacular, PostgreSQL 16     |
+| Backend  | Python 3.12, Django 6.1, Django REST Framework, SimpleJWT, drf-spectacular, PostgreSQL 15+ |
 | Frontend | React 18, Vite 5, React Router 6, @dnd-kit for the board. Plain JSX and CSS, no UI kit  |
 | Infra    | Docker Compose for dev and prod, nginx + gunicorn in prod, GitHub Actions CI            |
 

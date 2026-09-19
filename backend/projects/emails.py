@@ -2,7 +2,7 @@
 
 Sending is best-effort: a mail failure must never break registration or an admin
 action, so every send is wrapped and logged. The backend is configured by
-``EMAIL_URL`` (console in dev, SMTP in prod) — see settings.
+the ``EMAIL_*`` environment variables via ``MAILERS`` (console in dev, SMTP in prod) — see settings.
 """
 import logging
 
@@ -21,8 +21,7 @@ def _safe_send(subject, message, recipients):
     if not recipients:
         return False
     try:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, recipients,
-                  fail_silently=False)
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, recipients)
         return True
     except Exception:                       # SMTP down, bad creds, etc. — never fatal.
         logger.exception('Account email failed: %s', subject)

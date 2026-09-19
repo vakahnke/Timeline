@@ -162,16 +162,26 @@ SIMPLE_JWT = {
 # real mail is sent automatically; leave them empty in dev and mail prints to the backend
 # logs (console backend). These are the SAME variable names as nastran-deck-studio, so the
 # same Gmail block can be copied verbatim between the two projects' .env files.
-EMAIL_HOST          = env('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT          = env.int('EMAIL_PORT', default=587)
-EMAIL_USE_TLS       = env.bool('EMAIL_USE_TLS', default=True)
-EMAIL_HOST_USER     = env('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-EMAIL_BACKEND = env('EMAIL_BACKEND', default=(
-    'django.core.mail.backends.smtp.EmailBackend' if EMAIL_HOST_USER
-    else 'django.core.mail.backends.console.EmailBackend'))
+# The environment variable names are unchanged; Django 6.1 replaced the EMAIL_* *settings* with
+# MAILERS, and refuses to start if both are defined, so the values are read into locals here.
+_email_user = env('EMAIL_HOST_USER', default='')
+MAILERS = {
+    'default': {
+        'BACKEND': env('EMAIL_BACKEND', default=(
+            'django.core.mail.backends.smtp.EmailBackend' if _email_user
+            else 'django.core.mail.backends.console.EmailBackend')),
+    },
+}
+if MAILERS['default']['BACKEND'].endswith('smtp.EmailBackend'):
+    MAILERS['default']['OPTIONS'] = {
+        'host': env('EMAIL_HOST', default='smtp.gmail.com'),
+        'port': env.int('EMAIL_PORT', default=587),
+        'use_tls': env.bool('EMAIL_USE_TLS', default=True),
+        'username': _email_user,
+        'password': env('EMAIL_HOST_PASSWORD', default=''),
+    }
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL',
-                         default=(EMAIL_HOST_USER or 'Timeline <no-reply@localhost>'))
+                         default=(_email_user or 'Timeline <no-reply@localhost>'))
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 # Where "new account pending approval" alerts go (ADMIN_NOTIFY_EMAIL accepted for parity).
 ACCOUNT_NOTIFY_EMAIL = env('ACCOUNT_NOTIFY_EMAIL', default=env('ADMIN_NOTIFY_EMAIL', default=''))

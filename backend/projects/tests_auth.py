@@ -13,7 +13,6 @@ from .emails import notify_user_account_activated
 User = get_user_model()
 
 SETTINGS = dict(
-    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
     ACCOUNT_NOTIFY_EMAIL='operator@example.com',
     REQUIRE_ACCOUNT_APPROVAL=True,
     DEFAULT_FROM_EMAIL='Timeline <no-reply@example.com>',
