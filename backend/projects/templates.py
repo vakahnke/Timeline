@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.db import transaction
 
-from events.models import Category, Event
+from events.models import Category, Event, Task
 
 from .models import Project, ProjectMembership, Role
 
@@ -13,8 +13,14 @@ def spec_from_project(project):
 
     Task offsets are measured from the project's earliest event start, so the
     template can later be anchored to any start datetime.
+
+    A template is the PLAN, not the record of one run. It keeps what makes the plan reusable
+    (tracks, events, durations, dependencies, notes, which events are key milestones, and the
+    to-do items inside each event) and forgets what belonged to that run: the dates, the progress,
+    who did each to-do and whether it got done. A finished project therefore becomes a template
+    that starts at zero.
     """
-    events = list(project.events.prefetch_related('depends_on').order_by('start'))
+    events = list(project.events.prefetch_related('depends_on', 'tasks').order_by('start'))
     categories = [{'name': c.name, 'color': c.color} for c in project.categories.all()]
 
     anchor = events[0].start if events else None
@@ -28,8 +34,12 @@ def spec_from_project(project):
             'start_offset_minutes': int((e.start - anchor).total_seconds() // 60),
             'duration_minutes': max(1, int((e.end - e.start).total_seconds() // 60)),
             'notes': e.notes,
-            'percent_complete': e.percent_complete,
+            'is_milestone': e.is_milestone,
             'depends_on': [index_by_id[d.id] for d in e.depends_on.all() if d.id in index_by_id],
+            # To-dos travel as titles, with their due date as days from the project's start.
+            'todos': [{'title': t.title,
+                       'due_offset_days': (t.due_date - anchor.date()).days if t.due_date else None}
+                      for t in e.tasks.all()],
         })
     return {'categories': categories, 'tasks': tasks}
 
@@ -64,8 +74,19 @@ def create_project_from_spec(spec, *, name, description, start, owner, also_owne
             category=t.get('category', 'Default'),
             color=color_by_category.get(t.get('category'), ''),
             notes=t.get('notes', ''),
-            percent_complete=t.get('percent_complete', 0),
+            # Always a fresh start. Templates saved before this rule still carry the progress of
+            # the project they came from; it is ignored, not copied into the new project.
+            percent_complete=0,
+            is_milestone=bool(t.get('is_milestone', False)),
         ))
+        for order, todo in enumerate(t.get('todos') or []):
+            title = str(todo.get('title') or '').strip()[:200]
+            if not title:
+                continue
+            offset = todo.get('due_offset_days')
+            Task.objects.create(
+                event=created[-1], title=title, order=order, owner=owner, assignee=owner,
+                due_date=(start + timedelta(days=int(offset))).date() if isinstance(offset, int) else None)
 
     # Wire dependencies (stored as task indices).
     for t, ev in zip(spec.get('tasks', []), created):

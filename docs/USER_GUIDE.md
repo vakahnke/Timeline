@@ -174,6 +174,12 @@ dependencies) shifted to a start date you choose.
 - **Save your own:** open a project → **Save as Template** in the toolbar. Saved templates
   are private to you and appear alongside the built-ins in the **From Template** picker
   (delete them there).
+- **What a template keeps:** the plan. Tracks, events, their durations and dependencies, notes,
+  which events are key milestones, and the to-do list inside each event (due dates move with the
+  new start date).
+- **What it leaves behind:** that one run. The dates, the progress, who was assigned each to-do and
+  whether it was done, and the project's members. A project started from a template always begins
+  at zero, so a finished project makes a clean starting point for the next one.
 
 ## 5. Teams
 

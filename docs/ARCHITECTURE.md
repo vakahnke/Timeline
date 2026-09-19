@@ -187,6 +187,12 @@ live in code (`backend/projects/templates_builtin.py`); saved templates store th
 shifted so the first lands on the chosen start date and dependencies are re-wired. The project can
 be created for yourself or for someone you already work with.
 
+A template is the **plan**, not the record of one run (`spec_from_project`). Saving a project keeps
+tracks, events, durations, dependencies, notes, key-milestone flags and each event's to-do list
+(titles, with due dates as day offsets). It drops dates, progress, to-do status and assignees, and
+the project's members. A new project always starts at zero percent, including from templates saved
+before that rule existed. `backend/projects/tests_template_reuse.py` holds this through the API.
+
 ## Email
 
 `backend/projects/emails.py` sends account notices and password-reset mail through Django's

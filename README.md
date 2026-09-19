@@ -6,23 +6,68 @@
 [![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://web-production-28ba24.up.railway.app)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED.svg)](#run-it-yourself-in-two-minutes)
 
-**A self-hosted team project planner built around a timeline you can actually grab.** The
-Gantt-style view is drawn on canvas, so dragging, zooming, dependency arrows and the critical path
-stay smooth with hundreds of events on screen, including in Safari and on a phone. When leadership
-asks where the project stands, one click turns the same schedule into a one-page status report you
-can print, save as a PDF, or download as a native, fully editable PowerPoint slide.
+**Plan it once. Do it. Keep the plan that worked.**
 
-**[Try the live demo](https://web-production-28ba24.up.railway.app)** (sign in as `demo` / `demo12345`) ·
-[Run it in two minutes](#run-it-yourself-in-two-minutes) ·
+Timeline is a self-hosted project planner for the person who has to get something
+big done, often for the first time: a product launch, a fundraise, an office move,
+a hiring push, a first marathon. You work out the steps, put them on a timeline you
+can actually grab, and run the project from it. When it is done, you save the plan
+as a template, and the next launch, the next round, or the next person on your team
+starts from a plan that already worked instead of a blank page.
+
+The timeline is drawn on canvas, so dragging, zooming, dependency arrows and the
+critical path stay smooth with hundreds of events on screen, including on a phone.
+When leadership asks where the project stands, one click turns the same schedule into
+a one-page status report you can print, save as a PDF, or download as a fully
+editable PowerPoint slide.
+
+**[Try the live demo](https://web-production-28ba24.up.railway.app)** (sign in as
+`demo` / `demo12345`) · [Run it in two minutes](#run-it-yourself-in-two-minutes) ·
+[Templates](#templates-the-plan-that-worked) ·
 [The status report](#the-status-report-your-schedule-as-a-leadership-slide) ·
-[User guide](docs/USER_GUIDE.md) ·
-[Architecture](docs/ARCHITECTURE.md)
+[User guide](docs/USER_GUIDE.md) · [Architecture](docs/ARCHITECTURE.md)
 
 ![Zooming the timeline, moving an event while its dependency arrows follow, undo, the board, and the status report](docs/images/demo.gif)
 
 Free and open source under the [Apache 2.0 license](LICENSE): use it, modify it, and redistribute
 it, including commercially. Every project is private to the people you invite, with four roles from
 viewer to owner.
+
+## Templates: the plan that worked
+
+Most projects are not new. They are the second product launch, the fourth hire, the
+annual conference. But the plan from last time lives in someone's head, a stale
+document, or a spreadsheet nobody trusts, so every run starts over.
+
+Timeline treats a finished project as the most valuable thing you own. Any project
+can be saved as a template in one step. It keeps the tracks, the events, their
+durations and dependencies, the notes, which events are key milestones, and the to-do
+list inside each event. It forgets what belonged to that one run: the dates, the
+progress, and who did what. Start a new project from it, pick the day it begins, and
+every event lands in the right place with its dependencies intact, at zero percent,
+ready to go. Then you adjust it for this run, do the work, and save it again if you
+learned something.
+
+Over time a team builds up a library of plans that are known to work. A new hire
+running their first launch does not need to know how; they need the template from
+the last one and a start date.
+
+Timeline ships with built-in plans so you can see the idea before you have a
+library of your own:
+
+- **Business:** Startup MVP: Idea to Launch, Seed Fundraising Round, Customer
+  Discovery Sprint, Go-to-Market Launch, Hire a Key Role, Quarterly OKR Cycle,
+  Incorporate & Set Up the Company
+- **Work:** Two-Week Sprint, Product Launch, Event Plan, Custom Shop Build
+- **Hobby:** Homebrew a Batch of Ale, Backyard Raised-Bed Garden, First Marathon,
+  Solid-Wood Dining Table Build, Record & Release a Song, Write Your First Novel,
+  Frame-Off Classic Car Restore, Hand-Knit Sweater, Open Water Diver Certification,
+  Build a Steel-String Acoustic
+
+The hobby plans are not a joke. They are there because the tool is for anyone who
+has to do a big thing well, and a marathon has dependencies too.
+
+![The template picker](docs/images/templates.png)
 
 ## The status report: your schedule as a leadership slide
 
@@ -164,21 +209,6 @@ Outlook, Google Calendar and Apple Calendar, everything or key milestones only. 
 export Microsoft Project XML, the interchange format most scheduling tools open,
 with dependencies intact and tasks set to manual scheduling so your dates arrive
 unchanged. The XML is validated against Microsoft's published schema.
-
-**Templates.** Start a project from a built-in plan anchored to a date you choose,
-or save any project of your own as a template. Built-ins cover business,
-engineering, and hobby projects:
-
-- Business: Startup MVP: Idea to Launch, Seed Fundraising Round, Customer
-  Discovery Sprint, Go-to-Market Launch, Hire a Key Role, Quarterly OKR Cycle,
-  Incorporate & Set Up the Company
-- Work: Two-Week Sprint, Product Launch, Event Plan, Custom Shop Build
-- Hobby: Homebrew a Batch of Ale, Backyard Raised-Bed Garden, First Marathon,
-  Solid-Wood Dining Table Build, Record & Release a Song, Write Your First Novel,
-  Frame-Off Classic Car Restore, Hand-Knit Sweater, Open Water Diver
-  Certification, Build a Steel-String Acoustic
-
-![The template picker](docs/images/templates.png)
 
 **Teams and roles.** Every project is private to its members. Roles are owner,
 editor, commenter, and viewer. Reusable teams let you add a whole group to a
@@ -356,9 +386,11 @@ repository. [SECURITY.md](SECURITY.md) has the details.
 
 ## About
 
-I manage projects for a living, and I wanted a planner that is simple, interactive, and just
-works: grab an event and move it, see what it pushes, and hand leadership a slide without rebuilding
-it by hand every week. I did not have the coding chops to build that alone. Timeline was built with
+I manage projects for a living. Every project I ran taught me something about how to
+run the next one, and none of my tools had a place to keep that. I wanted a planner
+where the plan is the thing you build, and a finished plan is the thing you keep:
+grab an event and move it, see what it pushes, hand leadership a slide without
+rebuilding it by hand, and when it is done, save it for next time. I did not have the coding chops to build that alone. Timeline was built with
 a great deal of help from an AI coding assistant (Claude), and every change is tested and checked
 against the running app before it ships. Bug reports, ideas and pull requests are all welcome; the
 [issues](https://github.com/vakahnke/Timeline/issues) marked *good first issue* are a fine place to start.
