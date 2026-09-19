@@ -153,6 +153,15 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
 .settings-wrap {
   position: relative;
 }
+/* Desktop: pin the gear to the toolbar's top-right corner instead of letting it flow with the
+   wrap. Its menu is anchored right:0 and opens 220px to the LEFT, so when a project with a
+   short toolbar (e.g. no events yet, so no Start/Finish/Duration block) wrapped the gear to the
+   left edge, the menu opened off-screen. Pinned, it is in the same place on every project and
+   window size, and the menu always opens inward. Phones lay the toolbar out with `order`. */
+@media (min-width: 641px) {
+  .toolbar { position: relative; padding-right: 58px; }
+  .toolbar .settings-wrap { position: absolute; top: 10px; right: 16px; }
+}
 .btn-gear {
   font-size: 15px;
   line-height: 1;
@@ -2139,4 +2148,6 @@ fieldset.modal-body:disabled { opacity: 1; }
   .toolbar button { min-height: 40px; }
   .settings-popover { max-height: 70vh; overflow-y: auto; }
   .minimap { height: 44px; }
+  .toolbar { padding-right: 56px; }
+  .toolbar .settings-wrap { top: 7px; right: 10px; }   /* pinned gear, slimmer landscape row */
 }
