@@ -1,19 +1,27 @@
 # Timeline
 
-A self-hosted team project planner whose Gantt-style timeline is drawn on
-canvas, so dragging, zooming, dependency arrows, and the critical path stay
-smooth with hundreds of events on screen, including in Safari. Create a
-project, invite teammates with roles, and plan it on a surface you can drag,
-resize, zoom, and pan. Every project is isolated to its members.
+[![CI](https://github.com/vakahnke/Timeline/actions/workflows/ci.yml/badge.svg)](https://github.com/vakahnke/Timeline/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://web-production-28ba24.up.railway.app)
+[![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED.svg)](#run-it-yourself-in-two-minutes)
 
-When leadership asks where the project stands, one click turns that same schedule
-into a one-page status report you can print, save as a PDF, or download as a
-native, fully editable PowerPoint slide.
+**A self-hosted team project planner built around a timeline you can actually grab.** The
+Gantt-style view is drawn on canvas, so dragging, zooming, dependency arrows and the critical path
+stay smooth with hundreds of events on screen, including in Safari and on a phone. When leadership
+asks where the project stands, one click turns the same schedule into a one-page status report you
+can print, save as a PDF, or download as a native, fully editable PowerPoint slide.
 
-![The timeline view: dependency arrows, the critical path in red, the now-line, and a minimap](docs/images/timeline.png)
+**[Try the live demo](https://web-production-28ba24.up.railway.app)** (sign in as `demo` / `demo12345`) ·
+[Run it in two minutes](#run-it-yourself-in-two-minutes) ·
+[The status report](#the-status-report-your-schedule-as-a-leadership-slide) ·
+[User guide](docs/USER_GUIDE.md) ·
+[Architecture](docs/ARCHITECTURE.md)
 
-Timeline is free and open source under the [Apache 2.0 license](LICENSE). You can
-use it, modify it, and redistribute it, including commercially.
+![Zooming the timeline, moving an event while its dependency arrows follow, undo, the board, and the status report](docs/images/demo.gif)
+
+Free and open source under the [Apache 2.0 license](LICENSE): use it, modify it, and redistribute
+it, including commercially. Every project is private to the people you invite, with four roles from
+viewer to owner.
 
 ## The status report: your schedule as a leadership slide
 
@@ -125,12 +133,22 @@ whole project. A minimap at the bottom shows the whole plan and lets you jump
 around long projects. Dependencies draw as arrows and the critical path is
 highlighted automatically.
 
+![The timeline view: dependency arrows, the critical path in red, the now-line, and a minimap](docs/images/timeline.png)
+
 **Three views of one plan.** Timeline for planning, a board grouped by task
 status for day-to-day work, and an agenda-style list.
 
 **Works on a phone, timeline included.** Drag to pan, pinch to zoom, press and
 hold an event to pick it up and move it, and drag the dots at its ends to resize.
 A quick swipe never moves anything, which is the touch version of the Ctrl/⌘ rule. The status report is one tap away on the **Report** tab: the slide shown whole, and the same report below it at a size you can read and edit.
+
+<p align="center">
+  <img src="docs/images/phone-timeline.png" width="230" alt="The timeline on an iPhone: drag to pan, pinch to zoom, press and hold to move an event">
+  &nbsp;
+  <img src="docs/images/phone-report.png" width="230" alt="The status report on an iPhone: the whole slide, as it prints">
+  &nbsp;
+  <img src="docs/images/phone-report-read.png" width="230" alt="The same report below it, sized for reading and editing on a phone">
+</p>
 
 ![The board view: tasks grouped into To do, In progress, Blocked, and Done](docs/images/board.png)
 
@@ -328,6 +346,17 @@ Some directions that would be good contributions, roughly in order of effort:
 If you find a vulnerability, please report it privately rather than in a public
 issue. Use GitHub's "Report a vulnerability" button on the Security tab of this
 repository. [SECURITY.md](SECURITY.md) has the details.
+
+## About
+
+I manage projects for a living, and I wanted a planner that is simple, interactive, and just
+works: grab an event and move it, see what it pushes, and hand leadership a slide without rebuilding
+it by hand every week. I did not have the coding chops to build that alone. Timeline was built with
+a great deal of help from an AI coding assistant (Claude), and every change is tested and checked
+against the running app before it ships. Bug reports, ideas and pull requests are all welcome; the
+[issues](https://github.com/vakahnke/Timeline/issues) marked *good first issue* are a fine place to start.
+
+If Timeline is useful to you, a star helps other people find it.
 
 ## License
 
