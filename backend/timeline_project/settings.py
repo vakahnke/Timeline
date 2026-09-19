@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from datetime import timedelta
 
@@ -80,6 +81,11 @@ DATABASES = {
         default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
     ),
 }
+
+# Tests create many users; the production hasher is deliberately slow (1.5M rounds in Django 6.1).
+# A fast hasher for `manage.py test` only keeps the suite quick. Production is unaffected.
+if len(sys.argv) > 1 and sys.argv[1] == 'test':
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

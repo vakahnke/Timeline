@@ -196,7 +196,7 @@ REST API with JWT auth. Swagger UI lives at `/api/docs/` and ReDoc at
 | Layer    | Stack                                                                                   |
 |----------|-----------------------------------------------------------------------------------------|
 | Backend  | Python 3.12, Django 6.1, Django REST Framework, SimpleJWT, drf-spectacular, PostgreSQL 15+ |
-| Frontend | React 18, Vite 7, React Router 7, @dnd-kit for the board. Plain JSX and CSS, no UI kit  |
+| Frontend | React 19, Vite 8, React Router 7, @dnd-kit for the board. Plain JSX and CSS, no UI kit  |
 | Infra    | Docker Compose for dev and prod, nginx + gunicorn in prod, GitHub Actions CI            |
 
 The timeline canvas, dependency arrows, lane backgrounds, and minimap are drawn on
@@ -313,6 +313,7 @@ so the discussion happens before the code.
 
 Some directions that would be good contributions, roughly in order of effort:
 
+- Password reset by email: [design](docs/design/password-reset.md)
 - A subscribable calendar feed, so calendars stay current without exporting again:
   [design](docs/design/icalendar-export.md) (the one-off `.ics` export is built)
 - Import from Microsoft Project XML:

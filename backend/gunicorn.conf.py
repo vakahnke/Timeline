@@ -16,3 +16,7 @@ max_requests_jitter = 100
 # Log to stdout/stderr so Docker captures it.
 accesslog = '-'
 errorlog = '-'
+
+# gunicorn 26 adds a local control socket for managing a running server. Nothing here uses it,
+# so it stays off: one less thing listening inside the container.
+control_socket_disable = True

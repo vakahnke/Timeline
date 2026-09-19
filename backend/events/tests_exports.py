@@ -204,3 +204,37 @@ class ExportEndpointTests(_Base):
         self.client_for(self.owner).get(f'/api/projects/{self.project.id}/calendar.ics')
         self.client_for(self.owner).get(f'/api/projects/{self.project.id}/export/msproject.xml')
         self.assertEqual((Event.objects.count(), Task.objects.count()), before)
+
+
+class DependencyCycleTests(_Base):
+    """The API refuses dependency loops; the editor is not the only thing that talks to it."""
+
+    def setUp(self):
+        super().setUp()
+        self.c = Event.objects.create(project=self.project, title='Retro', category='Launch', start=T0 + timedelta(days=13), end=T0 + timedelta(days=14))
+        self.c.depends_on.set([self.launch])                      # build -> launch -> retro
+        self.client = self.client_for(self.owner)
+
+    def url(self, e):
+        return f'/api/projects/{self.project.id}/events/{e.id}/'
+
+    def test_an_event_cannot_depend_on_itself(self):
+        r = self.client.patch(self.url(self.build), {'depends_on': [self.build.id]}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('itself', str(r.json()))
+
+    def test_direct_and_indirect_loops_are_refused_and_nothing_is_saved(self):
+        for target, dep in ((self.build, self.launch), (self.build, self.c)):
+            r = self.client.patch(self.url(target), {'depends_on': [dep.id]}, format='json')
+            self.assertEqual(r.status_code, 400, (target.title, dep.title))
+            self.assertIn('loop', str(r.json()))
+        self.assertEqual(list(self.build.depends_on.all()), [])
+
+    def test_ordinary_links_including_diamonds_still_save(self):
+        side = Event.objects.create(project=self.project, title='Docs', category='Build', start=T0, end=T0 + timedelta(days=3))
+        self.assertEqual(self.client.patch(self.url(self.launch), {'depends_on': [self.build.id, side.id]}, format='json').status_code, 200)
+        self.assertEqual(self.client.patch(self.url(self.c), {'depends_on': [self.launch.id, side.id]}, format='json').status_code, 200)
+        self.assertEqual(self.client.patch(self.url(self.c), {'title': 'Retro & next steps'}, format='json').status_code, 200)   # no depends_on sent
+        new = self.client.post(f'/api/projects/{self.project.id}/events/', {'title': 'New', 'category': 'Launch', 'start': (T0 + timedelta(days=15)).isoformat(),
+                                                                          'end': (T0 + timedelta(days=16)).isoformat(), 'depends_on': [self.c.id]}, format='json')
+        self.assertEqual(new.status_code, 201, new.content)

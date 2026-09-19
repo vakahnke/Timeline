@@ -77,7 +77,35 @@ class EventSerializer(serializers.ModelSerializer):
             for dep in data.get('depends_on', []):
                 if dep.project_id != project.id:
                     raise serializers.ValidationError('Dependencies must belong to the same project.')
+        self._reject_cycle(data.get('depends_on'))
         return data
+
+    def _reject_cycle(self, deps):
+        """An event cannot depend, directly or through a chain, on something that depends on it.
+
+        The editor already prevents this, but the API is public: a script or an import could
+        otherwise store a loop, which makes the critical path meaningless and the timeline's
+        arrows circular. A new event cannot be part of a loop (nothing depends on it yet).
+        """
+        if not deps or self.instance is None:
+            return
+        me = self.instance.id
+        if any(d.id == me for d in deps):
+            raise serializers.ValidationError({'depends_on': 'An event cannot depend on itself.'})
+        # One query for the whole project's links, then walk upstream from the proposed predecessors.
+        links = {}
+        for frm, to in Event.depends_on.through.objects.filter(
+                from_event__project_id=self.instance.project_id).values_list('from_event_id', 'to_event_id'):
+            links.setdefault(frm, []).append(to)
+        seen, stack = set(), [d.id for d in deps]
+        while stack:
+            cur = stack.pop()
+            if cur == me:
+                raise serializers.ValidationError({'depends_on': 'That would create a dependency loop: one of these events already depends on this one.'})
+            if cur in seen:
+                continue
+            seen.add(cur)
+            stack.extend(links.get(cur, []))
 
     def create(self, validated_data):
         depends_on = validated_data.pop('depends_on', [])
