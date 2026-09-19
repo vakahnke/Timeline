@@ -130,18 +130,32 @@ export default function Minimap({ scrollRef, range, pxPerHour, events, trackColo
     el.scrollLeft = frac * el.scrollWidth - el.clientWidth / 2  // center the clicked spot
   }
 
+  // Pointer events + capture: one path for mouse, pen and touch. The strip has
+  // `touch-action: none` (style.css) so a finger drag is ours from the first pixel
+  // instead of being claimed by the browser as a scroll.
   const onDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
     e.preventDefault()
+    const wrap = wrapRef.current
+    const id = e.pointerId
+    try { wrap.setPointerCapture(id) } catch { /* capture is best-effort */ }
     navTo(e.clientX)
-    const move = (m) => navTo(m.clientX)
-    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up) }
-    document.addEventListener('mousemove', move)
-    document.addEventListener('mouseup', up)
+    const move = (m) => { if (m.pointerId === id) navTo(m.clientX) }
+    const up = (u) => {
+      if (u.pointerId !== id) return
+      wrap.removeEventListener('pointermove', move)
+      wrap.removeEventListener('pointerup', up)
+      wrap.removeEventListener('pointercancel', up)
+      try { wrap.releasePointerCapture(id) } catch { /* already released */ }
+    }
+    wrap.addEventListener('pointermove', move)
+    wrap.addEventListener('pointerup', up)
+    wrap.addEventListener('pointercancel', up)
   }
 
   if (!range || !events.length) return null
   return (
-    <div className="minimap" ref={wrapRef} onMouseDown={onDown} title="Overview — click or drag to navigate">
+    <div className="minimap" ref={wrapRef} onPointerDown={onDown} title="Overview — click or drag to navigate">
       <canvas ref={canvasRef} className="minimap-canvas" />
       <div className="minimap-viewport" ref={viewportRef} />
     </div>

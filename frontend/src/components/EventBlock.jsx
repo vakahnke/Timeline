@@ -46,18 +46,33 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
   const handleMoveDown = useCallback((e) => {
     if (!canEdit) return
     if (e.button !== 0) return
-    if (e.target.closest('.resize-handle') || e.target.closest('.event-actions') || e.target.closest('.event-tasks-badge')) return
+    const isTouch = e.pointerType === 'touch'
+    if (e.target.closest('.event-actions') || e.target.closest('.event-tasks-badge')) return
+    // The edge strips are a mouse affordance (Ctrl/⌘-drag to resize). A finger that lands on
+    // one still means "this event" — on a narrow block the strips are most of its width.
+    if (!isTouch && e.target.closest('.resize-handle')) return
+
+    // Run `fn` on this pointer's release. A touch that turns into a native scroll ends with
+    // pointercancel instead of pointerup, so listen for both or the listener leaks and fires
+    // on some later, unrelated tap.
+    const onRelease = (fn) => {
+      const done = () => {
+        document.removeEventListener('pointerup', up)
+        document.removeEventListener('pointercancel', done)
+      }
+      const up = (u) => { done(); fn(u) }
+      document.addEventListener('pointerup', up)
+      document.addEventListener('pointercancel', done)
+    }
 
     // Shift-click toggles this event in/out of the multi-selection (no move, no pan).
     if (e.shiftKey) {
       e.preventDefault()
       e.stopPropagation()
       const cx = e.clientX, cy = e.clientY
-      const selUp = (u) => {
-        document.removeEventListener('mouseup', selUp)
+      onRelease((u) => {
         if (Math.abs(u.clientX - cx) < 5 && Math.abs(u.clientY - cy) < 5) onToggleSelect?.(event.id)
-      }
-      document.addEventListener('mouseup', selUp)
+      })
       return
     }
 
@@ -65,14 +80,14 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     // the scroll container — we don't stopPropagation) and a clean click opens the editor.
     // Hold Ctrl/⌘ to actually move the event. A plain drag that started on an event is
     // almost always someone trying to move it, so report it (the timeline shows a hint).
-    if (!(e.ctrlKey || e.metaKey)) {
+    // Touch has no modifier key: a tap opens the editor and a drag is the browser's native
+    // scroll (touch moves arrive with long-press — docs/design/touch-timeline.md, phase 2).
+    if (isTouch || !(e.ctrlKey || e.metaKey)) {
       const cx = e.clientX, cy = e.clientY
-      const clickUp = (up) => {
-        document.removeEventListener('mouseup', clickUp)
-        if (Math.abs(up.clientX - cx) < 5 && Math.abs(up.clientY - cy) < 5) onEdit(event.id)
-        else onPlainDrag?.()
-      }
-      document.addEventListener('mouseup', clickUp)
+      onRelease((up) => {
+        if (Math.abs(up.clientX - cx) < 8 && Math.abs(up.clientY - cy) < 8) onEdit(event.id)
+        else if (!isTouch) onPlainDrag?.()      // the Ctrl/⌘ hint only makes sense with a keyboard
+      })
       return
     }
 
@@ -191,8 +206,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     }
 
     const onUp = async (e) => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
       document.removeEventListener('contextmenu', noCtx)
       autoVel = 0
       if (raf) cancelAnimationFrame(raf)
@@ -234,8 +249,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       }
     }
 
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
   }, [event, pxPerHour, rangeStart, trackColorMap, top, snapMinutes, autoPanSpeed, color, selectedIds, onToggleSelect, onGroupMove, onUpdate, onEdit])
 
   // ── Resize handles ────────────────────────────────────────────────────────
@@ -272,8 +287,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
     }
 
     const onUp = async (e) => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
       document.body.style.cursor = ''
 
       const dtMs = ((e.clientX - mouseX0) / capPx) * 3_600_000
@@ -293,8 +308,8 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       }
     }
 
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
   }, [event, pxPerHour, rangeStart, snapMinutes, onUpdate])
 
   return (
@@ -310,15 +325,16 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
         background:  hexToRgba(color, 0.22),
         borderColor: color,
       }}
-      onMouseDown={canEdit ? handleMoveDown : undefined}
+      onPointerDown={canEdit ? handleMoveDown : undefined}
       /* Editors open via handleMoveDown's click-vs-drag detection; non-editors (viewer/
          commenter) can't drag, so a plain click opens the event read-only (to read/add comments). */
       onClick={canEdit ? undefined : () => onEdit(event.id)}
-      onMouseEnter={e => onTooltip(event, e.clientX, e.clientY)}
-      onMouseLeave={() => onTooltip(null)}
+      /* Hover tooltip is for pointers that can hover; on touch it would stick after a tap. */
+      onPointerEnter={e => { if (e.pointerType !== 'touch') onTooltip(event, e.clientX, e.clientY) }}
+      onPointerLeave={() => onTooltip(null)}
     >
-      {canEdit && <div className="resize-handle left"  onMouseDown={e => handleResizeDown(e, 'left')} />}
-      {canEdit && <div className="resize-handle right" onMouseDown={e => handleResizeDown(e, 'right')} />}
+      {canEdit && <div className="resize-handle left"  onPointerDown={e => handleResizeDown(e, 'left')} />}
+      {canEdit && <div className="resize-handle right" onPointerDown={e => handleResizeDown(e, 'right')} />}
 
       {(event.percent_complete > 0) && (
         <div className="event-progress" style={{ width: event.percent_complete + '%', background: hexToRgba(color, 0.45) }} />
@@ -334,7 +350,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
           type="button"
           className={`event-tasks-badge${event.tasks_done === event.task_count ? ' all-done' : ''}`}
           title={`${event.tasks_done || 0}/${event.task_count} tasks done — click to open`}
-          onMouseDown={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onOpenTasks(event.id) }}
         >
           &#9776; {event.task_count}

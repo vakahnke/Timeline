@@ -384,6 +384,11 @@ button:disabled { opacity: 0.3; cursor: default; transform: none; }
   cursor: grab;
 }
 .timeline-scroll.panning { cursor: grabbing; }
+/* Touch: one finger scrolls natively (momentum, off the main thread); page pinch-zoom is
+   disallowed so the two-finger pinch reaches the timeline's own zoom (Timeline.jsx). */
+.timeline-scroll { touch-action: pan-x pan-y; overscroll-behavior: contain; }
+.minimap, .drag-handle { touch-action: none; }     /* these drags are ours from the first pixel */
+.event-block { -webkit-touch-callout: none; }      /* no iOS callout on a long touch */
 .timeline-scroll.panning * { cursor: grabbing !important; }
 
 .timeline-scroll::-webkit-scrollbar         { width: 5px; height: 5px; }
@@ -1462,7 +1467,7 @@ fieldset.modal-body:disabled { opacity: 1; }
   .toolbar .btn-new {
     position: fixed;
     right: 14px;
-    bottom: calc(62px + env(safe-area-inset-bottom));   /* clears the 46px minimap */
+    bottom: calc(72px + env(safe-area-inset-bottom));   /* clears the 56px minimap */
     z-index: 40;
     min-height: 48px;
     padding: 0 18px;
@@ -1479,7 +1484,8 @@ fieldset.modal-body:disabled { opacity: 1; }
   /* ── More canvas room: slimmer track-header panel + minimap ── */
   .headers-panel { width: 112px; }
   .track-header  { padding: 0 9px; gap: 7px; }
-  .minimap       { height: 46px; margin-left: 112px; }   /* match the slimmer header panel */
+  .minimap       { height: 56px; margin-left: 112px; }   /* match the slimmer header panel; tall enough to grab */
+  .minimap-viewport { min-width: 44px; }
 
   /* ── Dashboard ── */
   .dash-canvas  { padding: 12px 0 calc(32px + env(safe-area-inset-bottom)); }

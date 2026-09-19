@@ -435,6 +435,91 @@ const Timeline = forwardRef(function Timeline(
     return () => el.removeEventListener('wheel', onWheel)
   }, [zoomByFactor])
 
+  // Two-finger pinch (touch): zoom tracks the fingers 1:1, anchored at their midpoint, and
+  // the midpoint's travel pans, so pinch-and-drag feels like a map. Uses touch events rather
+  // than pointer events on purpose: preventDefault() on a two-touch touchmove is the one
+  // reliable, cross-browser way to stop the browser claiming the gesture (page zoom on iOS,
+  // two-finger scroll + pointercancel on Chrome). One finger is left entirely to native
+  // scrolling. The easing loop is bypassed — a pinch must not lag the fingers.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    let pinch = null      // { d0, px0, anchorTime, y0, top0 }
+    let pending = null    // latest { d, midX, midY } awaiting a frame
+    let raf = null
+
+    const read = (t) => {
+      const [a, b] = [t[0], t[1]]
+      return {
+        d:    Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        midX: (a.clientX + b.clientX) / 2,
+        midY: (a.clientY + b.clientY) / 2,
+      }
+    }
+
+    const apply = () => {
+      raf = null
+      const r = rangeRef.current
+      if (!pinch || !pending || !r) return
+      const rect   = el.getBoundingClientRect()
+      const mouseX = pending.midX - rect.left
+      const px     = clampPx(pinch.px0 * (pending.d / pinch.d0))
+      if (px !== pxRef.current) {
+        zoomAnchorRef.current = { anchorTime: pinch.anchorTime, mouseX }   // re-anchored before paint
+        setPxPerHour(px)
+      } else {
+        // At a zoom limit (or a pure two-finger drag): keep the anchored time under the midpoint.
+        el.scrollLeft = ((pinch.anchorTime - r.start) / 3_600_000) * px - mouseX
+      }
+      el.scrollTop = pinch.top0 - (pending.midY - pinch.y0)
+    }
+
+    const onStart = (e) => {
+      if (e.touches.length !== 2) { pinch = null; return }
+      const r = rangeRef.current
+      if (!r) return
+      e.preventDefault()
+      // Stop any in-flight eased zoom so it cannot fight the fingers.
+      cancelAnimationFrame(zoomRafRef.current); zoomRafRef.current = null; zoomTargetRef.current = null
+      cancelAnimationFrame(frameRafRef.current); frameRafRef.current = null
+      const { d, midX, midY } = read(e.touches)
+      const rect = el.getBoundingClientRect()
+      const anchorX = (midX - rect.left) + el.scrollLeft
+      pinch = {
+        d0: Math.max(1, d),
+        px0: pxRef.current,
+        anchorTime: r.start + (anchorX / pxRef.current) * 3_600_000,
+        y0: midY,
+        top0: el.scrollTop,
+      }
+      setTooltip(null)
+    }
+    const onMove = (e) => {
+      if (!pinch || e.touches.length !== 2) return
+      e.preventDefault()
+      pending = read(e.touches)
+      if (!raf) raf = requestAnimationFrame(apply)
+    }
+    const onEnd = (e) => { if (e.touches.length < 2) { pinch = null; pending = null } }
+    const noGesture = (e) => e.preventDefault()   // iOS Safari's own page-zoom gesture
+
+    el.addEventListener('touchstart',  onStart, { passive: false })
+    el.addEventListener('touchmove',   onMove,  { passive: false })
+    el.addEventListener('touchend',    onEnd)
+    el.addEventListener('touchcancel', onEnd)
+    el.addEventListener('gesturestart',  noGesture)
+    el.addEventListener('gesturechange', noGesture)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      el.removeEventListener('touchstart',  onStart)
+      el.removeEventListener('touchmove',   onMove)
+      el.removeEventListener('touchend',    onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+      el.removeEventListener('gesturestart',  noGesture)
+      el.removeEventListener('gesturechange', noGesture)
+    }
+  }, [setPxPerHour])
+
   // Sync header vertical scroll
   useEffect(() => {
     const el = scrollRef.current
@@ -488,16 +573,16 @@ const Timeline = forwardRef(function Timeline(
     }
 
     const onUp = () => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
       setDragging(prev => {
         if (prev && prev.from !== prev.to) onReorderTracks(prev.from, prev.to)
         return null
       })
     }
 
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
   }, [onReorderTracks])
 
   // Drag any empty part of the timeline (ruler or lanes) to pan — works with mouse,
@@ -520,8 +605,8 @@ const Timeline = forwardRef(function Timeline(
       setMarquee({ left: Math.min(x0, x1), top: Math.min(y0, y1), width: Math.abs(x1 - x0), height: Math.abs(y1 - y0) })
     }
     const onUp = (up) => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
       marqueeingRef.current = false
       setMarquee(null)
       if (!active) return
@@ -534,11 +619,14 @@ const Timeline = forwardRef(function Timeline(
       })
       if (hit.size) setSelectedIds(prev => { const n = new Set(prev); hit.forEach(id => n.add(id)); return n })
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
   }, [])
 
   const handlePanStart = useCallback((e) => {
+    // Touch pans by native scrolling (momentum, off the main thread); see the pinch effect
+    // below for two fingers. This JS pan is for mouse and pen.
+    if (e.pointerType === 'touch') return
     if (e.button !== 0) return
     // Pan even when the drag starts over an event (events only move with Ctrl/⌘, which
     // stops propagation before this runs). Only the action buttons opt out.
@@ -556,11 +644,13 @@ const Timeline = forwardRef(function Timeline(
     }
     const onUp = () => {
       el.classList.remove('panning')
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup',   onUp)
+      document.removeEventListener('pointermove',   onMove)
+      document.removeEventListener('pointerup',     onUp)
+      document.removeEventListener('pointercancel', onUp)
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup',   onUp)
+    document.addEventListener('pointermove',   onMove)
+    document.addEventListener('pointerup',     onUp)
+    document.addEventListener('pointercancel', onUp)
   }, [startMarquee])
 
   // Keyboard navigation (ignored while typing in a field or when a modal is open).
@@ -623,6 +713,7 @@ const Timeline = forwardRef(function Timeline(
     const el = scrollRef.current
     const label = cursorLabelRef.current
     if (!range || !el || !label) return
+    if (e.pointerType === 'touch') return   // the cursor time-label is a hover affordance
     const rect = el.getBoundingClientRect()
     const x  = e.clientX - rect.left + el.scrollLeft
     const ms = range.start + (x / pxPerHour) * 3_600_000
@@ -872,7 +963,7 @@ const Timeline = forwardRef(function Timeline(
               >
                 <div
                   className="drag-handle"
-                  onMouseDown={canEdit ? (e => handleHeaderDragStart(e, i)) : undefined}
+                  onPointerDown={canEdit ? (e => handleHeaderDragStart(e, i)) : undefined}
                   title={canEdit ? 'Drag to reorder' : ''}
                   style={canEdit ? undefined : { visibility: 'hidden' }}
                 >⠿</div>
@@ -892,9 +983,9 @@ const Timeline = forwardRef(function Timeline(
       <div
         className="timeline-scroll"
         ref={scrollRef}
-        onMouseDown={handlePanStart}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => { if (cursorLabelRef.current) cursorLabelRef.current.style.display = 'none' }}
+        onPointerDown={handlePanStart}
+        onPointerMove={handleMouseMove}
+        onPointerLeave={() => { if (cursorLabelRef.current) cursorLabelRef.current.style.display = 'none' }}
       >
         <div className="timeline-inner" style={{ width: w + 'px' }}>
           {/* Zebra lane backgrounds: a viewport-pinned canvas behind the blocks (see paintLaneBg). */}
@@ -912,7 +1003,7 @@ const Timeline = forwardRef(function Timeline(
 
           <div
             className="track-lanes"
-            onMouseDown={e => { lanesDownRef.current = { x: e.clientX, y: e.clientY } }}
+            onPointerDown={e => { lanesDownRef.current = { x: e.clientX, y: e.clientY } }}
             onClick={e => {
               const d = lanesDownRef.current
               if (d && !e.shiftKey && Math.abs(e.clientX - d.x) < 5 && Math.abs(e.clientY - d.y) < 5 && !e.target.closest('.event-block')) clearSelection()

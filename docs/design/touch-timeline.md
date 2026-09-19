@@ -1,6 +1,6 @@
 # Touch Timeline — Design Document
 
-**Status:** Draft
+**Status:** Building — Phase 1 shipped 2026-09-19 (pointer events, pinch zoom, touch minimap). Phases 2 and 3 not started.
 **Last updated:** 2026-09-19
 **Scope:** Make the timeline view itself fully usable by touch (phones and tablets): pan, pinch-zoom, move, resize, select, and the minimap.
 
@@ -200,7 +200,10 @@ open on the timeline like every other device. A saved preference still wins.
 
 ## 5. Phasing
 
-- **Phase 1 — pointer events + pinch (R1, R2, R6, R8).** Mechanical conversion of the
+- **Phase 1 — pointer events + pinch (R1, R2, R6, R8). SHIPPED.** As built: pinch uses *touch*
+  events (not pointer events), because `preventDefault()` on a two-touch `touchmove` is the
+  only reliable way to stop the browser claiming the gesture; the midpoint also pans. The
+  resize strips no longer swallow taps on touch (they covered most of a narrow event). Original scope: Mechanical conversion of the
   three files, `touch-action`, pinch zoom, touch minimap. No behavior change for mouse
   users. After this the timeline is fully *navigable* on a phone.
 - **Phase 2 — long-press move + grab-dot resize (R3, R4, R7).** The lifted state, grab
