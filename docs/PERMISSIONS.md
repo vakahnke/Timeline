@@ -26,6 +26,11 @@ One rule, enforced on the server for every request:
 - **Access is read on every request.** Demoting or removing a member, taking someone off a team,
   removing staff status or deactivating an account takes effect on their very next request, even
   though their token is still valid. Tokens carry identity only, never permissions.
+- **The people directory is not a list of every account.** `GET /api/users/` returns the people
+  you share a project or team with; anyone else is found only by their exact username or email,
+  which is how inviting works (`backend/projects/directory.py`). Org-admins see everyone.
+- **A project can be created for yourself or for someone you already work with**, not pushed onto
+  any account in the system.
 - **People on a task must have access to its project.** Owners and assignees are checked with the
   same `get_role`.
 - **The React app hides controls as a courtesy, not as security.** `my_role` is sent to the client

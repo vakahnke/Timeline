@@ -188,27 +188,58 @@ class EffectiveAccessAdminTests(APITestCase):
 
 
 class UserDirectoryTests(APITestCase):
-    """The /api/users/ directory that powers the member/team pickers."""
+    """The /api/users/ directory behind the member/team pickers: the people you work with, plus
+    an exact-match lookup for inviting someone new. Never a list of every account."""
 
     def setUp(self):
-        self.alice = User.objects.create_user('alice', 'alice@x.com', 'pw')
-        User.objects.create_user('bob', 'bob@x.com', 'pw')
-        User.objects.create_user('ghost', 'ghost@x.com', 'pw', is_active=False)  # unapproved
+        mk = lambda n, **kw: User.objects.create_user(n, f'{n}@x.com', 'pw', **kw)
+        self.alice, self.bob, self.carol, self.dave = mk('alice'), mk('bob'), mk('carol'), mk('dave')
+        self.stranger = mk('stranger')
+        self.ghost = mk('ghost', is_active=False)                                    # unapproved
+        shared = Project.objects.create(name='Shared', owner=self.alice)
+        ProjectMembership.objects.create(project=shared, user=self.alice, role=Role.OWNER)
+        ProjectMembership.objects.create(project=shared, user=self.bob, role=Role.VIEWER)
+        ProjectMembership.objects.create(project=shared, user=self.ghost, role=Role.VIEWER)
+        crew = Team.objects.create(name='Crew', owner=self.carol)                    # carol + dave reach Shared via a team
+        crew.members.add(self.dave)
+        ProjectTeam.objects.create(project=shared, team=crew, role=Role.VIEWER, added_by=self.alice)
+        elsewhere = Project.objects.create(name='Elsewhere', owner=self.stranger)
+        ProjectMembership.objects.create(project=elsewhere, user=self.stranger, role=Role.OWNER)
+
+    def names(self, user, search=None):
+        self.client.force_authenticate(user)
+        res = self.client.get('/api/users/' + (f'?search={search}' if search else ''))
+        self.assertEqual(res.status_code, 200)
+        return {u['username'] for u in res.data}
 
     def test_requires_auth(self):
         self.assertIn(self.client.get('/api/users/').status_code, (401, 403))
 
-    def test_lists_active_users_only(self):
-        self.client.force_authenticate(self.alice)
-        res = self.client.get('/api/users/')
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual({u['username'] for u in res.data}, {'alice', 'bob'})  # ghost excluded
+    def test_lists_the_people_you_work_with_not_every_account(self):
+        self.assertEqual(self.names(self.alice), {'alice', 'bob', 'carol', 'dave'})   # no stranger, no inactive ghost
+        self.assertEqual(self.names(self.dave), {'alice', 'bob', 'carol', 'dave'})    # team access counts both ways
+        self.assertEqual(self.names(self.stranger), {'stranger'})
 
-    def test_search_by_username_or_email(self):
-        self.client.force_authenticate(self.alice)
-        self.assertEqual([u['username'] for u in self.client.get('/api/users/?search=bob').data], ['bob'])
-        self.assertEqual({u['username'] for u in self.client.get('/api/users/?search=x.com').data},
-                         {'alice', 'bob'})
+    def test_teammates_are_known_even_without_a_shared_project(self):
+        club = Team.objects.create(name='Club', owner=self.stranger)
+        club.members.add(self.bob)
+        self.assertIn('stranger', self.names(self.bob))
+        self.assertIn('bob', self.names(self.stranger))
+
+    def test_a_partial_search_only_filters_people_you_know(self):
+        self.assertEqual(self.names(self.alice, 'x.com'), {'alice', 'bob', 'carol', 'dave'})
+        self.assertEqual(self.names(self.alice, 'stran'), set())
+        self.assertEqual(self.names(self.alice, 'bo'), {'bob'})
+
+    def test_an_exact_username_or_email_finds_someone_new_so_they_can_be_invited(self):
+        self.assertEqual(self.names(self.alice, 'stranger'), {'stranger'})
+        self.assertEqual(self.names(self.alice, 'STRANGER@x.com'), {'stranger'})
+        self.assertEqual(self.names(self.alice, 'ghost@x.com'), set())                # inactive accounts never appear
+
+    def test_org_admins_see_everyone_active(self):
+        self.stranger.is_staff = True
+        self.stranger.save()
+        self.assertEqual(self.names(self.stranger), {'alice', 'bob', 'carol', 'dave', 'stranger'})
 
 
 class ProjectAccessEndpointTests(APITestCase):

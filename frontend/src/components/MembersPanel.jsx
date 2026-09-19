@@ -140,7 +140,7 @@ export default function MembersPanel({ projectId, isOwner, onClose }) {
                 list="mp-user-list"
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
-                placeholder="Pick or type a name / email"
+                placeholder="Someone you work with, or a full email / username"
                 autoComplete="off"
               />
               <datalist id="mp-user-list">

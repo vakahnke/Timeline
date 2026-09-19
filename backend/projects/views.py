@@ -31,6 +31,7 @@ from .serializers import (
     TemplateListItemSerializer,
     UserSerializer,
 )
+from .directory import is_known, known_users
 from .templates import create_project_from_spec, spec_from_project
 from .templates_builtin import BUILTIN_TEMPLATES, builtin_spec
 
@@ -65,20 +66,25 @@ class MeView(generics.RetrieveAPIView):
 
 
 class UserListView(generics.ListAPIView):
-    """A directory of active users, for populating the member / team-member pickers so
-    people don't have to memorize usernames. Any authenticated user may read it (members
-    already see each other's names in member lists and task pickers). Optional ?search=
-    filters by username or email (case-insensitive substring). Inactive (unapproved)
-    accounts are excluded so you can't add someone who can't log in."""
+    """The people directory behind the member and team pickers.
+
+    It returns the people you already work with: anyone who shares a project or a team with you.
+    It is deliberately NOT a list of every account (see ``directory.py``). To find someone new, pass
+    their exact username or email as ``?search=``: an exact match is returned even if you do not
+    know them yet, which is how inviting works. A partial search only filters people you know.
+    Inactive (unapproved) accounts never appear. Org-admins see everyone.
+    """
     permission_classes = [IsAuthenticated]
     serializer_class   = UserSerializer
 
     def get_queryset(self):
-        qs = User.objects.filter(is_active=True).order_by('username')
+        known = known_users(self.request.user)
         q = (self.request.query_params.get('search') or '').strip()
-        if q:
-            qs = qs.filter(Q(username__icontains=q) | Q(email__icontains=q))
-        return qs
+        if not q:
+            return known.order_by('username')
+        exact = User.objects.filter(is_active=True).filter(Q(username__iexact=q) | Q(email__iexact=q))
+        partial = known.filter(Q(username__icontains=q) | Q(email__icontains=q))
+        return User.objects.filter(Q(id__in=exact.values('id')) | Q(id__in=partial.values('id'))).order_by('username')
 
 
 class LogoutView(generics.GenericAPIView):
@@ -399,9 +405,12 @@ class TemplateViewSet(viewsets.ViewSet):
         if identifier:
             target = (User.objects.filter(email__iexact=identifier).first()
                       or User.objects.filter(username__iexact=identifier).first())
-            if not target:
-                return Response({'owner': 'No user found with that email or username.'},
-                                status=status.HTTP_400_BAD_REQUEST)
+            # You can set up a project for someone you already work with, not for any account in the
+            # system: otherwise anyone could drop unsolicited projects into a stranger's list. The
+            # same message covers "no such user" so this cannot be used to discover accounts.
+            if not target or not target.is_active or not is_known(request.user, target):
+                return Response({'owner': 'You can only create a project for yourself or for someone you already '
+                                          'share a project or team with.'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             target = request.user
 

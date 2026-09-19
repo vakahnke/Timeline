@@ -135,7 +135,7 @@ export default function TemplateModal({ onCreated, onClose }) {
 
           <div className="field">
             <label>Assign to <span className="label-hint">(email or username — defaults to you)</span></label>
-            <input value={owner} onChange={e => setOwner(e.target.value)} placeholder="Leave blank for yourself" />
+            <input value={owner} onChange={e => setOwner(e.target.value)} placeholder="Blank for yourself, or someone you already work with" />
           </div>
 
           {error && <div className="field-error">&#10005; {error}</div>}

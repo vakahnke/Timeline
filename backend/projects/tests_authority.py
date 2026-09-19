@@ -184,3 +184,39 @@ class AccountStateIsLiveToo(_Base):
         self.assertEqual([t['title'] for t in c.get('/api/me/tasks/').json()], ['Via team'])
         team.members.remove(self.outsider)
         self.assertEqual(c.get('/api/me/tasks/').json(), [])
+
+
+class ProjectsCannotBePushedOntoStrangers(_Base):
+    URL = '/api/templates/instantiate/'
+
+    def body(self, owner=None):
+        b = {'key': 'builtin:sprint', 'start': timezone.now().isoformat(), 'name': 'From a template'}
+        return {**b, 'owner': owner} if owner is not None else b
+
+    def setUp(self):
+        super().setUp()
+        from projects.templates_builtin import BUILTIN_TEMPLATES
+        self.key = f'builtin:{next(iter(BUILTIN_TEMPLATES))}'
+
+    def post(self, user, owner=None):
+        return self.as_(user).post(self.URL, {**self.body(owner), 'key': self.key}, format='json')
+
+    def test_for_yourself_and_for_people_you_work_with(self):
+        self.assertEqual(self.post(self.editor).status_code, 201)
+        r = self.post(self.editor, 'viewer@example.com')
+        self.assertEqual(r.status_code, 201, r.content)
+        made = Project.objects.get(id=r.json()['id'])
+        self.assertEqual(made.owner_id, self.viewer.id)
+
+    def test_not_for_a_stranger_and_the_answer_does_not_reveal_who_has_an_account(self):
+        before = Project.objects.count()
+        stranger = self.post(self.editor, 'outsider')
+        nobody = self.post(self.editor, 'no-such-person@example.com')
+        self.assertEqual((stranger.status_code, nobody.status_code), (400, 400))
+        self.assertEqual(stranger.json(), nobody.json())
+        self.assertEqual(Project.objects.count(), before)
+        self.assertFalse(Project.objects.filter(owner=self.outsider, name='From a template').exists())
+
+    def test_an_org_admin_may_set_one_up_for_anyone(self):
+        self.owner.is_staff = True; self.owner.save()
+        self.assertEqual(self.post(self.owner, 'outsider').status_code, 201)
