@@ -136,6 +136,18 @@ class FactsAndRulesTests(_ProjectCase):
         self.assertEqual(s['status'], 'at_risk')
         self.assertIn('critical path', s['rule_fired'])
 
+    def test_headline_never_contradicts_the_status(self):
+        # On the committed date, but blocked on the critical path: the headline must say so.
+        e = self.add('Build', -2, 20, pct=10)
+        Task.objects.create(event=e, title='Vendor quote', status=Task.Status.BLOCKED,
+                            owner=self.owner, assignee=self.owner)
+        self.project.committed_end = timezone.localtime(self.now + timedelta(days=18)).date()
+        self.project.save()
+        s = suggest(build_facts(self.project, now=self.now))
+        self.assertEqual(s['status'], 'at_risk')
+        self.assertIn('at risk', s['headline'])
+        self.assertNotIn('On course', s['headline'])
+
     def test_work_well_behind_time_is_at_risk(self):
         self.add('Build', -18, 20, pct=20)                            # 90% elapsed, 20% done
         s = suggest(build_facts(self.project, now=self.now))

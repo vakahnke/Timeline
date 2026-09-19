@@ -208,4 +208,9 @@ def suggest(facts):
             headline = f'Forecast to finish {_fmt(end)}, {-days} day{"s" if days != -1 else ""} ahead of the {_fmt(c)} commitment.'
         else:
             headline = f'On course for the {_fmt(c)} commitment.'
+        # The headline must never contradict the status chip: a date that still holds can be
+        # at risk for another reason (blocked critical work, work well behind time, a missed milestone).
+        if status != 'on_track' and days <= 0:
+            word = 'at risk' if status == 'at_risk' else 'off track'
+            headline = f'The {_fmt(c)} commitment still holds on paper, but it is {word}: {rule}.'
     return {'status': status, 'rule_fired': rule, 'headline': headline}
