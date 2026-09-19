@@ -82,10 +82,26 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model  = Project
-        fields = ['id', 'name', 'description', 'committed_end', 'owner', 'my_role', 'member_count',
+        fields = ['id', 'name', 'description', 'committed_end', 'status_thresholds', 'owner', 'my_role', 'member_count',
                   'start', 'end', 'progress', 'event_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'owner', 'my_role', 'member_count', 'start', 'end',
                             'progress', 'event_count', 'created_at', 'updated_at']
+
+    def validate_status_thresholds(self, value):
+        limits = {'off_track_working_days': (1, 250), 'off_track_percent': (1, 100), 'behind_points': (1, 100)}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('Must be an object.')
+        clean = {}
+        for key, v in value.items():
+            if key not in limits:
+                raise serializers.ValidationError(f'Unknown threshold "{key}".')
+            if v in (None, ''):
+                continue                                  # blank = use the default
+            lo, hi = limits[key]
+            if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
+                raise serializers.ValidationError(f'{key} must be a whole number from {lo} to {hi}.')
+            clean[key] = v
+        return clean
 
     @extend_schema_field(serializers.IntegerField())
     def get_member_count(self, obj):

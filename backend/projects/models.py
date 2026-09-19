@@ -18,6 +18,9 @@ class Project(models.Model):
     # The finish date the project is held to. Status reports measure the schedule's current
     # end against it. Optional: without it a report shows planned dates but no variance.
     committed_end = models.DateField(null=True, blank=True)
+    # Limits for the status rule, agreed before anything slips. Empty = the defaults in
+    # events/status_report.py. Keys: off_track_working_days, off_track_percent, behind_points.
+    status_thresholds = models.JSONField(default=dict, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
 

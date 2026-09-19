@@ -13,8 +13,9 @@ from drf_spectacular.utils import extend_schema
 from projects.models import Project, ProjectMembership, Role
 from projects.permissions import IsAnyProjectMember, IsProjectCommenter, IsProjectMember, get_role
 
-from .models import Category, Comment, Event, StatusReport, Task
+from .models import Baseline, Category, Comment, Event, StatusReport, Task
 from .serializers import (
+    BaselineSerializer,
     CategorySerializer,
     CommentSerializer,
     EventSerializer,
@@ -25,7 +26,7 @@ from .serializers import (
     TaskSerializer,
 )
 from .pptx_export import build_pptx
-from .status_report import build_facts, suggest
+from .status_report import build_facts, history_from, suggest
 
 
 class _ProjectScopedMixin:
@@ -223,7 +224,8 @@ class StatusReportViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
             '`facts` (versioned; dates, duration-weighted progress, time elapsed, variance against the '
             'committed finish, milestones, one simplified timeline row per track with critical-path '
             'spans, blocked/overdue task counts, what finished since the previous report and what is '
-            'due next), `suggestion` (the rule-derived status, the rule that fired, a drafted headline), '
+            'due next, slip against the active `baseline`, what moved `since_last` report, the project\'s '
+            'status `thresholds`, and a `history` of saved reports for trend charts), `suggestion` (the rule-derived status, the rule that fired, a drafted headline), '
             'and `previous` (the last saved report, whose shape a new one starts from). '
             'This is the single source for the print tool and for any export or script; consumers '
             'must ignore fields they do not know.'),
@@ -231,8 +233,11 @@ class StatusReportViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
     )
     @action(detail=False, methods=['get'], url_path='draft')
     def draft(self, request, project_pk=None):
-        previous = self.get_queryset().first()
-        facts = build_facts(self.project, since=previous.as_of if previous else None)
+        saved = list(self.get_queryset()[:8])
+        previous = saved[0] if saved else None
+        facts = build_facts(self.project, since=previous.as_of if previous else None,
+                            previous_snapshot=previous.snapshot if previous else None,
+                            history=history_from(saved))
         return Response({
             'facts': facts,
             'suggestion': suggest(facts),
@@ -266,3 +271,42 @@ class StatusReportViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
         resp['Content-Disposition'] = f'attachment; filename="{name}"'
         resp['Content-Length'] = str(len(data))
         return resp
+
+
+class BaselineViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
+    """Frozen plans: /api/projects/<project_pk>/baselines/
+
+    Read: any member. Take or delete one: Editor+. Taking a baseline freezes every event's dates
+    as they stand and makes it the active one; older baselines are kept but retired. Deleting the
+    active baseline re-activates the most recent one that remains.
+    """
+    serializer_class = BaselineSerializer
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Baseline.objects.none()
+        return Baseline.objects.filter(project_id=self.kwargs['project_pk']).select_related('created_by')
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        events = list(Event.objects.filter(project=self.project))
+        frozen = {str(e.id): {'title': e.title, 'category': e.category, 'is_milestone': e.is_milestone,
+                              'start': e.start.isoformat(), 'end': e.end.isoformat()} for e in events}
+        Baseline.objects.filter(project=self.project, active=True).update(active=False)
+        serializer.save(
+            project=self.project, created_by=self.request.user, active=True, events=frozen,
+            committed_end=self.project.committed_end,
+            planned_start=min((e.start for e in events), default=None),
+            planned_end=max((e.end for e in events), default=None),
+        )
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        was_active = instance.active
+        instance.delete()
+        if was_active:
+            latest = Baseline.objects.filter(project=self.project).first()
+            if latest:
+                latest.active = True
+                latest.save(update_fields=['active'])

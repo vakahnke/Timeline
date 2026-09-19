@@ -176,6 +176,66 @@ class Command(BaseCommand):
 
         self._seed_template_projects(users)
 
+    def _seed_report_history(self, project, owner, events, now):
+        """A baseline and three earlier status reports, so the report shows slip, what moved, and
+        a milestone trend out of the box. The story: the plan was approved six weeks ago; the
+        unfinished work has since slipped three days, one of them before the last report."""
+        import copy
+        from datetime import datetime
+
+        from events.models import Baseline, StatusReport
+        from events.status_report import build_facts, suggest
+
+        open_ids = {e.id for e in events if e.end > now}
+
+        def shift(iso, days):
+            return (datetime.fromisoformat(iso) + timedelta(days=days)).isoformat()
+
+        base = Baseline.objects.create(
+            project=project, name='Approved plan', created_by=owner, active=True, committed_end=project.committed_end,
+            planned_start=min(e.start for e in events),
+            planned_end=max(e.end for e in events) - timedelta(days=3),
+            events={str(e.id): {'title': e.title, 'category': e.category, 'is_milestone': e.is_milestone,
+                                'start': (e.start - timedelta(days=3 if e.id in open_ids else 0)).isoformat(),
+                                'end': (e.end - timedelta(days=3 if e.id in open_ids else 0)).isoformat()} for e in events})
+        Baseline.objects.filter(pk=base.pk).update(created_at=now - timedelta(days=42))
+
+        for days_ago, slip_then, progress in ((42, -3, 8), (28, -3, 22), (14, -2, 33)):
+            when = now - timedelta(days=days_ago)
+            snap = copy.deepcopy(build_facts(project, now=when))
+            for key in ('events', 'milestones'):
+                for e in snap[key]:
+                    if e['id'] in open_ids:
+                        e['start'], e['end'] = shift(e['start'], slip_then), shift(e['end'], slip_then)
+                        if 'date' in e:
+                            e['date'] = e['end']
+            snap['end'] = shift(snap['end'], slip_then)
+            snap['progress'] = progress
+            snap['variance_days'] = 3 + slip_then
+            snap['variance_working_days'] = 3 + slip_then
+            verdict = suggest(snap)
+            StatusReport.objects.create(
+                project=project, author=owner, as_of=when, layout='slide', status=verdict['status'],
+                suggested_status=verdict['status'], status_source='rule', rule_fired=verdict['rule_fired'], snapshot=snap,
+                content={
+                    'v': 1,
+                    'header': {'project': project.name, 'subtitle': 'Status report', 'date': f'{when:%b} {when.day}, {when.year}', 'pm': 'PM: demo'},
+                    'headline': verdict['headline'], 'pathToGreen': '', 'moved': '',
+                    'show': {'pathToGreen': True, 'decision': True, 'kpis': True, 'timeline': True, 'baseline': True, 'moved': True,
+                             'trend': False, 'columns': True, 'milestoneTable': True, 'footer': True},
+                    'decision': {'none': slip_then == -3, 'title': 'Decision needed', 'neededBy': '', 'from': 'the sponsor',
+                                 'text': '' if slip_then == -3 else 'Shorten the private beta from 14 to 10 days to hold the committed launch? Each week undecided costs about two days.'},
+                    'kpis': [], 'hiddenKpis': [],
+                    'timeline': {'hiddenRows': [], 'milestoneIds': None, 'showCritical': True, 'showProgress': True},
+                    'columns': [] if slip_then == -3 else [
+                        {'id': 'done', 'kind': 'list', 'mark': '✓', 'title': 'Since last report', 'source': 'completed', 'items': []},
+                        {'id': 'next', 'kind': 'list', 'mark': '›', 'title': 'Next three weeks', 'source': 'next', 'items': []},
+                        {'id': 'risks', 'kind': 'risks', 'title': 'Top risks · impact · owner · mitigation', 'items': [
+                            {'id': 'r1', 'severity': 'high', 'text': 'Core flow build is behind, on the critical path: launch slips day for day.', 'detail': 'E. Editor · cut the settings page from beta'},
+                            {'id': 'r2', 'severity': 'medium', 'text': 'Billing vendor quote is blocked.', 'detail': 'E. Editor · hosted checkout as fallback'}]}],
+                    'footer': {'text': ''},
+                })
+
     def _seed_template_projects(self, users):
         """Instantiate a few built-in templates for the demo owner, relative to today."""
         now = timezone.now()
@@ -210,6 +270,7 @@ class Command(BaseCommand):
                 project.committed_end = planned_end + timedelta(days=offset)
                 project.save(update_fields=['committed_end'])
             in_flight = None
+            history_events = events if slug == 'startup_mvp' else None
             for ev in events:
                 if ev.end <= now:
                     ev.percent_complete = 100
@@ -236,6 +297,8 @@ class Command(BaseCommand):
             if in_flight is not None:
                 for author, body in SAMPLE_COMMENTS:
                     Comment.objects.create(event=in_flight, author=users[author], body=body)
+            if history_events:
+                self._seed_report_history(project, owner, history_events, now)
 
             self.stdout.write(self.style.SUCCESS(
                 f'Seeded "{spec["name"]}" from template ({len(events)} events, '

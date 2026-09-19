@@ -22,7 +22,7 @@ from io import BytesIO
 from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
@@ -146,7 +146,7 @@ def _chosen_milestones(doc, facts, tz):
     for e in picked:
         date = _parse(e['end'], tz)
         state = 'done' if e.get('percent_complete', 0) >= 100 else ('late' if date < now else 'upcoming')
-        out.append({**e, 'date': date, 'state': state})
+        out.append({**e, 'date': date, 'state': state, 'baseline': _parse(e['baseline_end'], tz) if e.get('baseline_end') else None})
     return sorted(out, key=lambda m: m['date'])
 
 
@@ -169,14 +169,26 @@ def _footer_text(doc, report, facts, tz):
     committed = (facts.get('project') or {}).get('committed_end')
     if committed:
         y, m, d = (int(v) for v in committed.split('-'))
-        parts.append(f'committed finish {MONTHS[m - 1]} {d}')
+        word = 'baseline' if (facts.get('project') or {}).get('commitment_source') == 'baseline' else 'committed'
+        parts.append(f'{word} finish {MONTHS[m - 1]} {d}')
     else:
         parts.append('no committed finish date set')
+    if facts.get('baseline'):
+        b = facts['baseline']
+        parts.append(f"baseline “{b.get('name') or ''}” of {_fmt_day(_parse(b['created_at'], tz))}")
     if report.get('status_source') == 'override':
         parts.append(f"status set by the author: {report.get('override_reason') or 'no reason given'}")
     elif report.get('rule_fired'):
         parts.append(f"{STATUS[report['status']]['label']} by rule: {report['rule_fired']}")
     return ' · '.join(parts)
+
+
+def _signed(days):
+    return f"{'+' if days > 0 else '−'}{abs(days)}d"
+
+
+def _slip_text(days):
+    return '–' if days is None else 'on plan' if days == 0 else _signed(days)
 
 
 def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
@@ -188,6 +200,22 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
         return None
     milestones = _chosen_milestones(doc, facts, tz)
     show_progress, show_critical = tl.get('showProgress', True), tl.get('showCritical', True)
+    show_baseline = bool(facts.get('baseline')) and (doc.get('show') or {}).get('baseline', True) is not False
+    one_day = timedelta(days=1)
+
+    def moved(a, b):
+        return bool(a and b) and abs(a - b) >= one_day
+
+    # Baseline ghosts only where the plan moved by a day or more, so an on-plan chart stays clean.
+    ghosts = {}
+    if show_baseline:
+        for r in rows:
+            if r.get('baseline_start') and r.get('baseline_end'):
+                bs, be = _parse(r['baseline_start'], tz), _parse(r['baseline_end'], tz)
+                if moved(bs, _parse(r['start'], tz)) or moved(be, _parse(r['end'], tz)):
+                    ghosts[r['name']] = (bs, be)
+    ghost_ms = {m['id'] for m in milestones if show_baseline and moved(m.get('baseline'), m['date'])}
+    base_times = [t for pair in ghosts.values() for t in pair] + [m['baseline'] for m in milestones if m['id'] in ghost_ms]
 
     grp = slide.shapes.add_group_shape()
     g = grp.shapes
@@ -200,8 +228,8 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
     dia = u * 0.62
 
     start, end = _parse(facts['start'], tz), _parse(facts['end'], tz)
-    t0 = start - timedelta(days=4)
-    t1 = max([end] + [m['date'] for m in milestones]) + timedelta(days=7)
+    t0 = min([start] + base_times) - timedelta(days=4)
+    t1 = max([end] + [m['date'] for m in milestones] + base_times) + timedelta(days=7)
     span = (t1 - t0).total_seconds()
     px0, px1 = x0 + label_w, x0 + w - right_pad
 
@@ -247,6 +275,11 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
             if done < 1 and bw * (1 - done) > u * 3:
                 _text(g, xs + bw * done + u * 0.35, cy - u * 0.75, u * 3.2, u * 1.5, [[(f'{round(done * 100)}%', {'bold': True})]], pt * 0.9, anchor=MSO_ANCHOR.MIDDLE, name='Percent complete')
                 obstacles.append((xs + bw * done + u * 0.35, cy - u * 0.6, xs + bw * done + u * 3.0, cy + u * 0.6))
+        if r['name'] in ghosts:                    # the baseline: a thin outline just above the bar
+            bs, be = ghosts[r['name']]
+            gh = max(0.03, min(row_h * 0.13, u * 0.42))
+            _describe(_box(g, X(bs), cy - bar_h / 2 - u * 0.22 - gh, max(0.03, X(be) - X(bs)), gh, fill='FFFFFF', line=INK3, line_pt=0.75, name=f'{r["name"]} baseline'),
+                      f'{r["name"]} baseline', f'{r["name"]} baseline: {_fmt_day(bs)} to {_fmt_day(be)}')
         if show_critical:
             for a, b in r.get('critical_spans') or []:
                 xa, xb = X(_parse(a, tz)), X(_parse(b, tz))
@@ -266,6 +299,9 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
             mx, cy = X(m['date']), y0 + top + row_h * ri + row_h / 2
             # bar-height box, so a diamond never blocks its own label just above or below it
             placed.append((mx - dia, cy - bar_h / 2, mx + dia, cy + bar_h / 2))
+            if m['id'] in ghost_ms:
+                bx_ = X(m['baseline'])
+                placed.append((bx_ - dia * 0.7, cy - bar_h / 2, bx_ + dia * 0.7, cy + bar_h / 2))
 
     def clear(bx):
         if bx[0] < px0 - u or bx[2] > x0 + w - 0.02 or bx[1] < y0 + u * 1.5 or bx[3] > y0 + h - legend_h + u * 0.4:
@@ -277,6 +313,11 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
         if ri is None:
             continue
         mx, cy = X(m['date']), y0 + top + row_h * ri + row_h / 2
+        if m['id'] in ghost_ms:                     # hollow baseline diamond, joined to where it is now
+            bx_, q = X(m['baseline']), dia * 0.7
+            _box(g, min(bx_, mx), cy - 0.006, max(0.02, abs(mx - bx_)), 0.012, fill=INK3, name='Slip')
+            _describe(_box(g, bx_ - q, cy - q, q * 2, q * 2, fill='FFFFFF', line=INK3, line_pt=0.75, kind=MSO_SHAPE.DIAMOND, name=f'Baseline: {m["title"]}'),
+                      f'Baseline: {m["title"]}', f'{m["title"]} baseline date {_fmt_day(m["baseline"])}')
         fill = INK if m['state'] == 'done' else BAD if m['state'] == 'late' else 'FFFFFF'
         line = INK if m['state'] == 'upcoming' else 'FFFFFF'
         _describe(_box(g, mx - dia, cy - dia, dia * 2, dia * 2, fill=fill, line=line, line_pt=1, kind=MSO_SHAPE.DIAMOND, name=f'Milestone: {m["title"]}'),
@@ -285,9 +326,15 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
         short = m['title'] if len(m['title']) <= 16 else m['title'][:15] + '…'
         day = _fmt_day(m['date'])
         chosen = None
-        for text in (f'{title} · {day}', f'{short} · {day}', day):
+        slip = f" ({_signed(m['slip_days'])})" if m['id'] in ghost_ms and m.get('slip_days') else ''
+        for text in (f'{title} · {day}{slip}', f'{short} · {day}{slip}', f'{day}{slip}', day):
             tw = _est_width(text, pt * 0.95, True)
-            for above, right in ((True, False), (True, True), (False, False), (False, True)):
+            # Normally to the right of the diamond; go left first when a neighbour in the same row
+            # sits within this label's reach, so that neighbour keeps a spot of its own.
+            crowded = any(o is not m and row_index.get(o.get('category'), row_index.get('Other')) == ri
+                          and 0 < X(o['date']) - mx < tw + dia * 2 + u for o in milestones)
+            spots = ((True, True), (True, False), (False, True), (False, False)) if crowded else ((True, False), (True, True), (False, False), (False, True))
+            for above, right in spots:
                 ty = cy - bar_h / 2 - u * 1.45 if above else cy + bar_h / 2 + u * 0.5
                 tx = mx - dia - u * 0.3 - tw if right else mx + dia + u * 0.3
                 bx = (tx, ty, tx + tw, ty + u * 1.2)
@@ -305,7 +352,7 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
                 lbl.left = Inches(tx - u * 0.6)
 
     # legend
-    items = ([('line', 'Critical path')] if show_critical else []) + [('done', 'Milestone met'), ('up', 'Milestone ahead'), ('late', 'Past due')]
+    items = ([('line', 'Critical path')] if show_critical else []) + [('done', 'Milestone met'), ('up', 'Milestone ahead'), ('late', 'Past due')] + ([('base', 'Baseline')] if base_times else [])
     step = u * 9.4
     lx = x0 + w - right_pad - len(items) * step
     ly = y0 + h - u * 1.5
@@ -313,6 +360,8 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
         cx = lx + k * step
         if kind == 'line':
             _box(g, cx, ly + u * 0.62, u * 1.6, 0.025, fill=ACCENT, name='Legend')
+        elif kind == 'base':
+            _box(g, cx, ly + u * 0.5, u * 1.6, u * 0.4, fill='FFFFFF', line=INK3, line_pt=0.75, name='Legend')
         else:
             q = u * 0.45
             _box(g, cx + u * 0.3, ly + u * 0.7 - q, q * 2, q * 2, fill=INK if kind == 'done' else BAD if kind == 'late' else 'FFFFFF',
@@ -392,10 +441,11 @@ def _ask(slide, x, y, w, h, doc, size):
     _write(_frame(box, MSO_ANCHOR.MIDDLE, 0.11), [[(head.upper(), {'bold': True, 'color': ACCENT, 'size': size * 0.86})], [(d.get('text') or '', {})]], size, space_after=2)
 
 
-def _milestone_table(slide, x, y, w, milestones, size):
+def _milestone_table(slide, x, y, w, milestones, size, with_base=False):
     rows = milestones[:8]
+    ncol = 6 if with_base else 5
     row_h = size * 1.85 / 72
-    shape = slide.shapes.add_table(len(rows) + 1, 5, Inches(x), Inches(y), Inches(w), Inches(row_h * (len(rows) + 1)))
+    shape = slide.shapes.add_table(len(rows) + 1, ncol, Inches(x), Inches(y), Inches(w), Inches(row_h * (len(rows) + 1)))
     shape.name = 'Milestones'
     tbl = shape.table
     style = shape._element.graphic.graphicData.tbl.tblPr.find(qn('a:tableStyleId'))
@@ -403,11 +453,17 @@ def _milestone_table(slide, x, y, w, milestones, size):
         style.text = '{2D5ABB26-0587-4C30-8999-92F81FD0307C}'          # "No Style, No Grid": ours is drawn below
     tbl.first_row = True
     tbl.horz_banding = False
-    for ci, frac in enumerate((0.50, 0.17, 0.11, 0.09, 0.13)):
+    for ci, frac in enumerate((0.44, 0.11, 0.11, 0.11, 0.09, 0.14) if with_base else (0.50, 0.17, 0.11, 0.09, 0.13)):
         tbl.columns[ci].width = Inches(w * frac)
     label = {'done': ('●  Met', OK), 'late': ('■  Past due', BAD), 'upcoming': ('◆  Ahead', INK)}
-    data = [(('Milestone', 'Track', 'Date', 'Done', 'Status'), True)] + [
-        ((m['title'], m.get('category') or '', _fmt_day(m['date']), f"{m.get('percent_complete', 0)}%", label[m['state']][0]), False) for m in rows]
+    if with_base:                                  # the audit trail: baseline, forecast, slip
+        data = [(('Milestone', 'Baseline', 'Forecast', 'Slip', 'Done', 'Status'), True)] + [
+            ((m['title'], _fmt_day(m['baseline']) if m.get('baseline') else 'new', _fmt_day(m['date']), _slip_text(m.get('slip_days')),
+              f"{m.get('percent_complete', 0)}%", label[m['state']][0]), False) for m in rows]
+    else:
+        data = [(('Milestone', 'Track', 'Date', 'Done', 'Status'), True)] + [
+            ((m['title'], m.get('category') or '', _fmt_day(m['date']), f"{m.get('percent_complete', 0)}%", label[m['state']][0]), False) for m in rows]
+    last = ncol - 1
     for ri, (cells, head) in enumerate(data):
         tbl.rows[ri].height = Inches(row_h)
         for ci, val in enumerate(cells):
@@ -419,9 +475,90 @@ def _milestone_table(slide, x, y, w, milestones, size):
             cell.vertical_anchor = MSO_ANCHOR.MIDDLE
             tf = cell.text_frame
             tf.word_wrap = True
-            color = INK3 if head else (label[rows[ri - 1]['state']][1] if ci == 4 else INK)
-            _write(tf, [[(val.upper() if head else val, {'bold': head or ci == 4})]], size * (0.84 if head else 1), color=color)
+            late = with_base and ci == 3 and not head and (rows[ri - 1].get('slip_days') or 0) > 0
+            color = INK3 if head else (label[rows[ri - 1]['state']][1] if ci == last else BAD if late else INK)
+            _write(tf, [[(val.upper() if head else val, {'bold': head or ci == last or late})]], size * (0.84 if head else 1), color=color)
     return row_h * (len(rows) + 1)
+
+
+TREND_MARKS = (MSO_SHAPE.OVAL, MSO_SHAPE.RECTANGLE, MSO_SHAPE.ISOSCELES_TRIANGLE, MSO_SHAPE.DIAMOND, MSO_SHAPE.MATH_MULTIPLY)
+
+
+def _trend_series(facts, milestones):
+    """Drift per series, mirroring MilestoneTrend.jsx: days later than the date first reported."""
+    now = {'as_of': facts['as_of'], 'end': facts.get('end'), 'milestones': {str(m['id']): m['end'] for m in milestones}}
+    pts = ((facts.get('history') or []) + [now])[-8:]
+    if len(pts) < 3:
+        return pts, []
+    raw = [('Finish', [p.get('end') for p in pts], True)] + [
+        (m['title'], [(p.get('milestones') or {}).get(str(m['id'])) for p in pts], False) for m in milestones if m['state'] != 'done'][:4]
+    series = []
+    for title, values, strong in raw:
+        if sum(1 for v in values if v) < 2:
+            continue
+        first = next(v for v in values if v)
+        d0 = datetime.fromisoformat(first).timestamp() // 86400
+        series.append({'title': title, 'strong': strong, 'values': values,
+                       'drift': [None if not v else int(round(datetime.fromisoformat(v).timestamp() / 86400 - d0)) for v in values]})
+    return pts, series
+
+
+def _draw_trend(slide, x0, y0, w, h, facts, milestones, tz, pt):
+    """The milestone trend chart as grouped native lines and markers."""
+    pts, series = _trend_series(facts, milestones)
+    if not series:
+        return None
+    grp = slide.shapes.add_group_shape()
+    g = grp.shapes
+    u = pt / 72
+    _text(g, x0, y0, w, u * 1.5, [[('MILESTONE TREND · DAYS LATER THAN FIRST REPORTED', {'bold': True})]], pt * 0.88, color=INK3, name='Trend title')
+    left, right, top, bottom = x0 + u * 4.2, x0 + w - w * 0.33, y0 + u * 2.2, y0 + h - u * 1.7
+    vals = [d for s_ in series for d in s_['drift'] if d is not None]
+    lo, hi = min(0, *vals), max(0, *vals)
+    if hi - lo < 4:
+        hi += math.ceil((4 - (hi - lo)) / 2)
+        lo = min(lo, hi - 4)
+
+    def PX(i):
+        return left + (i / (len(pts) - 1)) * (right - left)
+
+    def PY(d):
+        return top + (1 - (d - lo) / (hi - lo)) * (bottom - top)
+
+    step = max(1, math.ceil((hi - lo) / 4))
+    d = math.ceil(lo / step) * step
+    while d <= hi:
+        _box(g, left, PY(d) - 0.004, right - left, 0.008, fill=INK3 if d == 0 else RULE, name='Grid')
+        _text(g, x0, PY(d) - u * 0.7, u * 3.8, u * 1.4, ['on plan' if d == 0 else _signed(d)], pt * 0.82, color=INK3, align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE, name='Axis')
+        d += step
+    for i, p in enumerate(pts):
+        label = 'now' if i == len(pts) - 1 else _fmt_day(_parse(p['as_of'], tz))
+        _text(g, PX(i) - u * 3, bottom + u * 0.3, u * 6, u * 1.3, [label], pt * 0.82, color=INK3, align=PP_ALIGN.CENTER, name='Report date')
+
+    ends = sorted(((PY(next(v for v in reversed(s_['drift']) if v is not None)), k) for k, s_ in enumerate(series)))
+    label_y, prev = {}, None
+    for yy, k in ends:                              # right-hand labels, nudged apart
+        yy = yy if prev is None or yy - prev >= u * 1.25 else prev + u * 1.25
+        label_y[k], prev = yy, yy
+    for k, s_ in enumerate(series):
+        color = ACCENT if s_['strong'] else INK
+        xy = [(PX(i), PY(v)) for i, v in enumerate(s_['drift']) if v is not None]
+        for (ax, ay), (bx, by) in zip(xy, xy[1:]):
+            ln = g.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(ax), Inches(ay), Inches(bx), Inches(by))
+            ln.line.color.rgb = _rgb(color)
+            ln.line.width = Pt(2 if s_['strong'] else 1.1)
+            ln.name = f'Trend: {s_["title"]}'
+        q = u * 0.3
+        for px, py in xy:
+            _box(g, px - q, py - q, q * 2, q * 2, fill=color, kind=TREND_MARKS[k % len(TREND_MARKS)], name='Trend point')
+        last_v = next(v for v in reversed(s_['values']) if v)
+        last_d = next(v for v in reversed(s_['drift']) if v is not None)
+        title = s_['title'] if len(s_['title']) <= 22 else s_['title'][:21] + '…'
+        text = f"{title} · {_fmt_day(_parse(last_v, tz))}" + (f' ({_signed(last_d)})' if last_d else '')
+        _text(g, right + u * 0.8, label_y[k] - u * 0.7, x0 + w - right - u * 0.8, u * 1.4, [[(text, {'bold': s_['strong']})]], pt * 0.9, color=color, anchor=MSO_ANCHOR.MIDDLE, name=f'Trend label: {s_["title"]}')
+    _describe(grp, 'Milestone trend', 'Milestone trend: ' + '; '.join(
+        f"{s_['title']} {_slip_text(next(v for v in reversed(s_['drift']) if v is not None))}" for s_ in series) + f' across {len(pts)} reports.')
+    return grp
 
 
 def _cell_lines(cell, bottom, weight):
@@ -448,7 +585,8 @@ def build_pptx(*, doc, report, facts, layout='slide', paper='letter', previous=N
     tz = dt_tz(timedelta(minutes=max(-840, min(840, int(tz_offset_minutes or 0)))))
     status = STATUS.get(report.get('status'), STATUS['on_track'])
     report = {**report, 'status': report.get('status') if report.get('status') in STATUS else 'on_track'}
-    show = {'pathToGreen': True, 'decision': True, 'kpis': True, 'timeline': True, 'columns': True, 'milestoneTable': True, 'footer': True, **(doc.get('show') or {})}
+    show = {'pathToGreen': True, 'decision': True, 'kpis': True, 'timeline': True, 'baseline': True, 'moved': True, 'trend': False,
+            'columns': True, 'milestoneTable': True, 'footer': True, **(doc.get('show') or {})}
     handout = layout == 'handout'
 
     prs = Presentation()
@@ -511,7 +649,14 @@ def build_pptx(*, doc, report, facts, layout='slide', paper='letter', previous=N
     milestones = _chosen_milestones(doc, facts, tz) if not facts.get('empty') else []
     table_on = handout and show['milestoneTable'] and milestones
     table_h = (S['table'] * 1.85 / 72) * (min(8, len(milestones)) + 1) if table_on else 0
-    foot_h = 0.26 if show['footer'] else 0
+    foot_lines = min(2, _lines(_footer_text(doc, report, facts, tz), S['foot'], cw - 0.9)) or 1      # a baseline makes it longer
+    foot_h = (0.10 + foot_lines * S['foot'] * 1.3 / 72) if show['footer'] else 0
+    with_base = bool(facts.get('baseline')) and show['baseline'] is not False
+    moved_text = (doc.get('moved') or '').strip() if (show['moved'] is not False and facts.get('since_last')) else ''
+    moved_lead = f"Moved since {_fmt_day(_parse(facts['since_last']['as_of'], tz))}: " if moved_text else ''
+    moved_h = _lines(moved_lead + moved_text, S['ptg'], cw) * S['ptg'] * 1.3 / 72 + 0.04 if moved_text else 0
+    trend_on = handout and show['trend'] is True and bool(_trend_series(facts, milestones)[1])
+    trend_h = 1.45 if trend_on else 0
 
     def block_h(c):
         # Estimated from the wording and this block's width, so the space reserved is the space used.
@@ -528,7 +673,7 @@ def build_pptx(*, doc, report, facts, layout='slide', paper='letter', previous=N
     else:
         cols_h = max((block_h(c) for c in cols), default=0)
     timeline_on = show['timeline'] and not facts.get('empty') and facts.get('rows')
-    fixed = kpi_h + cols_h + table_h + foot_h + GAP * sum(1 for v in (kpi_h, cols_h, table_h, foot_h) if v)
+    fixed = kpi_h + cols_h + table_h + foot_h + moved_h + trend_h + GAP * sum(1 for v in (kpi_h, cols_h, table_h, foot_h, moved_h, trend_h) if v)
     avail = ph - B - y - fixed - (GAP if timeline_on else 0)
     # The timeline takes what is left, but never less than a readable height: if the page is
     # overfull, the blocks below run long rather than the chart collapsing (the print tool warns).
@@ -544,9 +689,15 @@ def build_pptx(*, doc, report, facts, layout='slide', paper='letter', previous=N
     if timeline_on and tl_h >= 0.6:
         _draw_timeline(slide, L, y, cw, tl_h, doc, facts, tz, S['tl'])
         y += tl_h + GAP
-    # 5. milestone table (handout)
+    if moved_text:
+        _text(sh, L, y, cw, moved_h, [[(moved_lead, {'bold': True, 'color': INK}), (moved_text, {'color': INK2})]], S['ptg'], name='Moved since last report')
+        y += moved_h + GAP
+    # 5. milestone table (handout), then the trend chart
     if table_on:
-        y += _milestone_table(slide, L, y, cw, milestones, S['table']) + GAP
+        y += _milestone_table(slide, L, y, cw, milestones, S['table'], with_base) + GAP
+    if trend_on:
+        _draw_trend(slide, L, y, cw, trend_h, facts, milestones, tz, S['tl'])
+        y += trend_h + GAP
     # 6. text blocks
     if cols:
         if handout:
@@ -570,7 +721,7 @@ def build_pptx(*, doc, report, facts, layout='slide', paper='letter', previous=N
     if show['footer']:
         fy = ph - B - foot_h
         _box(sh, L, fy, cw, 0.012, fill=RULE, name='Rule')
-        _text(sh, L, fy + 0.06, cw - 0.9, 0.2, [_footer_text(doc, report, facts, tz)], S['foot'], color=INK3, name='Footer')
+        _text(sh, L, fy + 0.06, cw - 0.9, foot_h - 0.06, [_footer_text(doc, report, facts, tz)], S['foot'], color=INK3, name='Footer')
         _text(sh, L + cw - 0.9, fy + 0.06, 0.9, 0.2, ['Timeline'], S['foot'], color=INK3, align=PP_ALIGN.RIGHT, name='Source')
 
     # Speaker notes: provenance travels with the slide even if the footer is deleted.

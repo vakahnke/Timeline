@@ -42,12 +42,16 @@ project's toolbar and it opens already filled in.
   up that deck's fonts.
 - **Or a PDF.** Print a single vector page as a 16:9 slide, or as a portrait
   handout on Letter or A4 that adds a milestone table.
-- **History.** Save a dated copy. The next report starts from its shape and shows
-  whether the status moved since last time.
+- **Slip against a baseline.** Freeze the approved plan with one click. Every later
+  report shows what slipped and by how much, on the timeline and in the milestone
+  table, and each project sets its own limits for At risk and Off track.
+- **History.** Save a dated copy. The next report starts from its shape, shows
+  whether the status moved, drafts a "what moved since last report" line, and can
+  chart how far each milestone has drifted across reports.
 - **Built on an API.** The page reads one versioned, documented endpoint, so
   scripts and other tools can consume the same facts.
 
-<p align="center"><img src="docs/images/status-report-handout.png" width="520" alt="The portrait handout, with its milestone table"></p>
+<p align="center"><img src="docs/images/status-report-handout.png" width="520" alt="The portrait handout: slip against the baseline, the milestone table, and the milestone trend chart"></p>
 
 Try it on the [live demo](#live-demo): open **Startup MVP: Idea to Launch** and
 click **Status report**. Details are in the [user guide](docs/USER_GUIDE.md) and

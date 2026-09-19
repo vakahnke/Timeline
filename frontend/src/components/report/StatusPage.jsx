@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import ReportTimeline from './ReportTimeline'
-import { STATUS, chosenMilestones, fmtDay, footerText } from './reportModel'
+import MilestoneTrend from './MilestoneTrend'
+import { STATUS, chosenMilestones, fmtDay, footerText, slipText, trendPoints } from './reportModel'
 
 // Text you can click and type into, right on the page. Commits on blur so React never fights the
 // caret; Enter commits a single-line field. Read-only members get plain text.
@@ -67,6 +68,7 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
     ? `${(['on_track', 'at_risk', 'off_track'].indexOf(report.status) > ['on_track', 'at_risk', 'off_track'].indexOf(previous.status)) ? '▼' : '▲'} was ${STATUS[previous.status]?.label} · ${fmtDay(previous.as_of)}`
     : previous ? `● unchanged since ${fmtDay(previous.as_of)}` : ''
   const handout = layout === 'handout'
+  const withBase = !!facts?.baseline && show.baseline !== false
   const cols = (doc.columns || []).filter(c => !c.hidden)
 
   const decision = show.decision && (
@@ -158,17 +160,29 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
         )}
 
         {show.timeline && <ReportTimeline facts={facts} rows={rows} milestones={milestones} dense={handout}
-                                          showCritical={doc.timeline?.showCritical !== false} showProgress={doc.timeline?.showProgress !== false} />}
+                                          showCritical={doc.timeline?.showCritical !== false} showProgress={doc.timeline?.showProgress !== false}
+                                          showBaseline={show.baseline !== false} />}
+
+        {show.moved !== false && facts?.since_last && (doc.moved || !ro) && (
+          <div className="sr-moved sr-opt" data-empty={!doc.moved}><b>Moved since {fmtDay(facts.since_last.as_of)}: </b>
+            <Editable value={doc.moved} onChange={v => set('moved', v)} readOnly={ro} multiline maxLength={220} placeholder="which dates moved, and by how much." /></div>)}
 
         {handout && show.milestoneTable && milestones.length > 0 && (
           <table className="sr-ms">
-            <thead><tr><th>Milestone</th><th>Track</th><th>Date</th><th>Done</th><th>Status</th></tr></thead>
+            <thead>{withBase
+              ? <tr><th>Milestone</th><th>Baseline</th><th>Forecast</th><th>Slip</th><th>Done</th><th>Status</th></tr>
+              : <tr><th>Milestone</th><th>Track</th><th>Date</th><th>Done</th><th>Status</th></tr>}</thead>
             <tbody>{milestones.slice(0, 8).map(m => {
               const s = m.state === 'done' ? { shape: 'circle', tone: 'ok', t: 'Met' } : m.state === 'late' ? { shape: 'square', tone: 'bad', t: 'Past due' } : { shape: 'diamond', tone: 'ink', t: 'Ahead' }
-              return <tr key={m.id}><td>{m.title}</td><td>{m.category}</td><td>{fmtDay(m.date)}</td><td>{m.percent_complete}%</td><td><span className={`sr-st sr-${s.tone}`}><Shape kind={s.shape} />{s.t}</span></td></tr>
+              const status = <td><span className={`sr-st sr-${s.tone}`}><Shape kind={s.shape} />{s.t}</span></td>
+              return withBase
+                ? <tr key={m.id}><td>{m.title}</td><td>{m.baseline_end ? fmtDay(m.baseline_end) : 'new'}</td><td>{fmtDay(m.date)}</td><td className={m.slip_days > 0 ? 'sr-slip' : ''}>{slipText(m.slip_days)}</td><td>{m.percent_complete}%</td>{status}</tr>
+                : <tr key={m.id}><td>{m.title}</td><td>{m.category}</td><td>{fmtDay(m.date)}</td><td>{m.percent_complete}%</td>{status}</tr>
             })}</tbody>
           </table>
         )}
+
+        {handout && show.trend === true && <MilestoneTrend points={trendPoints(facts, milestones)} milestones={milestones} dense={handout} />}
 
         {show.columns && cols.length > 0 && (
           <div className="sr-cols" style={handout ? undefined : { gridTemplateColumns: cols.map(c => (c.kind === 'risks' ? '1.45fr' : '1fr')).join(' ') }}>

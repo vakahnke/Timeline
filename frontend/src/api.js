@@ -33,6 +33,7 @@ const url = {
   statusReports:(pid)      => `/projects/${pid}/status-reports/`,
   statusReport: (pid, id)  => `/projects/${pid}/status-reports/${id}/`,
   statusDraft:  (pid)      => `/projects/${pid}/status-reports/draft/`,
+  baselines:    (pid)      => `/projects/${pid}/baselines/`,
 }
 
 export class ApiError extends Error {
@@ -140,6 +141,13 @@ export const api = {
     remove:       (id)      => req(url.team(id), { method: 'DELETE' }),
     addMember:    (id, d)   => req(url.teamMembers(id), { method: 'POST', body: body(d) }),
     removeMember: (id, uid) => req(url.teamMember(id, uid), { method: 'DELETE' }),
+  },
+
+  // Baselines: the plan, frozen, so a status report can show slip against it.
+  baselines: {
+    list:   (pid)       => req(url.baselines(pid)),
+    create: (pid, name) => req(url.baselines(pid), { method: 'POST', body: body({ name }) }),
+    remove: (pid, id)   => req(`${url.baselines(pid)}${id}/`, { method: 'DELETE' }),
   },
 
   // Status reports (the print tool): live draft from the schedule + saved, dated reports.

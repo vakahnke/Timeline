@@ -1,6 +1,6 @@
 # Status One-Pager — Design Document
 
-**Status:** Building — Phase 1 (the page, the print tool, print/PDF) and phase 2 (native PowerPoint) shipped 2026-09-19. Phase 3 (baselines, trends) not started.
+**Status:** Shipped — Phase 1 (the page, the print tool, print/PDF), phase 2 (native PowerPoint) and phase 3 (baselines, slip, limits, trends) shipped 2026-09-19. The portfolio slide and corporate templates remain under "Later".
 **Last updated:** 2026-09-19
 **Scope:** A per-project status report composed inside Timeline and exported as a native, editable PowerPoint slide and a print-ready PDF handout. Touches the data model (reports, baselines, milestones), the API, a new composer page, and two export renderers.
 
@@ -315,9 +315,38 @@ saved reports. No new roles; it follows [PERMISSIONS.md](../PERMISSIONS.md).
     that clicks the button and inspects the downloaded file, and an independent renderer used to
     look at the result. **Not yet opened in PowerPoint, Keynote or Google Slides by a person**:
     QuickLook and Keynote scripting both hung on the build machine.
-- **Phase 3 — the truth.** Baselines and a committed date, slip as ghost bars and variance, the
-  milestone table's baseline column, per-project thresholds, trend arrows and automatic "what
-  moved since last report", a milestone trend chart once three reports exist.
+- **Phase 3 — the truth. SHIPPED.** As built:
+  - **Baselines** (`events.Baseline`, `/api/projects/<id>/baselines/`). "Set baseline" in the print
+    tool freezes every event's dates under a name. One baseline is active; re-baselining retires
+    the old one but keeps it, and deleting the active one re-activates the most recent. Editors and
+    owners take baselines; every member sees the slip.
+  - **The commitment** is the project's committed date. Without one, the active baseline's finish
+    stands in, and the page says "baseline" wherever it would say "commitment".
+  - **Slip on the timeline** is drawn only where the plan moved by a day or more: a thin outlined
+    strip above the track's bar, and for a milestone a hollow baseline diamond joined to today's
+    diamond, with the slip in the label ("Oct 6 (+3d)"). An on-plan chart stays clean. One toggle
+    switches slip off for a report.
+  - **The handout's milestone table** becomes baseline, forecast, slip, done, status.
+  - **Limits per project** (`Project.status_thresholds`): off track beyond N working days or N% of
+    the project's length, at risk when work trails time by N points. Blank means the default.
+    Saved on the project from the print tool, so they are agreed once, not per report.
+  - **What moved since last report**: one line under the timeline, drafted from the previous saved
+    report's snapshot (milestones first, then critical events, largest move first) and reworded on
+    the page like any other text.
+  - **Milestone trend chart** (handout, off by default, needs two saved reports plus today). It
+    plots *drift*, days later than the date first reported, not the dates themselves: on a
+    six-month axis a two-day slip is invisible, and the repeated small slip is the whole point.
+    The slide has no room for it; the page refuses to squeeze the timeline instead.
+  - **Facts stay at version 1**: everything above was added (`baseline`, `since_last`, `history`,
+    `thresholds`, per-event and per-row `baseline_*` and `slip_days`), nothing changed meaning.
+  - **The PowerPoint export draws all of it natively**: outlined strips and diamonds, the six
+    column table, the moved line, and the trend chart as connector lines with shape markers.
+  - **The sample project ships with a baseline and three earlier reports**, so slip, what moved
+    and the trend are visible in the demo without any setup.
+  - Not built: the "critical-path float vs last report" number (the page keeps the count of
+    critical events), and a milestone table column per earlier baseline.
+  - Verified by 13 backend tests for baselines, limits and history, 5 more for the export, and a
+    21-check browser test that sets a baseline, slips an event, changes limits and downloads the file.
 - **Later / maybe:** a portfolio slide (all of a PM's projects, one row each), filling a
   user-supplied corporate template, scheduled or emailed PDFs via WeasyPrint, budget and staffing
   blocks.

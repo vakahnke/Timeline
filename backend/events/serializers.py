@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from projects.serializers import UserSerializer
 
-from .models import Category, Comment, Event, StatusReport, Task
+from .models import Baseline, Category, Comment, Event, StatusReport, Task
 
 User = get_user_model()
 
@@ -280,4 +280,29 @@ class StatusReportExportSerializer(serializers.Serializer):
     def validate_previous(self, value):
         if value is not None and not isinstance(value, dict):
             raise serializers.ValidationError('previous must be an object or null.')
+        return value
+
+
+class BaselineSerializer(serializers.ModelSerializer):
+    """A frozen plan. Creating one snapshots the schedule as it stands; only the name is accepted."""
+    created_by_name = serializers.SerializerMethodField()
+    event_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Baseline
+        fields = ['id', 'name', 'active', 'committed_end', 'planned_start', 'planned_end',
+                  'event_count', 'created_by_name', 'created_at']
+        read_only_fields = ['id', 'active', 'committed_end', 'planned_start', 'planned_end',
+                            'event_count', 'created_by_name', 'created_at']
+
+    def get_created_by_name(self, obj) -> str | None:
+        return obj.created_by.username if obj.created_by_id else None
+
+    def get_event_count(self, obj) -> int:
+        return len(obj.events or {})
+
+    def validate_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Give the baseline a name.')
         return value

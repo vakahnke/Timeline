@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import { useAuth } from '../auth/AuthContext'
@@ -47,6 +47,9 @@ export default function StatusReportPage() {
   const [layout, setLayout]     = useState('slide')
   const [paper, setPaper]       = useState(() => { try { return localStorage.getItem('report:paper') || 'letter' } catch { return 'letter' } })
   const [saved, setSaved]       = useState([])
+  const [baselines, setBaselines] = useState([])
+  const [baseName, setBaseName] = useState('')
+  const [limits, setLimits]     = useState({})        // threshold inputs, as typed
   const [savedId, setSavedId]   = useState(null)      // set when showing/editing a saved report
   const [frozen, setFrozen]     = useState(false)     // true = facts come from a saved snapshot
   const [error, setError]       = useState(null)
@@ -57,9 +60,10 @@ export default function StatusReportPage() {
 
   const load = useCallback(async ({ keepDoc = false } = {}) => {
     try {
-      const [proj, draft, list] = await Promise.all([
-        api.projects.get(projectId), api.statusReports.draft(projectId), api.statusReports.list(projectId),
+      const [proj, draft, list, bases] = await Promise.all([
+        api.projects.get(projectId), api.statusReports.draft(projectId), api.statusReports.list(projectId), api.baselines.list(projectId),
       ])
+      setBaselines(bases.results || bases); setLimits(proj.status_thresholds || {})
       setProject(proj); setFacts(draft.facts); setSug(draft.suggestion); setPrevious(draft.previous); setSaved(list)
       setFrozen(false)
       if (keepDoc) {
@@ -103,6 +107,28 @@ export default function StatusReportPage() {
     setBusy(true)
     try { await api.projects.update(projectId, { committed_end: value || null }); await load({ keepDoc: true }) }
     catch { flash('Could not save the committed date.', 'error') }
+    finally { setBusy(false) }
+  }
+
+  // Baselines and thresholds belong to the project, not to one report, so they save at once.
+  const takeBaseline = async () => {
+    const name = baseName.trim() || `Plan of ${fmtLong()}`
+    setBusy(true)
+    try { await api.baselines.create(projectId, name); setBaseName(''); await load({ keepDoc: true }); flash('Baseline set: slip is now measured against today’s plan', 'saved') }
+    catch { flash('Could not set the baseline.', 'error') }
+    finally { setBusy(false) }
+  }
+  const removeBaseline = async (id) => {
+    setBusy(true)
+    try { await api.baselines.remove(projectId, id); await load({ keepDoc: true }) }
+    catch { flash('Could not delete the baseline.', 'error') }
+    finally { setBusy(false) }
+  }
+  const saveLimits = async () => {
+    const clean = Object.fromEntries(Object.entries(limits).map(([k, v]) => [k, v === '' || v == null ? null : Number(v)]))
+    setBusy(true)
+    try { await api.projects.update(projectId, { status_thresholds: clean }); await load({ keepDoc: true }); flash('Status limits saved', 'saved') }
+    catch { flash('Limits must be whole numbers: days 1–250, percent and points 1–100.', 'error') }
     finally { setBusy(false) }
   }
 
@@ -223,6 +249,33 @@ export default function StatusReportPage() {
             <p className="sr-hint">The date the project is held to. The forecast is measured against it.</p>
           </details>
 
+          <details>
+            <summary>Baseline and limits <small>{facts?.baseline ? facts.baseline.name : 'no baseline'}</small></summary>
+            <div className="sr-base">
+              {facts?.baseline
+                ? <p className="sr-hint">Slip is measured against <b>{facts.baseline.name}</b>, frozen {fmtLong(facts.baseline.created_at)}: {facts.baseline.moved} event{facts.baseline.moved === 1 ? '' : 's'} moved, {facts.baseline.added} added, {facts.baseline.removed} removed since.</p>
+                : <p className="sr-hint">A baseline freezes today’s dates as the approved plan. Later reports then show what slipped, on the timeline and in the milestone table.</p>}
+              {canEdit && (
+                <div className="sr-base-row">
+                  <input id="sr-base-name" value={baseName} maxLength={80} onChange={e => setBaseName(e.target.value)} placeholder={facts?.baseline ? 'Name for the new baseline' : 'e.g. Approved plan'} aria-label="Baseline name" />
+                  <button onClick={takeBaseline} disabled={busy || frozen || facts?.empty}>{facts?.baseline ? 'Re-baseline' : 'Set baseline'}</button>
+                </div>)}
+              {baselines.length > 0 && (
+                <div className="sr-rows">{baselines.map(b => (
+                  <div className="sr-row" key={b.id}>
+                    <span className="sr-row-t">{b.name}{b.active && <em> · active</em>} <small>{fmtLong(b.created_at)}</small></span>
+                    {canEdit && <button onClick={() => removeBaseline(b.id)} disabled={busy} title="Delete this baseline">✕</button>}
+                  </div>))}</div>)}
+              <p className="sr-hint">Limits for the status rule. Agree them before anything slips; blank uses the default.</p>
+              <div className="sr-thresh">
+                {[['off_track_working_days', 'Off track beyond (working days late)', 10], ['off_track_percent', '…or beyond (% of project length)', 10], ['behind_points', 'At risk when work trails time by (points)', 10]].map(([k, label, dflt]) => (
+                  <Fragment key={k}><label htmlFor={`sr-lim-${k}`}>{label}</label>
+                    <input id={`sr-lim-${k}`} type="number" min="1" inputMode="numeric" placeholder={String(dflt)} value={limits[k] ?? ''} disabled={!canEdit || busy} onChange={e => setLimits(l => ({ ...l, [k]: e.target.value }))} /></Fragment>))}
+              </div>
+              {canEdit && <div className="sr-actions"><button onClick={saveLimits} disabled={busy}>Save limits</button></div>}
+            </div>
+          </details>
+
           <details open>
             <summary>What the page shows</summary>
             <div className="sr-checks">
@@ -230,6 +283,10 @@ export default function StatusReportPage() {
               {showToggle('pathToGreen', 'Path to green (when not on track)')}
               {showToggle('kpis', 'Numbers strip')}
               {showToggle('timeline', 'Timeline')}
+              {facts?.baseline && showToggle('baseline', 'Slip against the baseline')}
+              {facts?.since_last && showToggle('moved', 'What moved since last report')}
+              {layout === 'handout' && (facts?.history?.length || 0) >= 2 && (
+                <label className="sr-check"><input type="checkbox" checked={doc.show.trend === true} onChange={e => set('show.trend', e.target.checked)} />Milestone trend chart</label>)}
               {showToggle('columns', 'Text blocks')}
               {layout === 'handout' && showToggle('milestoneTable', 'Milestone table')}
               {showToggle('footer', 'Footer')}

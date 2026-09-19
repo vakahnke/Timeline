@@ -155,3 +155,28 @@ class StatusReport(models.Model):
 
     def __str__(self):
         return f'{self.project_id} · {self.as_of:%Y-%m-%d} · {self.status}'
+
+
+class Baseline(models.Model):
+    """The plan, frozen. Slip on a status report is measured against the project's active baseline.
+
+    ``events`` maps event id (as a string) to that event's title, track, dates and milestone flag
+    at the moment of freezing. Events created later have no entry: they are "added since baseline".
+    One baseline per project is active; taking a new one retires the others but keeps them.
+    """
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='baselines')
+    name = models.CharField(max_length=80)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                   related_name='baselines')
+    created_at = models.DateTimeField(auto_now_add=True)
+    committed_end = models.DateField(null=True, blank=True)   # the project's commitment when frozen
+    planned_start = models.DateTimeField(null=True, blank=True)
+    planned_end = models.DateTimeField(null=True, blank=True)
+    events = models.JSONField(default=dict)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.project_id} · {self.name}'

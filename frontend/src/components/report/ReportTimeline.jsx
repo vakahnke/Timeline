@@ -14,7 +14,7 @@ const W = 1000
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 const INK = '#16202E', INK3 = '#7C8797', RULE = '#D9DEE6', ACCENT = '#2B50C8', WARN = '#B86E00', BAD = '#B3362B'
 
-export default function ReportTimeline({ facts, rows, milestones, showCritical = true, showProgress = true, dense = false }) {
+export default function ReportTimeline({ facts, rows, milestones, showCritical = true, showProgress = true, showBaseline = true, dense = false }) {
   const wrapRef = useRef(null)
   const [aspect, setAspect] = useState(dense ? 0.4 : 0.2)
 
@@ -42,8 +42,17 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
 
   // Time scale: the project's span padded a little, snapped out to whole weeks.
   const DAY = 86400000
-  const t0 = new Date(facts.start).getTime() - 4 * DAY
-  const t1 = Math.max(new Date(facts.end).getTime(), ...milestones.map(m => new Date(m.date).getTime())) + 7 * DAY
+  // Baseline ghosts: drawn only where the plan moved by a day or more, so an on-plan chart stays clean.
+  const ms = (iso) => new Date(iso).getTime()
+  const moved = (a, b) => !!a && !!b && Math.abs(ms(a) - ms(b)) >= DAY
+  const ghostRows = showBaseline && facts.baseline
+    ? rows.map(r => (moved(r.baseline_start, r.start) || moved(r.baseline_end, r.end)) ? r : null) : rows.map(() => null)
+  const ghostMs = (m) => showBaseline && facts.baseline && moved(m.baseline_end, m.date)
+  const baseTimes = [...ghostRows.filter(Boolean).flatMap(r => [ms(r.baseline_start), ms(r.baseline_end)]),
+    ...milestones.filter(ghostMs).map(m => ms(m.baseline_end))]
+  const anyGhost = baseTimes.length > 0
+  const t0 = Math.min(new Date(facts.start).getTime(), ...baseTimes) - 4 * DAY
+  const t1 = Math.max(new Date(facts.end).getTime(), ...milestones.map(m => new Date(m.date).getTime()), ...baseTimes) + 7 * DAY
   const x = (t) => L + ((new Date(t).getTime() - t0) / (t1 - t0)) * (W - L - R)
   const today = new Date(facts.as_of).getTime()
   const bodyH = H - top - legendH
@@ -79,7 +88,10 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
     if (row == null) return
     const mx = x(m.date), cy = top + rowH * row + rowH / 2
     placed.push({ x0: mx - dia, x1: mx + dia, y0: cy - barH / 2, y1: cy + barH / 2 })
+    if (ghostMs(m)) placed.push({ x0: x(m.baseline_end) - dia * 0.7, x1: x(m.baseline_end) + dia * 0.7, y0: cy - barH / 2, y1: cy + barH / 2 })
   })
+  const ghostH = Math.max(2.5, Math.min(rowH * 0.13, fs * 0.42)), ghostGap = fs * 0.22
+  // Baseline strips are thin outlines, not obstacles: a label may sit over one (it has a white halo).
   const clear = (b) => b.x0 >= L - fs && b.x1 <= W - 2 && b.y0 >= fs * 1.6 && b.y1 <= H - legendH + fs * 0.4 &&
     !placed.some(o => b.x0 < o.x1 + fs * 0.4 && b.x1 > o.x0 - fs * 0.4 && b.y0 < o.y1 && b.y1 > o.y0)
   const marks = milestones.filter(m => rowIndex[m.category] != null || rowIndex.Other != null).map(m => {
@@ -89,9 +101,14 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
     const yAbove = cy - barH / 2 - fs * 0.45, yBelow = cy + barH / 2 + fs * 1.5
     let chosen = null
     const short = m.title.length > 16 ? m.title.slice(0, 15) + '…' : m.title
-    for (const text of [`${title} · ${fmtDay(m.date)}`, `${short} · ${fmtDay(m.date)}`, fmtDay(m.date)]) {
+    const slip = ghostMs(m) && m.slip_days ? ` (${m.slip_days > 0 ? '+' : '−'}${Math.abs(m.slip_days)}d)` : ''
+    for (const text of [`${title} · ${fmtDay(m.date)}${slip}`, `${short} · ${fmtDay(m.date)}${slip}`, `${fmtDay(m.date)}${slip}`, fmtDay(m.date)]) {
       const w = text.length * charW
-      for (const [y, right] of [[yAbove, false], [yAbove, true], [yBelow, false], [yBelow, true]]) {
+      // A label normally goes to the right of its diamond. When another milestone of the same row
+      // sits within that label's reach, go left first, so the neighbour keeps a spot of its own.
+      const crowded = milestones.some(o => o !== m && (rowIndex[o.category] ?? rowIndex.Other) === row && x(o.date) > mx && x(o.date) - mx < w + dia * 2 + fs)
+      const spots = crowded ? [[yAbove, true], [yAbove, false], [yBelow, true], [yBelow, false]] : [[yAbove, false], [yAbove, true], [yBelow, false], [yBelow, true]]
+      for (const [y, right] of spots) {
         const tx = right ? mx - dia - fs * 0.4 : mx + dia + fs * 0.4
         const box = { x0: right ? tx - w : tx, x1: right ? tx : tx + w, y0: y - fs * 0.9, y1: y + fs * 0.25 }
         if (clear(box)) { chosen = { text, tx, y, right, box }; break }
@@ -108,6 +125,7 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
     { k: 'done', t: 'Milestone met' },
     { k: 'up', t: 'Milestone ahead' },
     { k: 'late', t: 'Past due' },
+    anyGhost && { k: 'base', t: 'Baseline' },
   ].filter(Boolean)
   const step = fs * 10.2
   const lx0 = W - R - legend.length * step
@@ -140,6 +158,8 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
               <rect x={xs} y={cy - barH / 2} width={w} height={barH} fill="none" stroke={r.color} strokeWidth="1" rx="2" />
               {showProgress && done > 0 && done < 1 && w * (1 - done) > fs * 3 &&
                 <text x={xs + w * done + fs * 0.4} y={cy + fs * 0.34} fontSize={fs * 0.9} fill={INK} fontWeight="700">{Math.round(done * 100)}%</text>}
+              {ghostRows[i] && <rect x={x(r.baseline_start)} y={cy - barH / 2 - ghostGap - ghostH} width={Math.max(2, x(r.baseline_end) - x(r.baseline_start))} height={ghostH}
+                                     fill="#fff" stroke={INK3} strokeWidth="1" data-ghost="row" />}
               {showCritical && (r.critical_spans || []).map(([a, b], k) => (
                 <line key={k} x1={x(a)} x2={Math.max(x(a) + 2, x(b))} y1={cy + barH / 2 + fs * 0.34} y2={cy + barH / 2 + fs * 0.34} stroke={ACCENT} strokeWidth={Math.max(1.6, fs * 0.17)} />
               ))}
@@ -157,9 +177,15 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
 
         {marks.map(m => (
           <g key={m.id}>
+            {ghostMs(m) && (
+              <g data-ghost="milestone">
+                <line x1={x(m.baseline_end)} x2={m.mx} y1={m.cy} y2={m.cy} stroke={INK3} strokeWidth="1" strokeDasharray={`${fs * 0.3} ${fs * 0.22}`} />
+                <path d={diamond(x(m.baseline_end), m.cy, dia * 0.7)} fill="#fff" stroke={INK3} strokeWidth="1" />
+              </g>)}
             <path d={diamond(m.mx, m.cy, dia)} fill={m.state === 'done' ? INK : m.state === 'late' ? BAD : '#fff'} stroke={m.state === 'upcoming' ? INK : '#fff'} strokeWidth="1.3" />
             {m.label && (
-              <text x={m.label.tx} y={m.label.y} fontSize={fs * 0.95} fill={m.state === 'late' ? BAD : INK} fontWeight="600" textAnchor={m.label.right ? 'end' : 'start'}>{m.label.text}</text>
+              <text x={m.label.tx} y={m.label.y} fontSize={fs * 0.95} fill={m.state === 'late' ? BAD : INK} fontWeight="600" textAnchor={m.label.right ? 'end' : 'start'}
+                    stroke="#fff" strokeWidth={fs * 0.32} strokeLinejoin="round" paintOrder="stroke">{m.label.text}</text>
             )}
           </g>
         ))}
@@ -169,7 +195,8 @@ export default function ReportTimeline({ facts, rows, milestones, showCritical =
           return (
             <g key={it.k}>
               {it.k === 'crit' && <line x1={cx} x2={cx + fs * 1.6} y1={my} y2={my} stroke={ACCENT} strokeWidth="2" />}
-              {it.k !== 'crit' && <path d={diamond(cx + fs * 0.7, my, fs * 0.46)} fill={it.k === 'done' ? INK : it.k === 'late' ? BAD : '#fff'} stroke={it.k === 'up' ? INK : '#fff'} strokeWidth="1.2" />}
+              {it.k === 'base' && <rect x={cx} y={my - fs * 0.2} width={fs * 1.6} height={fs * 0.4} fill="#fff" stroke={INK3} strokeWidth="1" />}
+              {it.k !== 'crit' && it.k !== 'base' && <path d={diamond(cx + fs * 0.7, my, fs * 0.46)} fill={it.k === 'done' ? INK : it.k === 'late' ? BAD : '#fff'} stroke={it.k === 'up' ? INK : '#fff'} strokeWidth="1.2" />}
               <text x={cx + fs * 2} y={ly} fontSize={fs * 0.86} fill={INK3}>{it.t}</text>
             </g>
           )

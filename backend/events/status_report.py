@@ -12,16 +12,40 @@ from datetime import datetime, time, timedelta
 
 from django.utils import timezone
 
-from .models import Category, Event, Task
+from .models import Baseline, Category, Event, Task
 from .schedule import critical_path
 
 DAY_MS = 86_400_000
 
 # Default status thresholds (docs/design/status-one-pager.md §3.2). Deliberately strict about the
 # committed date; per-project overrides arrive with baselines.
-OFF_TRACK_WORKING_DAYS = 10
-OFF_TRACK_FRACTION = 0.10
-BEHIND_POINTS = 10
+DEFAULT_THRESHOLDS = {'off_track_working_days': 10, 'off_track_percent': 10, 'behind_points': 10}
+HISTORY_LIMIT = 8
+MOVED_LIMIT = 6
+
+
+def thresholds_for(project):
+    """The project's agreed limits over the defaults."""
+    return {**DEFAULT_THRESHOLDS, **(project.status_thresholds or {})}
+
+
+def _day(value):
+    """Local calendar date of a datetime or an ISO string."""
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
+    return timezone.localtime(value).date()
+
+
+def history_from(reports):
+    """Trend points from saved reports, oldest first: status, forecast finish, milestone dates."""
+    points = []
+    for r in list(reports)[:HISTORY_LIMIT][::-1]:
+        snap = r.snapshot or {}
+        if not snap.get('end'):
+            continue
+        points.append({'as_of': _iso(r.as_of), 'status': r.status, 'end': snap['end'],
+                       'milestones': {str(m['id']): m['date'] for m in snap.get('milestones', []) if m.get('id') is not None}})
+    return points
 
 MAX_ROWS = 7
 FACTS_VERSION = 1
@@ -64,7 +88,9 @@ def _weighted_progress(evs):
     return round(100 * done / total)
 
 
-def build_facts(project, now=None, since=None):
+def build_facts(project, now=None, since=None, previous_snapshot=None, history=None):
+    """``previous_snapshot`` (the last saved report's facts) drives "what moved since last report";
+    ``history`` (from ``history_from``) is passed through for the milestone trend chart."""
     now = now or timezone.now()
     since = since or (now - timedelta(days=14))
 
@@ -79,7 +105,10 @@ def build_facts(project, now=None, since=None):
         'as_of': _iso(now),
         'since': _iso(since),
         'project': {'id': project.id, 'name': project.name,
-                    'committed_end': project.committed_end.isoformat() if project.committed_end else None},
+                    'committed_end': project.committed_end.isoformat() if project.committed_end else None,
+                    'commitment_source': 'project' if project.committed_end else None},
+        'thresholds': thresholds_for(project),
+        'baseline': None, 'since_last': None, 'history': history or [],
         'empty': not evs,
     }
     if not evs:
@@ -100,11 +129,19 @@ def build_facts(project, now=None, since=None):
 
     # Forecast finish is the schedule's current end: the plan as it stands today. Variance is
     # measured against the project's committed date when one is set.
+    # The commitment is the project's committed date; without one, the active baseline's finish.
+    baseline = Baseline.objects.filter(project=project, active=True).first()
+    base_ev = (baseline.events or {}) if baseline else {}
+    committed = project.committed_end
+    if committed is None and baseline is not None:
+        committed = baseline.committed_end or (_day(baseline.planned_end) if baseline.planned_end else None)
+        if committed:
+            facts['project'].update({'committed_end': committed.isoformat(), 'commitment_source': 'baseline'})
     variance_days = variance_wd = None
-    if project.committed_end:
+    if committed:
         local_end = timezone.localtime(end).date()
-        variance_days = (local_end - project.committed_end).days
-        variance_wd = working_days_between(project.committed_end, local_end)
+        variance_days = (local_end - committed).days
+        variance_wd = working_days_between(committed, local_end)
 
     today = timezone.localdate(now)
     tasks = list(Task.objects.filter(event__project=project).exclude(status=Task.Status.DONE)
@@ -114,9 +151,13 @@ def build_facts(project, now=None, since=None):
     crit_trouble = len({id(t) for t in blocked + overdue if t['event_id'] in critical})
 
     def ev_dict(e):
+        b = base_ev.get(str(e.id))
         return {'id': e.id, 'title': e.title, 'start': _iso(e.start), 'end': _iso(e.end),
                 'category': e.category, 'percent_complete': e.percent,
-                'critical': e.id in critical, 'is_milestone': e.is_milestone}
+                'critical': e.id in critical, 'is_milestone': e.is_milestone,
+                # Against the active baseline; None when there is none or the event is newer than it.
+                'baseline_start': b['start'] if b else None, 'baseline_end': b['end'] if b else None,
+                'slip_days': (_day(e.end) - _day(b['end'])).days if b else None}
 
     milestones = []
     for e in sorted((e for e in evs if e.is_milestone), key=lambda e: e.end):
@@ -135,7 +176,12 @@ def build_facts(project, now=None, since=None):
     timeline_rows = []
     for c in cats:
         ce = by_cat[c]
+        cb = [base_ev[str(e.id)] for e in ce if str(e.id) in base_ev]
+        b_start = min((b['start'] for b in cb), key=datetime.fromisoformat, default=None)
+        b_end = max((b['end'] for b in cb), key=datetime.fromisoformat, default=None)
         timeline_rows.append({
+            'baseline_start': b_start, 'baseline_end': b_end,
+            'slip_days': (_day(max(e.end for e in ce)) - _day(b_end)).days if b_end else None,
             'name': c, 'color': colors.get(c) or '#6B7A90',
             'start': _iso(min(e.start for e in ce)), 'end': _iso(max(e.end for e in ce)),
             'progress': _weighted_progress(ce), 'event_count': len(ce),
@@ -145,6 +191,35 @@ def build_facts(project, now=None, since=None):
     completed = sorted((e for e in evs if e.percent >= 100 and since <= e.end <= now), key=lambda e: e.end, reverse=True)
     horizon = now + timedelta(days=21)
     due_next = sorted((e for e in evs if e.percent < 100 and now < e.end <= horizon), key=lambda e: (not e.is_milestone, e.end))
+
+    if baseline is not None:
+        ids = {str(e.id) for e in evs}
+        facts['baseline'] = {
+            'id': baseline.id, 'name': baseline.name, 'created_at': _iso(baseline.created_at),
+            'committed_end': baseline.committed_end.isoformat() if baseline.committed_end else None,
+            'planned_start': _iso(baseline.planned_start), 'planned_end': _iso(baseline.planned_end),
+            'finish_slip_days': (_day(end) - _day(baseline.planned_end)).days if baseline.planned_end else None,
+            'moved': sum(1 for e in evs if str(e.id) in base_ev and _day(e.end) != _day(base_ev[str(e.id)]['end'])),
+            'added': sum(1 for e in evs if str(e.id) not in base_ev),
+            'removed': sum(1 for k in base_ev if k not in ids),
+        }
+
+    if previous_snapshot and previous_snapshot.get('end'):
+        was = {e['id']: e for e in previous_snapshot.get('events', [])}
+        moved = []
+        for e in evs:
+            p = was.get(e.id)
+            days = (_day(e.end) - _day(p['end'])).days if p else 0
+            if days:
+                moved.append({'id': e.id, 'title': e.title, 'is_milestone': e.is_milestone, 'critical': e.id in critical,
+                              'from': p['end'], 'to': _iso(e.end), 'days': days})
+        moved.sort(key=lambda m: (not m['is_milestone'], not m['critical'], -abs(m['days'])))
+        facts['since_last'] = {
+            'as_of': previous_snapshot.get('as_of'),
+            'finish_days': (_day(end) - _day(previous_snapshot['end'])).days,
+            'progress_points': progress - (previous_snapshot.get('progress') or 0),
+            'moved': moved[:MOVED_LIMIT], 'moved_count': len(moved),
+        }
 
     facts.update({
         'start': _iso(start), 'end': _iso(end), 'progress': progress, 'elapsed': elapsed,
@@ -175,6 +250,9 @@ def suggest(facts):
         return {'status': 'on_track', 'rule_fired': 'no events yet', 'headline': f"{facts['project']['name']}: no schedule yet."}
 
     wd, days = facts['variance_working_days'], facts['variance_days']
+    limits = {**DEFAULT_THRESHOLDS, **(facts.get('thresholds') or {})}
+    # What the forecast is measured against: a committed date, or failing that the baseline's finish.
+    noun = 'baseline' if facts['project'].get('commitment_source') == 'baseline' else 'commitment'
     length = facts.get('length_days') or 1
     behind = facts['elapsed'] - facts['progress']
     late_ms = facts['milestones_late']
@@ -182,16 +260,16 @@ def suggest(facts):
     committed = facts['project']['committed_end']
 
     status, rule = 'on_track', 'no rule fired'
-    if wd is not None and (wd > OFF_TRACK_WORKING_DAYS or days > OFF_TRACK_FRACTION * length):
-        status, rule = 'off_track', f'forecast finish {days} days past commitment'
+    if wd is not None and (wd > limits['off_track_working_days'] or days > limits['off_track_percent'] / 100 * length):
+        status, rule = 'off_track', f'forecast finish {days} days past {noun}'
     elif late_ms:
         status, rule = 'off_track', f'{late_ms} key milestone{"s" if late_ms != 1 else ""} past due and not complete'
     elif days is not None and days > 0:
-        status, rule = 'at_risk', f'forecast finish {days} day{"s" if days != 1 else ""} past commitment'
+        status, rule = 'at_risk', f'forecast finish {days} day{"s" if days != 1 else ""} past {noun}'
     elif facts['critical_blocked_or_overdue']:
         n = facts['critical_blocked_or_overdue']
         status, rule = 'at_risk', f'{n} blocked or overdue task{"s" if n != 1 else ""} on the critical path'
-    elif behind >= BEHIND_POINTS:
+    elif behind >= limits['behind_points']:
         status, rule = 'at_risk', f'work complete is {behind} points behind time elapsed'
 
     # The project's name is already in the page's identity bar, so the headline does not repeat it.
@@ -203,14 +281,14 @@ def suggest(facts):
     else:
         c = datetime.combine(datetime.fromisoformat(committed).date() if 'T' in committed else datetime.strptime(committed, '%Y-%m-%d').date(), time())
         if days > 0:
-            headline = f'Forecast to finish {_fmt(end)}, {days} day{"s" if days != 1 else ""} past the {_fmt(c)} commitment.'
+            headline = f'Forecast to finish {_fmt(end)}, {days} day{"s" if days != 1 else ""} past the {_fmt(c)} {noun}.'
         elif days < 0:
-            headline = f'Forecast to finish {_fmt(end)}, {-days} day{"s" if days != -1 else ""} ahead of the {_fmt(c)} commitment.'
+            headline = f'Forecast to finish {_fmt(end)}, {-days} day{"s" if days != -1 else ""} ahead of the {_fmt(c)} {noun}.'
         else:
-            headline = f'On course for the {_fmt(c)} commitment.'
+            headline = f'On course for the {_fmt(c)} {noun}.'
         # The headline must never contradict the status chip: a date that still holds can be
         # at risk for another reason (blocked critical work, work well behind time, a missed milestone).
         if status != 'on_track' and days <= 0:
             word = 'at risk' if status == 'at_risk' else 'off track'
-            headline = f'The {_fmt(c)} commitment still holds on paper, but it is {word}: {rule}.'
+            headline = f'The {_fmt(c)} {noun} still holds on paper, but it is {word}: {rule}.'
     return {'status': status, 'rule_fired': rule, 'headline': headline}

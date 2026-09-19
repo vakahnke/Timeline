@@ -85,7 +85,10 @@ div.sr-edit, p.sr-edit { display: block; }
 .sr-edit:empty::before { content: attr(data-placeholder); color: #A9B2BF; font-weight: 400; font-style: italic; }
 
 /* slide */
-.sr-page--slide .sr-in { position: absolute; inset: 0; padding: 2.3cqw 3cqw 1.6cqw; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto auto; row-gap: 1.05cqw; }
+.sr-page--slide .sr-in { position: absolute; inset: 0; padding: 2.3cqw 3cqw 1.6cqw; display: flex; flex-direction: column; gap: 1.05cqw; }
+.sr-page--slide .sr-in > * { flex: 0 0 auto; }
+.sr-page--slide .sr-in > .sr-tl { flex: 1 1 0; }          /* the timeline is the only row that gives way */
+.sr-page--slide .sr-foot { margin-top: auto; }
 .sr-top { display: flex; justify-content: space-between; align-items: center; gap: 2cqw; font-size: 1.15cqw; color: var(--p-ink2); }
 .sr-ident b { color: var(--p-ink); font-weight: 600; }
 .sr-sep { color: var(--p-rule); padding: 0 .55cqw; }
@@ -171,3 +174,14 @@ div.sr-edit, p.sr-edit { display: block; }
   .sr-opt[data-empty="true"] { display: none !important; }   /* …nor does its label ("· by", "Path to green:") */
   .sr-edit:empty::before { content: none !important; }
 }
+
+/* phase 3: what moved, slip, milestone trend */
+.sr-moved { font-size: 1.08cqw; color: var(--p-ink2); } .sr-moved b { color: var(--p-ink); }
+.sr-page--handout .sr-moved { font-size: 1.7cqw; }
+.sr-ms td.sr-slip { color: #B3362B; font-weight: 600; }
+.sr-trendchart svg { display: block; width: 100%; height: auto; font-family: inherit; }
+.sr-trend-t { font-size: 1.45cqw; letter-spacing: .05em; text-transform: uppercase; color: var(--p-ink3); font-weight: 700; margin-bottom: .6cqw; }
+.sr-base { display: flex; flex-direction: column; gap: 8px; }
+.sr-base-row { display: flex; gap: 6px; } .sr-base-row input { flex: 1; min-width: 0; }
+.sr-thresh { display: grid; grid-template-columns: 1fr 64px; gap: 6px 8px; align-items: center; font-size: 12.5px; color: var(--text-dim); }
+.sr-thresh input { width: 64px; }
