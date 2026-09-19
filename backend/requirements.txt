@@ -8,5 +8,5 @@ django-environ>=0.14,<0.15
 psycopg[binary]>=3.1,<4.0
 gunicorn>=21.2,<23.0
 whitenoise>=6.6,<7.0
-icalendar>=6.0,<7         # .ics calendar export: RFC 5545 folding and escaping (BSD-2-Clause)
+icalendar>=6.0,<8         # .ics calendar export: RFC 5545 folding and escaping (BSD-2-Clause)
 python-pptx>=1.0.2,<1.1   # native .pptx export of the status report (MIT)
