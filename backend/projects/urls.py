@@ -9,7 +9,7 @@ from drf_spectacular.views import (
 )
 
 from events.views import (CategoryViewSet, CommentViewSet, EventViewSet, MyTasksView,
-                          ProjectTasksView, TaskViewSet)
+                          ProjectTasksView, StatusReportViewSet, TaskViewSet)
 
 from .auth import EmailOrUsernameTokenObtainPairView
 from .views import (
@@ -31,6 +31,7 @@ router.register(r'teams', TeamViewSet, basename='team')
 projects_nested = NestedDefaultRouter(router, r'projects', lookup='project')
 projects_nested.register(r'events',     EventViewSet,    basename='project-events')
 projects_nested.register(r'categories', CategoryViewSet, basename='project-categories')
+projects_nested.register(r'status-reports', StatusReportViewSet, basename='project-status-reports')
 
 events_nested = NestedDefaultRouter(projects_nested, r'events', lookup='event')
 events_nested.register(r'tasks',    TaskViewSet,    basename='event-tasks')

@@ -15,6 +15,9 @@ class Project(models.Model):
         through='ProjectMembership',
         related_name='projects',
     )
+    # The finish date the project is held to. Status reports measure the schedule's current
+    # end against it. Optional: without it a report shows planned dates but no variance.
+    committed_end = models.DateField(null=True, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
 

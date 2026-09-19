@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from projects.serializers import UserSerializer
 
-from .models import Category, Comment, Event, Task
+from .models import Category, Comment, Event, StatusReport, Task
 
 User = get_user_model()
 
@@ -50,7 +50,7 @@ class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ['id', 'title', 'start', 'end', 'category', 'color',
-                  'notes', 'percent_complete', 'depends_on', 'task_count', 'tasks_done']
+                  'notes', 'percent_complete', 'is_milestone', 'depends_on', 'task_count', 'tasks_done']
 
     def get_task_count(self, obj):
         val = getattr(obj, 'task_count', None)
@@ -185,3 +185,63 @@ class MyTaskSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_project(obj):
         return {'id': obj.event.project_id, 'name': obj.event.project.name}
+
+
+# A report page is small; this bounds what a client can store in the two JSON columns.
+_MAX_JSON_CHARS = 200_000
+
+
+class StatusReportSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StatusReport
+        fields = ['id', 'as_of', 'layout', 'status', 'status_source', 'override_reason',
+                  'rule_fired', 'suggested_status', 'content', 'snapshot',
+                  'author', 'author_name', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'author', 'author_name', 'created_at', 'updated_at']
+
+    def get_author_name(self, obj) -> str | None:
+        return obj.author.username if obj.author_id else None
+
+    def _bounded(self, value, name):
+        import json
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(f'{name} must be an object.')
+        if len(json.dumps(value)) > _MAX_JSON_CHARS:
+            raise serializers.ValidationError(f'{name} is too large.')
+        return value
+
+    def validate_content(self, value):
+        return self._bounded(value, 'content')
+
+    def validate_snapshot(self, value):
+        return self._bounded(value, 'snapshot')
+
+    def validate(self, data):
+        source = data.get('status_source', getattr(self.instance, 'status_source', StatusReport.Source.RULE))
+        reason = data.get('override_reason', getattr(self.instance, 'override_reason', ''))
+        if source == StatusReport.Source.OVERRIDE and not reason.strip():
+            raise serializers.ValidationError({'override_reason': 'Say why the status differs from the rule.'})
+        return data
+
+    def create(self, validated_data):
+        validated_data['project'] = self.context['project']
+        validated_data['author'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class StatusReportListSerializer(serializers.ModelSerializer):
+    """The saved-reports list: light, without the two JSON bodies."""
+    author_name = serializers.SerializerMethodField()
+    headline = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StatusReport
+        fields = ['id', 'as_of', 'layout', 'status', 'status_source', 'author_name', 'headline', 'updated_at']
+
+    def get_author_name(self, obj) -> str | None:
+        return obj.author.username if obj.author_id else None
+
+    def get_headline(self, obj) -> str:
+        return (obj.content or {}).get('headline', '')

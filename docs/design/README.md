@@ -51,7 +51,7 @@ all docs, what's designed-but-unbuilt vs. shipped.
 
 <!-- Optional index. Update as docs are added so parked ideas stay visible. -->
 
-- [status-one-pager.md](status-one-pager.md) — **Draft**. A leadership status report composed in the app
+- [status-one-pager.md](status-one-pager.md) — **Building** (phase 1 shipped). A leadership status report composed in the app
   and exported as a native PowerPoint slide and a print-ready PDF handout; derived status, baselines.
 - [touch-timeline.md](touch-timeline.md) — **Shipped**. Make the timeline itself usable by touch: pointer
   events, pinch zoom, long-press to move, grab-dot resize, touch minimap.

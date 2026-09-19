@@ -36,6 +36,8 @@ class Event(models.Model):
     color = models.CharField(max_length=7, blank=True, default='')  # hex e.g. #4a88ff
     notes             = models.TextField(blank=True, default='')
     percent_complete  = models.PositiveSmallIntegerField(default=0)
+    # A date leadership tracks. Drawn as a diamond and listed on the status report.
+    is_milestone      = models.BooleanField(default=False)
     depends_on = models.ManyToManyField('self', symmetrical=False, blank=True, related_name='dependents')
 
     class Meta:
@@ -108,3 +110,48 @@ class Comment(models.Model):
     @property
     def project_id(self):
         return self.event.project_id
+
+
+class StatusReport(models.Model):
+    """A saved one-page status report for a project (docs/design/status-one-pager.md).
+
+    ``content`` is the page as the author left it: every block's text, which blocks are shown,
+    their titles and order. It is owned by the print tool in the frontend, so the page can be
+    customized per project without a migration. ``snapshot`` freezes the computed facts at the
+    moment of saving, which makes a report reproducible and gives the next one something to
+    compare against ("since last report", trend).
+    """
+
+    class Status(models.TextChoices):
+        ON_TRACK  = 'on_track',  'On track'
+        AT_RISK   = 'at_risk',   'At risk'
+        OFF_TRACK = 'off_track', 'Off track'
+
+    class Source(models.TextChoices):
+        RULE     = 'rule',     'Derived by rule'
+        OVERRIDE = 'override', 'Set by the author'
+
+    class Layout(models.TextChoices):
+        SLIDE   = 'slide',   '16:9 slide'
+        HANDOUT = 'handout', 'Portrait handout'
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='status_reports')
+    author  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                related_name='status_reports')
+    as_of   = models.DateTimeField()
+    layout  = models.CharField(max_length=10, choices=Layout.choices, default=Layout.SLIDE)
+    status          = models.CharField(max_length=10, choices=Status.choices)
+    status_source   = models.CharField(max_length=10, choices=Source.choices, default=Source.RULE)
+    override_reason = models.CharField(max_length=200, blank=True, default='')
+    rule_fired      = models.CharField(max_length=200, blank=True, default='')
+    suggested_status = models.CharField(max_length=10, choices=Status.choices, blank=True, default='')
+    content  = models.JSONField(default=dict)
+    snapshot = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-as_of', '-id']
+
+    def __str__(self):
+        return f'{self.project_id} · {self.as_of:%Y-%m-%d} · {self.status}'

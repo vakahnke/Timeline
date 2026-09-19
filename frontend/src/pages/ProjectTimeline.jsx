@@ -581,6 +581,7 @@ export default function ProjectTimeline() {
       <Toolbar
         projectName={project?.name}
         onBack={() => navigate('/')}
+        onStatusReport={() => navigate(`/projects/${projectId}/status`)}
         canEdit={canEdit}
         isOwner={isOwner}
         view={view}

@@ -1,6 +1,6 @@
 # Status One-Pager — Design Document
 
-**Status:** Draft
+**Status:** Building — Phase 1 (the page, the print tool, print/PDF) shipped 2026-09-19. Phase 2 (native PowerPoint) and phase 3 (baselines, trends) not started.
 **Last updated:** 2026-09-19
 **Scope:** A per-project status report composed inside Timeline and exported as a native, editable PowerPoint slide and a print-ready PDF handout. Touches the data model (reports, baselines, milestones), the API, a new composer page, and two export renderers.
 
@@ -272,7 +272,27 @@ saved reports. No new roles; it follows [PERMISSIONS.md](../PERMISSIONS.md).
 
 ## 5. Phasing
 
-- **Phase 1 — the page.** `StatusReport` model and API, server-side critical path, the draft
+- **Phase 1 — the page. SHIPPED.** As built, and where it departs from the plan above:
+  - **Customization happens in the print tool, at print time**, not in a settings area. Click any
+    text on the page to reword it; the side panel switches blocks on and off, reorders them, adds
+    custom numbers and free-text blocks, hides tracks, and picks the milestones for *this* report.
+    A saved report's shape is the starting point for the project's next one.
+  - **The page is a document, not columns.** `StatusReport.content` is a JSON document owned by
+    the frontend (`frontend/src/components/report/reportModel.js`), so a project's page can change
+    without a migration. Block kinds live in one registry (`BLOCK_KINDS` + `BLOCK_RENDERERS`).
+  - **One versioned facts endpoint** (`GET …/status-reports/draft/`, documented in the OpenAPI
+    schema) is the only thing the page reads. It never scrapes the app's screens, so UI redesigns
+    cannot break it, and exports or scripts can consume the same payload.
+  - **`Project.committed_end` arrived early** (it was planned with baselines): without a committed
+    date the page's most important number cannot be computed.
+  - **Variance is shown in calendar days everywhere on the page**; working days are used only for
+    the off-track threshold.
+  - **An overfull page warns instead of shrinking type**, and empty optional fields leave no trace
+    on paper.
+  - Verified by 20 backend tests and a 28-check browser test that generates real PDFs: one
+    13.333 × 7.5 in page for the slide, one Letter or A4 page for the handout.
+
+  Original scope: `StatusReport` model and API, server-side critical path, the draft
   payload, the composer with live preview, `Event.is_milestone`, saved reports, print / PDF through
   the print stylesheet. Without a baseline the page shows forecast dates and progress but no
   variance, and says so. Useful on its own.

@@ -10,6 +10,8 @@ import TeamsPage from './pages/TeamsPage'
 
 // Code-split the heavy timeline route (canvas ruler + CPM + drag math).
 const ProjectTimeline = lazy(() => import('./pages/ProjectTimeline'))
+// The status report / print tool is its own chunk: most sessions never open it.
+const StatusReportPage = lazy(() => import('./pages/StatusReportPage'))
 
 // Set VITE_DEMO_BANNER at build time (e.g. on a public demo host) to show a notice bar.
 const DEMO_BANNER = import.meta.env.VITE_DEMO_BANNER || ''
@@ -31,6 +33,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<RouteFallback />}>
                     <ProjectTimeline />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/projects/:projectId/status"
+                element={
+                  <Suspense fallback={<RouteFallback />}>
+                    <StatusReportPage />
                   </Suspense>
                 }
               />

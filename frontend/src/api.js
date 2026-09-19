@@ -30,6 +30,9 @@ const url = {
   projectTeams: (pid)      => `/projects/${pid}/teams/`,
   projectTeam:  (pid, tid) => `/projects/${pid}/teams/${tid}/`,
   projectAccess:(pid)      => `/projects/${pid}/access/`,
+  statusReports:(pid)      => `/projects/${pid}/status-reports/`,
+  statusReport: (pid, id)  => `/projects/${pid}/status-reports/${id}/`,
+  statusDraft:  (pid)      => `/projects/${pid}/status-reports/draft/`,
 }
 
 export class ApiError extends Error {
@@ -133,6 +136,16 @@ export const api = {
     remove:       (id)      => req(url.team(id), { method: 'DELETE' }),
     addMember:    (id, d)   => req(url.teamMembers(id), { method: 'POST', body: body(d) }),
     removeMember: (id, uid) => req(url.teamMember(id, uid), { method: 'DELETE' }),
+  },
+
+  // Status reports (the print tool): live draft from the schedule + saved, dated reports.
+  statusReports: {
+    draft:  (pid)        => req(url.statusDraft(pid)),
+    list:   (pid)        => req(url.statusReports(pid)),
+    get:    (pid, id)    => req(url.statusReport(pid, id)),
+    create: (pid, d)     => req(url.statusReports(pid), { method: 'POST', body: body(d) }),
+    update: (pid, id, d) => req(url.statusReport(pid, id), { method: 'PATCH', body: body(d) }),
+    remove: (pid, id)    => req(url.statusReport(pid, id), { method: 'DELETE' }),
   },
 
   // Same method names as the old prototype, now project-scoped.

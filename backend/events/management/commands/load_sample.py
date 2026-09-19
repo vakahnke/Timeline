@@ -62,6 +62,19 @@ TEMPLATE_PROJECTS = [
     ('gtm_launch',          +1),
 ]
 
+# Key milestones (matched on the start of the event title) and the committed finish date, given as
+# days relative to the schedule's own end. They make the status report meaningful out of the box:
+# the MVP project is committed three days earlier than it is planned to finish, so it reads
+# "at risk, +3 days"; the seed round is committed exactly to plan.
+SAMPLE_REPORTING = {
+    'startup_mvp': {'commit_offset_days': -3, 'milestones': [
+        'Synthesize findings', 'Define MVP scope', 'Build the core flow', 'Private beta', 'Public launch']},
+    'seed_round': {'commit_offset_days': 0, 'milestones': [
+        'Pitch deck', 'First-meeting sprint', 'Secure a lead investor', 'Sign, wire & close']},
+    'gtm_launch': {'commit_offset_days': None, 'milestones': [
+        'Pricing tiers', 'Train sales', 'Launch day']},
+}
+
 # Sub-task sets spread over the in-flight and next upcoming events of each template
 # project (one set per event, cycling), so the board and task panels have content.
 SAMPLE_TASK_SETS = [
@@ -186,6 +199,16 @@ class Command(BaseCommand):
 
             # Progress: finished events are 100%, in-flight ones proportional to elapsed time.
             events = list(Event.objects.filter(project=project).order_by('start', 'id'))
+
+            # Key milestones and the committed finish date, for the status report.
+            reporting = SAMPLE_REPORTING.get(slug, {})
+            for prefix in reporting.get('milestones', []):
+                Event.objects.filter(project=project, title__startswith=prefix).update(is_milestone=True)
+            offset = reporting.get('commit_offset_days')
+            if offset is not None and events:
+                planned_end = timezone.localtime(max(e.end for e in events)).date()
+                project.committed_end = planned_end + timedelta(days=offset)
+                project.save(update_fields=['committed_end'])
             in_flight = None
             for ev in events:
                 if ev.end <= now:

@@ -71,6 +71,14 @@ dates, and a comment thread.
 
 ![The event editor with predecessors, successors, and percent complete](docs/images/event.png)
 
+**A status page for leadership, in one click.** Timeline fills in a one-page report from the
+schedule: a status derived by rule, a headline, the numbers against your committed date, a
+simplified timeline with your key milestones, what finished and what is next, and your risks. Click
+any text to reword it, switch blocks on and off, then print a single vector page as a 16:9 slide or
+a portrait handout.
+
+![The status report: a one-page slide generated from the schedule](docs/images/status-report.png)
+
 **Templates.** Start a project from a built-in plan anchored to a date you choose,
 or save any project of your own as a template. Built-ins cover business,
 engineering, and hobby projects:

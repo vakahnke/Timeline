@@ -18,7 +18,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, onResetSettings, projectStart, projectEnd, onEditStart }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onStatusReport, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, onResetSettings, projectStart, projectEnd, onEditStart }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -106,6 +106,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
         <button className="btn-members tb-collapsible" onClick={onOpenMembers} title="Manage members">Members</button>
       )}
       <button className="btn-workloads tb-collapsible" onClick={onManageWorkloads} title="View workload by member and reassign tasks">Manage Workloads</button>
+      <button className="btn-report tb-collapsible" onClick={onStatusReport} title="One-page status report for leadership: customize it and print or save as PDF">Status report</button>
       {canEdit && (
         <>
           <button className="btn-save-tpl tb-collapsible" onClick={onSaveTemplate} title="Save this project as a reusable template">Save as Template</button>
@@ -183,6 +184,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                 <button className="settings-action" onClick={() => { onOpenMembers?.(); setShowSettings(false) }}>Members</button>
               )}
               <button className="settings-action" onClick={() => { onManageWorkloads?.(); setShowSettings(false) }}>Manage workloads</button>
+              <button className="settings-action" onClick={() => { onStatusReport?.(); setShowSettings(false) }}>Status report</button>
               {canEdit && (
                 <>
                   <button className="settings-action" onClick={() => { onEditStart?.(); setShowSettings(false) }}>Change start date</button>

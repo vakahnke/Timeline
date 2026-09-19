@@ -38,10 +38,10 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
   // Editable fields live in one undoable object so Ctrl+Z / the modal's ↶ ↷ can revert
   // edits (including predecessor toggles) before you save.
   const { value: form, set: setForm, reset: resetForm, undo, redo, canUndo, canRedo } = useUndoableForm({
-    title: '', start: '', end: '', track: '', notes: '', pct: 0, dependsOn: [], successors: [],
+    title: '', start: '', end: '', track: '', notes: '', pct: 0, milestone: false, dependsOn: [], successors: [],
     durVal: 1, durUnit: 'hours',
   })
-  const { title, start, end, track, notes, pct, dependsOn, successors, durVal, durUnit } = form
+  const { title, start, end, track, notes, pct, milestone, dependsOn, successors, durVal, durUnit } = form
 
   const [showAllDeps,  setShowAllDeps]  = useState(false)
   const [showAllSuccs, setShowAllSuccs] = useState(false)
@@ -94,6 +94,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
         track: existing.category,
         notes: existing.notes || '',
         pct:   existing.percent_complete ?? 0,
+        milestone: !!existing.is_milestone,
         dependsOn: existing.depends_on ?? [],
         // Successors are the inverse link: every event that lists THIS one as a predecessor.
         successors: events.filter(e => (e.depends_on ?? []).includes(existing.id)).map(e => e.id),
@@ -105,7 +106,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
         start: defaults?.start ?? toLocalISO(now),
         end:   defaults?.end ?? toLocalISO(new Date(now.getTime() + 3_600_000)),
         track: defaults?.category ?? tracks[0]?.name ?? '',
-        notes: '', pct: 0, dependsOn: [], successors: [],
+        notes: '', pct: 0, milestone: false, dependsOn: [], successors: [],
       }
     }
     // Seed the duration fields from the loaded span so the number/unit match start→end.
@@ -134,6 +135,7 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
         category:   track.trim() || 'Default',
         notes:            notes.trim(),
         percent_complete: Math.min(100, Math.max(0, Number(pct))),
+        is_milestone:     !!milestone,
         depends_on:       dependsOn,
         // Not a field on this event — the parent reconciles it by editing each successor's
         // depends_on after this event is saved (a new event has no id until then).
@@ -348,6 +350,11 @@ export default function EventModal({ eventId, defaults, events, tracks, projectI
               <span className="pct-value">{pct}%</span>
             </div>
           </div>
+
+          <label className="milestone-row" title="Key milestones are drawn as diamonds and listed on the status report">
+            <input type="checkbox" checked={!!milestone} onChange={e => setField('milestone', e.target.checked, { field: 'milestone' })} />
+            <span>Key milestone <em>· a date leadership tracks; shown on the status report</em></span>
+          </label>
 
           <div className="field">
             <label>Notes</label>

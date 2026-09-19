@@ -83,6 +83,30 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
 Zoom is cursor-anchored and eases smoothly, and a project auto-fits when you open it, so
 even multi-year plans are easy to navigate.
 
+### Status report (one page for leadership)
+
+**Status report** in the project toolbar opens the print tool with a page already filled in from
+the schedule: a status (on track / at risk / off track) derived by rule, a drafted headline, five
+numbers, a simplified timeline with your key milestones, what finished recently and what is due
+next, and your top risks.
+
+- **Everything is editable, right there.** Click any text on the page to reword it. Use the panel
+  to switch blocks on and off, reorder them, add your own numbers or a free-text block, hide tracks,
+  and pick which milestones this audience sees.
+- **Committed finish date.** Set it in the panel. The forecast is measured against it, and it is
+  what turns the status amber or red. You can overrule the derived status, but you must say why,
+  and the reason is printed in the footer.
+- **Key milestones.** Tick **Key milestone** in an event's editor. They show as diamonds on the
+  timeline and on the report.
+- **Two layouts:** a 16:9 slide and a portrait handout (Letter or A4) that adds a milestone table.
+- **Print / Save as PDF** produces a single vector page. In the print dialog choose "Save as PDF",
+  margins "None", and turn on background graphics. The slide PDF drops straight into a deck.
+- **Save report** keeps a dated copy. The next report for that project starts from its shape and
+  shows whether the status moved. If the page gets too full it tells you what to cut; it never
+  shrinks the type.
+
+Viewers and commenters can open and print a report; owners and editors can edit and save.
+
 ## 4. Templates
 
 Templates create a fully-formed project — categories plus sample timed tasks (with

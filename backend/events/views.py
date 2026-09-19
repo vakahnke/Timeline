@@ -5,18 +5,23 @@ from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 
 from projects.models import Project, ProjectMembership, Role
 from projects.permissions import IsProjectCommenter, IsProjectMember, get_role
 
-from .models import Category, Comment, Event, Task
+from .models import Category, Comment, Event, StatusReport, Task
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
     EventSerializer,
     MyTaskSerializer,
+    StatusReportListSerializer,
+    StatusReportSerializer,
     TaskSerializer,
 )
+from .status_report import build_facts, suggest
 
 
 class _ProjectScopedMixin:
@@ -182,3 +187,44 @@ class MyTasksView(generics.ListAPIView):
         if self.request.query_params.get('scope') != 'all':
             qs = qs.filter(assignee=self.request.user)
         return qs.order_by('due_date', 'id')
+
+
+class StatusReportViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
+    """Saved status reports: /api/projects/<project_pk>/status-reports/
+
+    Read: any member. Create/edit/delete: Editor+ (IsProjectMember). ``draft/`` returns the live
+    facts, the rule-derived status and headline, and the previous report to start from.
+    """
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_serializer_class(self):
+        return StatusReportListSerializer if self.action == 'list' else StatusReportSerializer
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return StatusReport.objects.none()
+        return (StatusReport.objects.filter(project_id=self.kwargs['project_pk'])
+                .select_related('author'))
+
+    @extend_schema(
+        summary='Live status facts for a project',
+        description=(
+            'Everything a status page can be filled in from, computed from the live schedule: '
+            '`facts` (versioned; dates, duration-weighted progress, time elapsed, variance against the '
+            'committed finish, milestones, one simplified timeline row per track with critical-path '
+            'spans, blocked/overdue task counts, what finished since the previous report and what is '
+            'due next), `suggestion` (the rule-derived status, the rule that fired, a drafted headline), '
+            'and `previous` (the last saved report, whose shape a new one starts from). '
+            'This is the single source for the print tool and for any export or script; consumers '
+            'must ignore fields they do not know.'),
+        responses=OpenApiTypes.OBJECT,
+    )
+    @action(detail=False, methods=['get'], url_path='draft')
+    def draft(self, request, project_pk=None):
+        previous = self.get_queryset().first()
+        facts = build_facts(self.project, since=previous.as_of if previous else None)
+        return Response({
+            'facts': facts,
+            'suggestion': suggest(facts),
+            'previous': StatusReportSerializer(previous, context=self.get_serializer_context()).data if previous else None,
+        })

@@ -446,7 +446,7 @@ function EventBlock({ event, rangeStart, pxPerHour, trackColor, trackColorMap, i
       )}
 
       <div className="event-inner">
-        {nameFits && <span className="event-title">{event.title}</span>}
+        {nameFits && <span className="event-title">{event.is_milestone && <span className="event-ms" title="Key milestone" aria-label="Key milestone">◆ </span>}{event.title}</span>}
         <span className="event-time">{fmtSpan(startMs, endMs)}</span>
       </div>
 

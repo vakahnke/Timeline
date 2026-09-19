@@ -2125,6 +2125,12 @@ fieldset.modal-body:disabled { opacity: 1; }
 .el-tasks-manage { margin-top: 2px; align-self: flex-start; background: transparent; border: 0; color: var(--accent); font-size: 12px; padding: 8px 2px; cursor: pointer; }
 .el-tasks-manage:hover { background: transparent; color: var(--text-bright); }
 
+/* ── Key milestone ─────────────────────────────────────────────────────────── */
+.milestone-row { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text-bright); cursor: pointer; margin: 2px 0 4px; }
+.milestone-row em { font-style: normal; color: var(--text-dim); }
+.event-ms { color: var(--warn); font-size: 0.85em; }
+.btn-report { color: var(--text-bright); }
+
 /* ── Touch targets ────────────────────────────────────────────────────────────
    Kept at the very end of the file so these win over the component rules above
    (same specificity, later wins). 44px is the platform guideline; nothing
