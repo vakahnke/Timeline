@@ -140,6 +140,12 @@ dates, and a comment thread.
 
 ![The event editor with predecessors, successors, and percent complete](docs/images/event.png)
 
+**Gets along with other tools.** Export a project to a calendar file (`.ics`) for
+Outlook, Google Calendar and Apple Calendar, everything or key milestones only. Or
+export Microsoft Project XML, the interchange format most scheduling tools open,
+with dependencies intact and tasks set to manual scheduling so your dates arrive
+unchanged. The XML is validated against Microsoft's published schema.
+
 **Templates.** Start a project from a built-in plan anchored to a date you choose,
 or save any project of your own as a template. Built-ins cover business,
 engineering, and hobby projects:
@@ -307,10 +313,10 @@ so the discussion happens before the code.
 
 Some directions that would be good contributions, roughly in order of effort:
 
-- iCalendar export of a project's events (RFC 5545):
-  [design draft](docs/design/icalendar-export.md)
-- Import and export for Microsoft Project XML:
-  [design draft](docs/design/ms-project-xml.md)
+- A subscribable calendar feed, so calendars stay current without exporting again:
+  [design](docs/design/icalendar-export.md) (the one-off `.ics` export is built)
+- Import from Microsoft Project XML:
+  [design](docs/design/ms-project-xml.md) (export is built)
 - Manual card ordering within board columns
 - Guest access for people outside the team, read-only, without an account
 - A schedule-health check over the dependency graph: missing links, dangling

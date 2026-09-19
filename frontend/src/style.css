@@ -2157,3 +2157,14 @@ fieldset.modal-body:disabled { opacity: 1; }
   .toolbar { padding-right: 56px; }
   .toolbar .settings-wrap { top: 7px; right: 10px; }   /* pinned gear, slimmer landscape row */
 }
+
+/* Export dialog */
+.export-modal .modal-body { display: flex; flex-direction: column; gap: 18px; }
+.export-block { display: flex; flex-direction: column; gap: 9px; align-items: flex-start; }
+.export-block + .export-block { border-top: 1px solid var(--border); padding-top: 16px; }
+.export-block h3 { margin: 0; font-size: 14px; color: var(--text-bright); }
+.export-block p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--text-dim); }
+.export-block .export-note { font-size: 12px; opacity: .85; }
+.export-choice { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.export-choice label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.export-choice small { color: var(--text-dim); }

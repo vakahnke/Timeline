@@ -1,6 +1,6 @@
 # Microsoft Project XML Import and Export — Design Document
 
-**Status:** Draft
+**Status:** Building — Phase 1 (export) shipped 2026-09-19. Phase 2 (import) and phase 3 (round trip) not started and not approved.
 **Last updated:** 2026-09-19
 **Scope:** Read and write Microsoft Project's XML interchange format (MSPDI) so a schedule can move between Timeline and Microsoft Project, and the other tools that speak the same format. A new import flow that creates a project, a new export endpoint, and an honest report of what did not survive the trip.
 
@@ -172,7 +172,17 @@ like the other exports. No new roles.
 
 ## 5. Phasing
 
-- **Phase 1: export.** The smaller half and useful alone: hand a Timeline plan to a scheduler.
+- **Phase 1: export. SHIPPED.** As built: `GET /api/projects/<id>/export/msproject.xml?timezone=`
+  (`backend/events/msproject_export.py`), using only the standard library. Tracks are level-1
+  summaries, events level-2 tasks with their ids as UIDs, dependencies finish-to-start links,
+  every task manually scheduled on a 24-hour, 7-day calendar, to-do items as a checklist in the
+  notes. The browser's time zone is sent automatically and named in the dialog.
+  **Validated against Microsoft's own schema** (`mspdi_pj12.xsd` from schemas.microsoft.com, with
+  the 2010 manual-scheduling elements set aside because that schema predates them): all four
+  sample projects pass. That check found two real defects before anyone opened a file: the format
+  is an `xs:sequence`, so element order matters, and `CurrencyCode` is mandatory. Both are now
+  pinned by a test. **Not yet done:** opening a file in Microsoft Project or ProjectLibre to confirm
+  the dates are untouched; that needs a person with the software. Original scope: The smaller half and useful alone: hand a Timeline plan to a scheduler.
   Builder, endpoint, gear-menu item, tests against the MSPDI schema, and a manual check that the
   file opens in Microsoft Project and ProjectLibre with identical dates.
 - **Phase 2: import as a new project.** Safe parser, mapping, dry-run report, import dialog,

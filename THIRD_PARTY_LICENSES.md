@@ -26,6 +26,10 @@ ranges.
 | psycopg (with `binary` extra) | LGPL-3.0-only | Daniele Varrazzo and the Psycopg Team | https://github.com/psycopg/psycopg |
 | gunicorn | MIT | Benoit Chesneau | https://github.com/benoitc/gunicorn |
 | whitenoise | MIT | David Evans | https://github.com/evansd/whitenoise |
+| icalendar | BSD-2-Clause | Plone Foundation and contributors | https://github.com/collective/icalendar |
+| python-dateutil (via icalendar) | Apache-2.0 / BSD-3-Clause (dual) | Gustavo Niemeyer, Paul Ganssle and contributors | https://github.com/dateutil/dateutil |
+| six (via python-dateutil) | MIT | Benjamin Peterson | https://github.com/benjaminp/six |
+| tzdata (via icalendar) | Apache-2.0 | Python Software Foundation | https://github.com/python/tzdata |
 | python-pptx | MIT | Steve Canny | https://github.com/scanny/python-pptx |
 | lxml (via python-pptx) | BSD-3-Clause | lxml dev team; bundles libxml2 and libxslt (MIT) | https://github.com/lxml/lxml |
 | Pillow (via python-pptx) | MIT-CMU (HPND) | Jeffrey A. Clark and contributors; Secret Labs AB; Fredrik Lundh | https://github.com/python-pillow/Pillow |

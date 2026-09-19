@@ -13,6 +13,7 @@ import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
 import WorkloadModal from '../components/WorkloadModal'
 import ProjectStartModal from '../components/ProjectStartModal'
+import ExportModal from '../components/ExportModal'
 import Board from '../components/Board'
 
 const DEFAULT_SETTINGS = { showArrows: true, showOnlyCritical: false, snapMinutes: 15, autoPanSpeed: 64 }
@@ -121,6 +122,7 @@ export default function ProjectTimeline() {
   const [showMembers,    setShowMembers]  = useState(false)
   const [showWorkloads,  setShowWorkloads] = useState(false)
   const [showReschedule, setShowReschedule] = useState(false)
+  const [showExport,     setShowExport]    = useState(false)
   const [loading,        setLoading]      = useState(true)
   const [apiError,       setApiError]     = useState(null)
   const [accessError,    setAccessError]  = useState(null)
@@ -593,6 +595,7 @@ export default function ProjectTimeline() {
         onOpenMembers={() => setShowMembers(true)}
         onManageWorkloads={() => setShowWorkloads(true)}
         onSaveTemplate={saveAsTemplate}
+        onExport={() => setShowExport(true)}
         pxPerHour={pxPerHour}
         onZoomIn={() => timelineRef.current?.zoomBy(1.6)}
         onZoomOut={() => timelineRef.current?.zoomBy(1 / 1.6)}
@@ -705,6 +708,7 @@ export default function ProjectTimeline() {
           onClose={() => setShowWorkloads(false)}
         />
       )}
+      {showExport && <ExportModal projectId={projectId} events={events} onClose={() => setShowExport(false)} />}
       {showReschedule && projectStart != null && (
         <ProjectStartModal
           currentStart={projectStart}

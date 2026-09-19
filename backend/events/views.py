@@ -1,14 +1,20 @@
+from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 
 from projects.models import Project, ProjectMembership, Role
 from projects.permissions import IsAnyProjectMember, IsProjectCommenter, IsProjectMember, get_role
@@ -25,6 +31,8 @@ from .serializers import (
     StatusReportSerializer,
     TaskSerializer,
 )
+from .ical_export import build_ics
+from .msproject_export import build_mspdi
 from .pptx_export import build_pptx
 from .status_report import build_facts, history_from, suggest
 
@@ -310,3 +318,64 @@ class BaselineViewSet(_ProjectScopedMixin, viewsets.ModelViewSet):
             if latest:
                 latest.active = True
                 latest.save(update_fields=['active'])
+
+
+class _ProjectExportView(APIView):
+    """Read-only file exports of one project. Any member may download, as any member may read."""
+    permission_classes = [IsAuthenticated, IsProjectMember]
+
+    def events(self, request):
+        qs = (Event.objects.filter(project_id=self.kwargs['project_pk'])
+              .prefetch_related('depends_on', 'tasks').order_by('start', 'id'))
+        if request.query_params.get('only') == 'milestones':
+            qs = qs.filter(is_milestone=True)
+        tracks = [t for t in request.query_params.get('tracks', '').split(',') if t.strip()]
+        if tracks:
+            qs = qs.filter(category__in=[t.strip() for t in tracks])
+        return list(qs)
+
+    def attachment(self, data, content_type, filename):
+        resp = HttpResponse(data, content_type=content_type)
+        resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+        resp['Content-Length'] = str(len(data))
+        resp['Cache-Control'] = 'no-store'
+        return resp
+
+
+class ProjectCalendarView(_ProjectExportView):
+    @extend_schema(
+        summary="Export a project's events as an iCalendar file",
+        description=('RFC 5545 `.ics` for Outlook, Google Calendar and Apple Calendar. Event UIDs are stable, so '
+                     'importing a newer file updates the same entries. `only=milestones` exports key milestones '
+                     'only; `tracks=A,B` limits it to those tracks. Open to every project member.'),
+        parameters=[OpenApiParameter('only', str, enum=['all', 'milestones']), OpenApiParameter('tracks', str)],
+        responses={(200, 'text/calendar'): OpenApiTypes.BINARY},
+    )
+    def get(self, request, project_pk=None):
+        project = get_object_or_404(Project, pk=project_pk)
+        site = getattr(settings, 'SITE_URL', '') or ''
+        host = urlparse(site).hostname or request.get_host().split(':')[0] or 'timeline'
+        data = build_ics(project, self.events(request), host=host, site_url=site)
+        return self.attachment(data, 'text/calendar; charset=utf-8', f"{slugify(project.name) or 'project'}.ics")
+
+
+class ProjectMsProjectView(_ProjectExportView):
+    @extend_schema(
+        summary='Export a project as Microsoft Project XML',
+        description=('MSPDI, the interchange format Microsoft Project, ProjectLibre, GanttProject, Smartsheet and '
+                     'others read. Tracks become summary tasks, events become tasks, dependencies become '
+                     'finish-to-start links. Tasks are written as manually scheduled on a 24-hour calendar so the '
+                     'dates open unchanged. Dates in this format have no time zone: `timezone` (an IANA name, '
+                     'default UTC) says which zone to write them in. Open to every project member.'),
+        parameters=[OpenApiParameter('timezone', str)],
+        responses={(200, 'application/xml'): OpenApiTypes.BINARY},
+    )
+    def get(self, request, project_pk=None):
+        project = get_object_or_404(Project, pk=project_pk)
+        name = request.query_params.get('timezone') or 'UTC'
+        try:
+            tz = ZoneInfo(name)
+        except (ZoneInfoNotFoundError, ValueError):
+            return Response({'timezone': f'"{name}" is not a time zone name such as America/New_York.'}, status=status.HTTP_400_BAD_REQUEST)
+        data = build_mspdi(project, self.events(request), tz=tz, now=timezone.now())
+        return self.attachment(data, 'application/xml; charset=utf-8', f"{slugify(project.name) or 'project'}-msproject.xml")

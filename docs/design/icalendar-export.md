@@ -1,6 +1,6 @@
 # iCalendar Export — Design Document
 
-**Status:** Draft
+**Status:** Building — Phase 1 (the file) shipped 2026-09-19. Phase 2 (subscribable feed) not started and not approved.
 **Last updated:** 2026-09-19
 **Scope:** A project's events as a standard `.ics` file (RFC 5545) that Outlook, Google Calendar and Apple Calendar can open. One new read-only endpoint, one menu item. No data-model change in phase 1.
 
@@ -124,7 +124,17 @@ The UI shows the `webcal://` link once with Copy, lists active feeds, and revoke
 
 ## 5. Phasing
 
-- **Phase 1 (MVP): the file.** Endpoint, builder, gear-menu item with the everything/milestones
+- **Phase 1 (MVP): the file. SHIPPED.** As built: `GET /api/projects/<id>/calendar.ics`
+  (`backend/events/ical_export.py`), with `only=milestones` and `tracks=`. The open questions were
+  settled with the proposed defaults: milestones are timed (one hour ending when the work ends),
+  everything is exported unless milestones-only is chosen, and entries are free time. Reached from
+  an **Export** toolbar button on desktop and **Export…** in the gear menu on a phone, which
+  opens one dialog shared with the Microsoft Project export. Verified by 7 builder tests, 4
+  endpoint tests, and a browser test that downloads the file and reads it back with a different
+  parser (ical.js): CRLF line ends, no line over 75 octets, unique UIDs, UTC times, `RELATED-TO`.
+  **Not yet done:** importing the file into real Google, Outlook and Apple calendars to confirm
+  that a re-import updates entries. The dialog therefore says "should update", not "updates".
+  Original scope: Endpoint, builder, gear-menu item with the everything/milestones
   choice, tests for structure, CRLF, 75-octet folding, escaping, UTC, stable UIDs, `RELATED-TO`,
   and permissions. Verified by importing the real file into Google, Outlook and Apple Calendar.
 - **Phase 2: the feed.** Tokenized `webcal://` subscription per user and project, revocable.

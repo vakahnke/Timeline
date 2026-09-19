@@ -10,7 +10,7 @@ from drf_spectacular.views import (
 
 from events.views import (CategoryViewSet, CommentViewSet, EventViewSet, MyTasksView,
                           ProjectTasksView, StatusReportViewSet, TaskViewSet)
-from events.views import BaselineViewSet
+from events.views import BaselineViewSet, ProjectCalendarView, ProjectMsProjectView
 
 from .auth import EmailOrUsernameTokenObtainPairView
 from .views import (
@@ -48,6 +48,8 @@ urlpatterns = [
     path('users/',              UserListView.as_view(),        name='users'),
     path('me/tasks/',           MyTasksView.as_view(),         name='my-tasks'),
     path('projects/<int:project_pk>/tasks/', ProjectTasksView.as_view(), name='project-tasks'),
+    path('projects/<int:project_pk>/calendar.ics', ProjectCalendarView.as_view(), name='project-calendar'),
+    path('projects/<int:project_pk>/export/msproject.xml', ProjectMsProjectView.as_view(), name='project-msproject'),
     path('health/',             HealthView.as_view(),          name='health'),
 
     # API documentation (OpenAPI schema + Swagger UI + ReDoc).

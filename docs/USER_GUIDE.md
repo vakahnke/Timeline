@@ -83,6 +83,23 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
 Zoom is cursor-anchored and eases smoothly, and a project auto-fits when you open it, so
 even multi-year plans are easy to navigate.
 
+### Export to a calendar or to Microsoft Project
+
+**Export** in the project toolbar (or **Export…** in the gear menu on a phone) offers two
+downloads. Every member of the project can use them; nothing is changed by exporting.
+
+- **Calendar (.ics)** for Outlook, Google Calendar and Apple Calendar. Choose every event or key
+  milestones only. Entries show as free time, so a long phase does not block anyone's calendar,
+  and each keeps the same ID so a newer file should update entries rather than add copies. A key
+  milestone appears as a one-hour entry, marked ◆, ending when the work ends.
+- **Microsoft Project (.xml)**, the interchange format that Microsoft Project, ProjectLibre,
+  GanttProject, Smartsheet and others open. In Microsoft Project use File ▸ Open and choose the
+  XML file type. Tracks become summary tasks, events become tasks, and dependencies become
+  finish-to-start links. Tasks are set to manual scheduling so your dates open unchanged; switch
+  them to automatic scheduling in Project when you want it to take over. Dates are written in
+  your browser's time zone. Members, colours and comments do not travel; to-do items go into each
+  task's notes.
+
 ### Status report (one page for leadership)
 
 **Status report** in the project toolbar opens the print tool with a page already filled in from

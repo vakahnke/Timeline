@@ -117,6 +117,9 @@ export const api = {
     create: (d)   => req(url.projects(), { method: 'POST', body: body(d) }),
     update: (id, d) => req(url.project(id), { method: 'PATCH', body: body(d) }),
     remove: (id)  => req(url.project(id), { method: 'DELETE' }),
+    // File exports: each resolves to { blob, filename }.
+    exportCalendar:  (id, only = 'all') => req(`/projects/${id}/calendar.ics${only === 'milestones' ? '?only=milestones' : ''}`, { blob: true }),
+    exportMsProject: (id, tz)           => req(`/projects/${id}/export/msproject.xml${tz ? `?timezone=${encodeURIComponent(tz)}` : ''}`, { blob: true }),
 
     members: {
       list:       (pid)      => req(url.members(pid)),
