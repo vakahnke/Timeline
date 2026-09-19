@@ -1,6 +1,7 @@
 # Timeline
 
 [![CI](https://github.com/vakahnke/Timeline/actions/workflows/ci.yml/badge.svg)](https://github.com/vakahnke/Timeline/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/vakahnke/Timeline?color=8b93ff)](https://github.com/vakahnke/Timeline/releases)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://web-production-28ba24.up.railway.app)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED.svg)](#run-it-yourself-in-two-minutes)
@@ -328,6 +329,12 @@ For a larger feature, open an issue or a design doc first. The
 [design docs README](docs/design/README.md) describes the process: a short
 document that captures the current state, prior art, and the proposed design,
 so the discussion happens before the code.
+
+Open issues with context and pointers into the code are in the
+[issue tracker](https://github.com/vakahnke/Timeline/issues); the ones marked
+[good first issue](https://github.com/vakahnke/Timeline/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+are the easiest way in, and one of them needs no coding at all. Questions and ideas are welcome in
+[Discussions](https://github.com/vakahnke/Timeline/discussions).
 
 Some directions that would be good contributions, roughly in order of effort:
 
