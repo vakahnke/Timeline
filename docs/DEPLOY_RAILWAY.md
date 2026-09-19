@@ -40,6 +40,12 @@ by the image and by Railway.
 The reset service uses the same variables plus a custom start command,
 `python manage.py reset_demo --yes`, and a cron schedule such as `0 */6 * * *`.
 
+`reset_demo` deletes every row in the database, so it has two locks: the `--yes` flag and
+the environment variable **`ALLOW_DEMO_RESET=1`**. Set that variable on the reset service
+and nowhere else. Without it the command refuses to run, which is what protects a real
+deployment from a copied cron line or a command run on the wrong host. A production
+instance should never set `ALLOW_DEMO_RESET`, `SEED_DEMO`, or `VITE_DEMO_BANNER`.
+
 ## Setting it up with the CLI
 
 ```bash
