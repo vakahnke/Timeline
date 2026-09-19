@@ -49,6 +49,7 @@ export default function StatusReportPage() {
   const [saved, setSaved]       = useState([])
   const [baselines, setBaselines] = useState([])
   const [baseName, setBaseName] = useState('')
+  const [baseOpen, setBaseOpen] = useState(null)      // null = decide from the project: open until a baseline exists
   const [limits, setLimits]     = useState({})        // threshold inputs, as typed
   const [savedId, setSavedId]   = useState(null)      // set when showing/editing a saved report
   const [frozen, setFrozen]     = useState(false)     // true = facts come from a saved snapshot
@@ -114,7 +115,7 @@ export default function StatusReportPage() {
   const takeBaseline = async () => {
     const name = baseName.trim() || `Plan of ${fmtLong()}`
     setBusy(true)
-    try { await api.baselines.create(projectId, name); setBaseName(''); await load({ keepDoc: true }); flash('Baseline set: slip is now measured against today’s plan', 'saved') }
+    try { await api.baselines.create(projectId, name); setBaseName(''); setBaseOpen(true); await load({ keepDoc: true }); flash('Baseline set: slip is now measured against today’s plan', 'saved') }
     catch { flash('Could not set the baseline.', 'error') }
     finally { setBusy(false) }
   }
@@ -249,12 +250,12 @@ export default function StatusReportPage() {
             <p className="sr-hint">The date the project is held to. The forecast is measured against it.</p>
           </details>
 
-          <details>
+          <details open={baseOpen ?? (canEdit && !!facts && !facts.empty && !facts.baseline)} onToggle={e => setBaseOpen(e.currentTarget.open)}>
             <summary>Baseline and limits <small>{facts?.baseline ? facts.baseline.name : 'no baseline'}</small></summary>
             <div className="sr-base">
               {facts?.baseline
                 ? <p className="sr-hint">Slip is measured against <b>{facts.baseline.name}</b>, frozen {fmtLong(facts.baseline.created_at)}: {facts.baseline.moved} event{facts.baseline.moved === 1 ? '' : 's'} moved, {facts.baseline.added} added, {facts.baseline.removed} removed since.</p>
-                : <p className="sr-hint">A baseline freezes today’s dates as the approved plan. Later reports then show what slipped, on the timeline and in the milestone table.</p>}
+                : <p className="sr-note sr-note--tip" id="sr-base-tip"><b>No baseline yet.</b> When the plan is approved, name it and click Set baseline. That freezes today’s dates, so later reports can show exactly what slipped and by how much. Nothing changes on the page until a date moves.</p>}
               {canEdit && (
                 <div className="sr-base-row">
                   <input id="sr-base-name" value={baseName} maxLength={80} onChange={e => setBaseName(e.target.value)} placeholder={facts?.baseline ? 'Name for the new baseline' : 'e.g. Approved plan'} aria-label="Baseline name" />
