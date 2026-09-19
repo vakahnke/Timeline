@@ -1,5 +1,5 @@
 # ---- dev: Vite dev server with HMR (used by docker-compose.yml) ----
-FROM node:24-alpine AS dev
+FROM node:25-alpine AS dev
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 # ---- build: produce the static dist/ bundle ----
-FROM node:24-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
