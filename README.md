@@ -11,7 +11,17 @@ resize, zoom, and pan. Every project is isolated to its members.
 Timeline is free and open source under the [Apache 2.0 license](LICENSE). You can
 use it, modify it, and redistribute it, including commercially.
 
-## Try it in two minutes
+## Live demo
+
+**https://web-production-28ba24.up.railway.app**
+
+Sign in as `demo` with password `demo12345` (or `editor` / `viewer` with the same
+password to see the other roles), or register your own account. The demo is
+public and writable, and it is wiped and reseeded every six hours, so do not
+keep anything real in it. Tip: hold Ctrl (⌘ on a Mac) and drag an event to move
+it; a plain drag pans.
+
+## Run it yourself in two minutes
 
 Requires [Docker](https://docs.docker.com/get-docker/). No other setup: no `.env`,
 no database to install.

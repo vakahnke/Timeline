@@ -31,6 +31,9 @@ Set these on the web service:
 | `WEB_CONCURRENCY` | `2` | gunicorn workers; 2 fits a small instance |
 | `SITE_URL` | `https://` + the domain | links in account emails (none are sent without SMTP) |
 
+| `RAILWAY_DOCKERFILE_PATH` | `deploy/railway.Dockerfile` | makes Railway build from the demo Dockerfile; without it, `railway up` auto-detects the root `index.html` and deploys a static site instead |
+| `VITE_DEMO_BANNER` | the notice text | Railway passes service variables as Docker build args, so this is baked into the frontend bundle |
+
 `DJANGO_DEBUG`, `RUN_COLLECTSTATIC`, `SPA_DIST`, and `PORT` are already handled
 by the image and by Railway.
 
