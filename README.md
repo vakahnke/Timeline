@@ -307,8 +307,10 @@ so the discussion happens before the code.
 
 Some directions that would be good contributions, roughly in order of effort:
 
-- iCalendar export of a project's events (RFC 5545)
-- Import and export for Microsoft Project XML
+- iCalendar export of a project's events (RFC 5545):
+  [design draft](docs/design/icalendar-export.md)
+- Import and export for Microsoft Project XML:
+  [design draft](docs/design/ms-project-xml.md)
 - Manual card ordering within board columns
 - Guest access for people outside the team, read-only, without an account
 - A schedule-health check over the dependency graph: missing links, dangling
