@@ -219,7 +219,7 @@ class PptxBaselineTests(_Base):
         launch.save()
         saved = list(StatusReport.objects.filter(project=self.project))
         self.facts = json.loads(json.dumps(build_facts(self.project, now=now, previous_snapshot=saved[0].snapshot, history=history_from(saved))))
-        self.doc = {**self.doc, 'moved': 'Public launch +5d (now later); finish +5d.'}
+        self.doc = {**self.doc, 'moved': 'Public launch +5d (now later); finish +5d.', 'show': {'baseline': True, 'moved': True}}
 
     def names(self, prs):
         return [s.name for s in _walk(prs.slides[0].shapes)]
@@ -234,15 +234,20 @@ class PptxBaselineTests(_Base):
         self.assertIn('Baseline', [s.text_frame.text for s in _walk(prs.slides[0].shapes) if s.name == 'Legend' and s.has_text_frame])
         self.assertIn('baseline “Approved plan”', _all_text(prs.slides[0]))
 
-    def test_ghosts_can_be_switched_off(self):
-        prs = self.build(facts=self.facts, doc={**self.doc, 'show': {'baseline': False}})
-        self.assertFalse([n for n in self.names(prs) if 'baseline' in n.lower()])
+    def test_slip_is_opt_in_a_baseline_alone_shows_nothing(self):
+        for show in ({}, {'baseline': False}):
+            prs = self.build(facts=self.facts, doc={**self.doc, 'show': show})
+            self.assertFalse([n for n in self.names(prs) if 'baseline' in n.lower()])
+            text = _all_text(prs.slides[0])
+            self.assertNotIn('Approved plan', text)                  # not even in the footer
+            self.assertNotIn('Moved since', text)
+            self.assertNotIn('(+5d)', text)
 
     def test_what_moved_is_printed_with_the_previous_report_date(self):
         text = _all_text(self.build(facts=self.facts).slides[0])
         self.assertIn('Moved since', text)
         self.assertIn('Public launch +5d', text)
-        self.assertNotIn('Moved since', _all_text(self.build(facts=self.facts, doc={**self.doc, 'show': {'moved': False}}).slides[0]))
+        self.assertNotIn('Moved since', _all_text(self.build(facts=self.facts, doc={**self.doc, 'show': {'baseline': True}}).slides[0]))
 
     def test_handout_table_gains_baseline_forecast_and_slip(self):
         prs = self.build(facts=self.facts, layout='handout')
@@ -253,7 +258,7 @@ class PptxBaselineTests(_Base):
         self.assertEqual(rows['Scope locked'][3], 'on plan')
 
     def test_trend_chart_is_native_lines_on_the_handout_only_when_asked(self):
-        on = self.build(facts=self.facts, layout='handout', doc={**self.doc, 'show': {'trend': True}})
+        on = self.build(facts=self.facts, layout='handout', doc={**self.doc, 'show': {'trend': True, 'baseline': True}})
         grp = next(s for s in on.slides[0].shapes if s.shape_type == MSO_SHAPE_TYPE.GROUP and s.name == 'Milestone trend')
         lines = [s for s in grp.shapes if s.shape_type == MSO_SHAPE_TYPE.LINE]
         self.assertGreaterEqual(len(lines), 2)                                       # three points, two segments

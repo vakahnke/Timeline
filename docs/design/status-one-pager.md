@@ -316,6 +316,12 @@ saved reports. No new roles; it follows [PERMISSIONS.md](../PERMISSIONS.md).
     look at the result. **Not yet opened in PowerPoint, Keynote or Google Slides by a person**:
     QuickLook and Keynote scripting both hung on the build machine.
 - **Phase 3 — the truth. SHIPPED.** As built:
+  - **Everything about plan changes is opt-in, per report.** The owner's direction after first use:
+    changing a plan is healthy, and how often it changed is for specific audiences, not every
+    report. So a baseline by itself shows nothing anywhere, not even in the footer. "Show changes
+    against the baseline", "Show what moved since last report" and the trend chart all start
+    unticked, the baseline panel stays closed, and its hint says it is optional. The choice is
+    saved with the report and carries to the next one like the rest of the page's shape.
   - **Baselines** (`events.Baseline`, `/api/projects/<id>/baselines/`). "Set baseline" in the print
     tool freezes every event's dates under a name. One baseline is active; re-baselining retires
     the old one but keeps it, and deleting the active one re-activates the most recent. Editors and
@@ -324,8 +330,7 @@ saved reports. No new roles; it follows [PERMISSIONS.md](../PERMISSIONS.md).
     stands in, and the page says "baseline" wherever it would say "commitment".
   - **Slip on the timeline** is drawn only where the plan moved by a day or more: a thin outlined
     strip above the track's bar, and for a milestone a hollow baseline diamond joined to today's
-    diamond, with the slip in the label ("Oct 6 (+3d)"). An on-plan chart stays clean. One toggle
-    switches slip off for a report.
+    diamond, with the slip in the label ("Oct 6 (+3d)"). An on-plan chart stays clean.
   - **The handout's milestone table** becomes baseline, forecast, slip, done, status.
   - **Limits per project** (`Project.status_thresholds`): off track beyond N working days or N% of
     the project's length, at risk when work trails time by N points. Blank means the default.

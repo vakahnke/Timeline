@@ -68,7 +68,7 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
     ? `${(['on_track', 'at_risk', 'off_track'].indexOf(report.status) > ['on_track', 'at_risk', 'off_track'].indexOf(previous.status)) ? '▼' : '▲'} was ${STATUS[previous.status]?.label} · ${fmtDay(previous.as_of)}`
     : previous ? `● unchanged since ${fmtDay(previous.as_of)}` : ''
   const handout = layout === 'handout'
-  const withBase = !!facts?.baseline && show.baseline !== false
+  const withBase = !!facts?.baseline && show.baseline === true      // slip is opt-in, per report
   const cols = (doc.columns || []).filter(c => !c.hidden)
 
   const decision = show.decision && (
@@ -161,9 +161,9 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
 
         {show.timeline && <ReportTimeline facts={facts} rows={rows} milestones={milestones} dense={handout}
                                           showCritical={doc.timeline?.showCritical !== false} showProgress={doc.timeline?.showProgress !== false}
-                                          showBaseline={show.baseline !== false} />}
+                                          showBaseline={show.baseline === true} />}
 
-        {show.moved !== false && facts?.since_last && (doc.moved || !ro) && (
+        {show.moved === true && facts?.since_last && (doc.moved || !ro) && (
           <div className="sr-moved sr-opt" data-empty={!doc.moved}><b>Moved since {fmtDay(facts.since_last.as_of)}: </b>
             <Editable value={doc.moved} onChange={v => set('moved', v)} readOnly={ro} multiline maxLength={220} placeholder="which dates moved, and by how much." /></div>)}
 

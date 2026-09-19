@@ -177,8 +177,8 @@ class Command(BaseCommand):
         self._seed_template_projects(users)
 
     def _seed_report_history(self, project, owner, events, now):
-        """A baseline and three earlier status reports, so the report shows slip, what moved, and
-        a milestone trend out of the box. The story: the plan was approved six weeks ago; the
+        """A baseline and three earlier status reports, so slip, what moved and the milestone
+        trend can be switched on in the sample (they are opt-in and start switched off). The story: the plan was approved six weeks ago; the
         unfinished work has since slipped three days, one of them before the last report."""
         import copy
         from datetime import datetime
@@ -221,7 +221,7 @@ class Command(BaseCommand):
                     'v': 1,
                     'header': {'project': project.name, 'subtitle': 'Status report', 'date': f'{when:%b} {when.day}, {when.year}', 'pm': 'PM: demo'},
                     'headline': verdict['headline'], 'pathToGreen': '', 'moved': '',
-                    'show': {'pathToGreen': True, 'decision': True, 'kpis': True, 'timeline': True, 'baseline': True, 'moved': True,
+                    'show': {'pathToGreen': True, 'decision': True, 'kpis': True, 'timeline': True, 'baseline': False, 'moved': False,
                              'trend': False, 'columns': True, 'milestoneTable': True, 'footer': True},
                     'decision': {'none': slip_then == -3, 'title': 'Decision needed', 'neededBy': '', 'from': 'the sponsor',
                                  'text': '' if slip_then == -3 else 'Shorten the private beta from 14 to 10 days to hold the committed launch? Each week undecided costs about two days.'},

@@ -173,7 +173,7 @@ def _footer_text(doc, report, facts, tz):
         parts.append(f'{word} finish {MONTHS[m - 1]} {d}')
     else:
         parts.append('no committed finish date set')
-    if facts.get('baseline'):
+    if facts.get('baseline') and (doc.get('show') or {}).get('baseline') is True:
         b = facts['baseline']
         parts.append(f"baseline “{b.get('name') or ''}” of {_fmt_day(_parse(b['created_at'], tz))}")
     if report.get('status_source') == 'override':
@@ -200,7 +200,7 @@ def _draw_timeline(slide, x0, y0, w, h, doc, facts, tz, pt):
         return None
     milestones = _chosen_milestones(doc, facts, tz)
     show_progress, show_critical = tl.get('showProgress', True), tl.get('showCritical', True)
-    show_baseline = bool(facts.get('baseline')) and (doc.get('show') or {}).get('baseline', True) is not False
+    show_baseline = bool(facts.get('baseline')) and (doc.get('show') or {}).get('baseline') is True      # opt-in, per report
     one_day = timedelta(days=1)
 
     def moved(a, b):
@@ -585,7 +585,7 @@ def build_pptx(*, doc, report, facts, layout='slide', paper='letter', previous=N
     tz = dt_tz(timedelta(minutes=max(-840, min(840, int(tz_offset_minutes or 0)))))
     status = STATUS.get(report.get('status'), STATUS['on_track'])
     report = {**report, 'status': report.get('status') if report.get('status') in STATUS else 'on_track'}
-    show = {'pathToGreen': True, 'decision': True, 'kpis': True, 'timeline': True, 'baseline': True, 'moved': True, 'trend': False,
+    show = {'pathToGreen': True, 'decision': True, 'kpis': True, 'timeline': True, 'baseline': False, 'moved': False, 'trend': False,
             'columns': True, 'milestoneTable': True, 'footer': True, **(doc.get('show') or {})}
     handout = layout == 'handout'
 
@@ -651,8 +651,8 @@ def build_pptx(*, doc, report, facts, layout='slide', paper='letter', previous=N
     table_h = (S['table'] * 1.85 / 72) * (min(8, len(milestones)) + 1) if table_on else 0
     foot_lines = min(2, _lines(_footer_text(doc, report, facts, tz), S['foot'], cw - 0.9)) or 1      # a baseline makes it longer
     foot_h = (0.10 + foot_lines * S['foot'] * 1.3 / 72) if show['footer'] else 0
-    with_base = bool(facts.get('baseline')) and show['baseline'] is not False
-    moved_text = (doc.get('moved') or '').strip() if (show['moved'] is not False and facts.get('since_last')) else ''
+    with_base = bool(facts.get('baseline')) and show['baseline'] is True
+    moved_text = (doc.get('moved') or '').strip() if (show['moved'] is True and facts.get('since_last')) else ''
     moved_lead = f"Moved since {_fmt_day(_parse(facts['since_last']['as_of'], tz))}: " if moved_text else ''
     moved_h = _lines(moved_lead + moved_text, S['ptg'], cw) * S['ptg'] * 1.3 / 72 + 0.04 if moved_text else 0
     trend_on = handout and show['trend'] is True and bool(_trend_series(facts, milestones)[1])

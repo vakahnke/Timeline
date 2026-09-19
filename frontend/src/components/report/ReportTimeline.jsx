@@ -14,7 +14,7 @@ const W = 1000
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 const INK = '#16202E', INK3 = '#7C8797', RULE = '#D9DEE6', ACCENT = '#2B50C8', WARN = '#B86E00', BAD = '#B3362B'
 
-export default function ReportTimeline({ facts, rows, milestones, showCritical = true, showProgress = true, showBaseline = true, dense = false }) {
+export default function ReportTimeline({ facts, rows, milestones, showCritical = true, showProgress = true, showBaseline = false, dense = false }) {
   const wrapRef = useRef(null)
   const [aspect, setAspect] = useState(dense ? 0.4 : 0.2)
 

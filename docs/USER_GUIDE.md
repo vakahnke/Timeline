@@ -101,8 +101,10 @@ next, and your top risks.
 - **Two layouts:** a 16:9 slide and a portrait handout (Letter or A4) that adds a milestone table.
 - **Print / Save as PDF** produces a single vector page. In the print dialog choose "Save as PDF",
   margins "None", and turn on background graphics. The slide PDF drops straight into a deck.
-- **Baseline.** Under **Baseline and limits**, **Set baseline** freezes today's dates as the
-  approved plan. From then on the report shows slip: an outlined strip above any track that moved,
+- **Baseline (optional).** Plans should change, and by default a report shows only where the
+  project stands today. For the audiences that need the history, **Set baseline** under
+  **Baseline and limits** freezes today's dates as the approved plan. Setting one shows nothing by
+  itself. On a report where you tick **Show changes against the baseline**, the report shows: an outlined strip above any track that moved,
   a hollow diamond where a milestone used to be with the slip in its label, and baseline, forecast
   and slip columns in the handout's table. Re-baseline when the plan is formally changed; old
   baselines are kept. With no committed date, the baseline's finish is what the forecast is
@@ -110,8 +112,8 @@ next, and your top risks.
 - **Limits.** The same section holds the project's limits for the status rule: how late is off
   track, and how far work may trail time before the project is at risk. Agree them with your
   sponsor before anything slips. Blank uses the default.
-- **What moved.** Once a report has been saved, the next one drafts a "Moved since" line under the
-  timeline. Reword it like any other text, or switch it off.
+- **What moved (optional).** Once a report has been saved, tick **Show what moved since last
+  report** to add a drafted "Moved since" line under the timeline. Reword it like any other text.
 - **Milestone trend chart** (handout). After two saved reports you can add a chart of how far each
   milestone has drifted from the date first reported. A line that keeps climbing is a date that
   slips a little every time.
@@ -123,7 +125,7 @@ next, and your top risks.
   shows whether the status moved. If the page gets too full it tells you what to cut; it never
   shrinks the type.
 
-Viewers and commenters can open, print and download a report and see slip against the baseline; owners and editors can edit and save.
+Viewers and commenters can open, print and download a report; owners and editors can edit and save.
 
 ## 4. Templates
 

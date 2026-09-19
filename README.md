@@ -42,37 +42,39 @@ project's toolbar and it opens already filled in.
   up that deck's fonts.
 - **Or a PDF.** Print a single vector page as a 16:9 slide, or as a portrait
   handout on Letter or A4 that adds a milestone table.
-- **Slip against a baseline.** Freeze the approved plan with one click. Every later
-  report shows what slipped and by how much, on the timeline and in the milestone
-  table, and each project sets its own limits for At risk and Off track.
-- **History.** Save a dated copy. The next report starts from its shape, shows
-  whether the status moved, drafts a "what moved since last report" line, and can
-  chart how far each milestone has drifted across reports.
+- **History.** Save a dated copy. The next report starts from its shape and shows
+  whether the status moved since last time.
+- **Plan changes, only when you want them shown.** Optionally freeze an approved
+  plan as a baseline and, per report, show what changed against it, what moved
+  since the last report, and a milestone trend chart. All of it is off by default.
+- **Your own limits.** Each project sets how late counts as At risk or Off track.
 - **Built on an API.** The page reads one versioned, documented endpoint, so
   scripts and other tools can consume the same facts.
 
-<p align="center"><img src="docs/images/status-report-handout.png" width="520" alt="The portrait handout: slip against the baseline, the milestone table, and the milestone trend chart"></p>
+<p align="center"><img src="docs/images/status-report-handout.png" width="520" alt="The portrait handout with the optional baseline table and milestone trend chart switched on"></p>
 
-### Baselines: showing what slipped
+### Optional: showing how the plan has changed
 
-A schedule changes every time someone drags an event, so "are we late?" has no
-answer unless you remember what the plan *was*. A baseline is that memory: a
-frozen copy of every event's dates, taken at the moment the plan was approved.
+Plans should change. Keeping a plan current and pivoting in real time is healthy,
+and most status reports have no reason to dwell on it. So by default the report
+shows only where the project stands today.
 
-1. Open **Status report** from a project's toolbar.
-2. In the left panel, open **Baseline and limits**.
-3. Type a name such as "Approved plan" and click **Set baseline**.
+Some audiences do need the history: a sponsor who approved specific dates, a
+contract milestone, a review of why a launch moved. For those cases you can take a
+**baseline**, a frozen copy of every event's dates at the moment the plan was
+approved, and choose report by report whether to show changes against it.
 
-Nothing on the page changes yet, because the plan and the baseline are identical.
-The difference appears later. When an event moves, the next report shows it:
+1. Open **Status report** and, in the left panel, open **Baseline and limits**.
+2. Name it, for example "Approved plan", and click **Set baseline**. Nothing on any
+   report changes.
+3. On a report that should show it, tick **Show changes against the baseline**.
 
-- a thin outlined strip above the track, where the track used to be
-- a hollow diamond where a milestone used to be, and a label such as "Oct 6 (+3d)"
-- on the handout, a table of baseline date, forecast date, and slip for each milestone
-
-When the plan is formally changed and everyone agrees to new dates, click
-**Re-baseline**. Old baselines are kept. The same panel holds the project's
-**limits**: how many days late counts as Off track, agreed before anything slips.
+That report then marks each track and milestone that moved ("Oct 6 (+3d)") and, on
+the handout, lists baseline date, forecast date, and the difference. Two more
+opt-in items sit beside it: a drafted **what moved since last report** line, and a
+**milestone trend chart** on the handout. Re-baseline whenever new dates are
+agreed; old baselines are kept. The same panel holds the project's **limits** for
+the status rule: how late counts as Off track.
 
 Try it on the [live demo](#live-demo): open **Startup MVP: Idea to Launch** and
 click **Status report**. Details are in the [user guide](docs/USER_GUIDE.md) and

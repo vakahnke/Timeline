@@ -99,7 +99,7 @@ export function newDocument({ facts, suggestion, previous, user }) {
     headline: suggestion.headline,
     pathToGreen: '',
     moved: draftMoved(facts),
-    show: { pathToGreen: true, decision: true, kpis: true, timeline: true, baseline: true, moved: true, trend: false, columns: true, milestoneTable: true, footer: true, ...(prev?.show || {}) },
+    show: { pathToGreen: true, decision: true, kpis: true, timeline: true, baseline: false, moved: false, trend: false, columns: true, milestoneTable: true, footer: true, ...(prev?.show || {}) },
     decision: { none: prev?.decision?.none ?? true, title: prev?.decision?.title || 'Decision needed', text: prev?.decision?.text || '', neededBy: prev?.decision?.neededBy || '', from: prev?.decision?.from || '' },
     kpis: autoKpis(facts),
     timeline: { hiddenRows: prev?.timeline?.hiddenRows || [], milestoneIds: prev?.timeline?.milestoneIds ?? null, showCritical: prev?.timeline?.showCritical ?? true, showProgress: prev?.timeline?.showProgress ?? true },
@@ -148,7 +148,7 @@ export function footerText(doc, report, facts) {
   const parts = [`Schedule data as of ${fmtLong(facts?.as_of)}`]
   if (facts?.project?.committed_end) parts.push(`${facts.project.commitment_source === 'baseline' ? 'baseline' : 'committed'} finish ${fmtDateOnly(facts.project.committed_end)}`)
   else parts.push('no committed finish date set')
-  if (facts?.baseline) parts.push(`baseline “${facts.baseline.name}” of ${fmtDay(facts.baseline.created_at)}`)
+  if (facts?.baseline && doc.show?.baseline === true) parts.push(`baseline “${facts.baseline.name}” of ${fmtDay(facts.baseline.created_at)}`)
   if (report.status_source === 'override') parts.push(`status set by the author: ${report.override_reason || 'no reason given'}`)
   else if (report.rule_fired) parts.push(`${STATUS[report.status]?.label} by rule: ${report.rule_fired}`)
   return parts.join(' · ')
