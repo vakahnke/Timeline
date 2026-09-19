@@ -313,7 +313,7 @@ so the discussion happens before the code.
 
 Some directions that would be good contributions, roughly in order of effort:
 
-- Password reset by email: [design](docs/design/password-reset.md)
+- A signed-in "change password" screen: [design](docs/design/password-reset.md) (reset by email is built)
 - A subscribable calendar feed, so calendars stay current without exporting again:
   [design](docs/design/icalendar-export.md) (the one-off `.ics` export is built)
 - Import from Microsoft Project XML:

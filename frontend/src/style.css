@@ -2168,3 +2168,11 @@ fieldset.modal-body:disabled { opacity: 1; }
 .export-choice { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .export-choice label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .export-choice small { color: var(--text-dim); }
+
+/* Password reset */
+.auth-forgot { margin: -4px 0 10px; text-align: right; font-size: 12.5px; }
+.auth-forgot a, .auth-card > .auth-foot a { color: var(--accent); text-decoration: none; }
+.auth-forgot a:hover { text-decoration: underline; }
+.auth-check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; color: var(--text-dim); cursor: pointer; }
+.field-ok { margin: 0 0 10px; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #6ee7b7; background: rgba(52,211,153,.10); border: 1px solid rgba(52,211,153,.35); }
+a.btn-primary.btn-block { display: block; text-align: center; text-decoration: none; box-sizing: border-box; }

@@ -102,6 +102,8 @@ export const api = {
     register: (d)       => req('/auth/register/', { method: 'POST', body: body(d) }, false),
     login:    (d)       => req('/auth/token/',    { method: 'POST', body: body(d) }, false),
     logout:   (refresh) => req('/auth/logout/',   { method: 'POST', body: body({ refresh }) }, false),
+    requestPasswordReset: (email) => req('/auth/password-reset/',         { method: 'POST', body: body({ email }) }, false),
+    confirmPasswordReset: (d)     => req('/auth/password-reset/confirm/', { method: 'POST', body: body(d) }, false),
     me:       ()        => req('/me/'),
     myTasks:  (scope)   => req(url.myTasks() + (scope === 'all' ? '?scope=all' : '')),
   },

@@ -8,6 +8,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from .password_reset import PasswordResetConfirmView, PasswordResetRequestView
 from events.views import (CategoryViewSet, CommentViewSet, EventViewSet, MyTasksView,
                           ProjectTasksView, StatusReportViewSet, TaskViewSet)
 from events.views import BaselineViewSet, ProjectCalendarView, ProjectMsProjectView
@@ -44,6 +45,8 @@ urlpatterns = [
     path('auth/token/',         EmailOrUsernameTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(),                   name='token_refresh'),
     path('auth/logout/',        LogoutView.as_view(),                         name='logout'),
+    path('auth/password-reset/',         PasswordResetRequestView.as_view(), name='password-reset'),
+    path('auth/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('me/',                 MeView.as_view(),              name='me'),
     path('users/',              UserListView.as_view(),        name='users'),
     path('me/tasks/',           MyTasksView.as_view(),         name='my-tasks'),

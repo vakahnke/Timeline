@@ -87,6 +87,9 @@ DATABASES = {
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
+# A password-reset link is good for one hour (Django's default is three days).
+PASSWORD_RESET_TIMEOUT = 60 * 60
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -138,6 +141,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ],
+    # Only the password-reset endpoints are throttled today (docs/design/password-reset.md).
+    # Counters live in the process-local cache, so with N gunicorn workers the effective ceiling
+    # is up to N times these numbers: still a firm brake on flooding an inbox or guessing links.
+    'DEFAULT_THROTTLE_RATES': {
+        'password_reset_request': '5/hour',
+        'password_reset_address': '3/hour',
+        'password_reset_confirm': '10/hour',
+    },
 }
 
 SPECTACULAR_SETTINGS = {

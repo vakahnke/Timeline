@@ -1,6 +1,6 @@
 # Password Reset by Email — Design Document
 
-**Status:** Draft
+**Status:** Building — Phase 1 (reset by email) shipped 2026-09-19. Phase 2 (signed-in change password) not started.
 **Last updated:** 2026-09-19
 **Scope:** A "Forgot your password?" flow on the sign-in page: request a link by email, set a new password. Two new API endpoints, two small pages, one email. No data-model change.
 
@@ -94,7 +94,23 @@ Not in scope: two-factor authentication, single sign-on, "magic link" sign-in, a
 
 ## 5. Phasing
 
-- **Phase 1:** request + confirm endpoints, the email, the two pages, throttling on those
+- **Phase 1: SHIPPED.** As built (`backend/projects/password_reset.py`, `ForgotPasswordPage.jsx`,
+  `ResetPasswordPage.jsx`), with the proposed answers to the open questions: one-hour links,
+  inactive accounts cannot reset, throttling on these endpoints only, and the link is left
+  visible on the demo (where mail only prints to the log).
+  - The confirm endpoint also accepts a call with no password, which only checks the link, so
+    the page can say "expired" immediately instead of after the user has typed a new password.
+  - Mail is sent off the request thread so the response takes the same time with or without an
+    account. The per-caller throttle keys on `CF-Connecting-IP` when present, because prod sits
+    behind Cloudflare. Throttle counters are per process, so the ceiling is up to N times the
+    configured rate with N gunicorn workers.
+  - The reset page removes the token from the address bar on load and sets
+    `Referrer-Policy: no-referrer` through a meta tag.
+  - A successful reset emails a "your password was changed" notice (moved up from phase 2).
+  - Verified by 11 backend tests and a 13-check browser test that reads the link from the dev
+    console mailer (decoding quoted-printable the way a mail client does) and completes the flow.
+    **Not yet done:** receiving a real reset email from production in a real inbox.
+  Original scope: request + confirm endpoints, the email, the two pages, throttling on those
   endpoints. Tests for: identical responses for known and unknown
   emails, inactive accounts get no mail, token single-use and expiry, validators enforced, other
   sessions signed out, throttles. A browser test reads the link from the dev console mailer and

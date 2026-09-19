@@ -12,6 +12,7 @@ export default function LoginPage() {
   const wanted = location.state?.from?.pathname
   const from = typeof wanted === 'string' && /^\/(?![/\\])[^\\]*$/.test(wanted) ? wanted : '/'
 
+  const notice = typeof location.state?.notice === 'string' ? location.state.notice : ''
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
@@ -56,6 +57,9 @@ export default function LoginPage() {
                  placeholder="••••••••" autoComplete="current-password" />
         </div>
 
+        <p className="auth-forgot"><Link to="/forgot-password">Forgot your password?</Link></p>
+
+        {notice && !error && <div className="field-ok" role="status">✓ {notice}</div>}
         {error && <div className="field-error">✕ {error}</div>}
 
         <button className="btn-primary btn-block" type="submit" disabled={busy}>

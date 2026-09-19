@@ -5,6 +5,8 @@ import { ToastProvider } from './ui/ToastProvider'
 import { ProtectedRoute, PublicOnly, NotFound, RouteFallback } from './routes/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import ProjectsDashboard from './pages/ProjectsDashboard'
 import TeamsPage from './pages/TeamsPage'
 
@@ -25,6 +27,9 @@ export default function App() {
           <Routes>
             <Route path="/login"    element={<PublicOnly><LoginPage /></PublicOnly>} />
             <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+            {/* Open to everyone, signed in or not: a reset link must work from any browser. */}
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password"  element={<ResetPasswordPage />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<ProjectsDashboard />} />
               <Route path="/teams" element={<TeamsPage />} />

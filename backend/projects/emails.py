@@ -57,3 +57,34 @@ def notify_user_account_activated(user):
         '— Timeline\n'
     )
     return _safe_send(subject, message, [user.email])
+
+
+def send_password_reset_link(user, uid, token):
+    """The reset link. Says how long it lasts and that ignoring it changes nothing."""
+    from urllib.parse import urlencode
+    link = f"{_site()}/reset-password?{urlencode({'uid': uid, 'token': token})}"
+    subject = 'Reset your Timeline password'
+    message = (
+        f'Hi {user.username},\n\n'
+        'Someone asked to reset the password for your Timeline account. If that was you, '
+        'choose a new password here:\n\n'
+        f'  {link}\n\n'
+        'The link works once and for one hour. If you did not ask for this, ignore this '
+        'message: your password stays as it is.\n\n'
+        '— Timeline\n'
+    )
+    return _safe_send(subject, message, [user.email])
+
+
+def send_password_changed_notice(user):
+    """Tell the account owner the password changed, in case it was not them."""
+    subject = 'Your Timeline password was changed'
+    message = (
+        f'Hi {user.username},\n\n'
+        'The password for your Timeline account was just changed, and every other session '
+        'was signed out.\n\n'
+        'If this was you, nothing more is needed. If it was not, reset your password now:\n\n'
+        f'  {_site()}/forgot-password\n\n'
+        '— Timeline\n'
+    )
+    return _safe_send(subject, message, [user.email])

@@ -83,6 +83,17 @@ The heart of the app. Events are bars arranged into **tracks** (one per category
 Zoom is cursor-anchored and eases smoothly, and a project auto-fits when you open it, so
 even multi-year plans are easy to navigate.
 
+### Forgot your password
+
+On the sign-in page choose **Forgot your password?**, enter the email on your account, and open
+the link that arrives. It works once and for one hour. Choosing a new password signs you out
+everywhere else, and you get an email confirming the change. The page gives the same answer
+whether or not an address has an account, so it cannot be used to find out who has one. An
+account that is still waiting for approval cannot reset its password.
+
+The server must be able to send email for this to work (see the `EMAIL_*` settings in
+[DEPLOYMENT.md](DEPLOYMENT.md)); without it the message is only written to the server log.
+
 ### Export to a calendar or to Microsoft Project
 
 **Export** in the project toolbar (or **Export…** in the gear menu on a phone) offers two
