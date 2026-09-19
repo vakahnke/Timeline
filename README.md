@@ -96,6 +96,8 @@ REST API with JWT auth. Swagger UI lives at `/api/docs/` and ReDoc at
   nginx and gunicorn, CI
 - [AWS Deployment](docs/AWS_DEPLOYMENT.md): a worked example on EC2 with
   Terraform, Cloudflare, and HTTPS
+- [Railway demo](docs/DEPLOY_RAILWAY.md): the single-container image behind
+  the public demo, with a scheduled reset
 - [Design docs](docs/design/): how larger features are designed before they are
   built, plus the designs for the [board](docs/KANBAN.md) and
   [permissions](docs/PERMISSIONS.md)

@@ -1308,6 +1308,19 @@ fieldset.modal-body:disabled { opacity: 1; }
 .toast.saved  { color: var(--success); border-color: rgba(52,211,153,0.35); }
 .toast.error  { color: var(--danger);  border-color: rgba(248,113,113,0.35); }
 .toast.hint   { color: var(--text-bright); border-color: rgba(129,140,248,0.45); }
+
+/* Public-demo notice bar (rendered only when VITE_DEMO_BANNER is set at build time). */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 250;
+  padding: 6px 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-bright);
+  background: rgba(129,140,248,0.14);
+  border-bottom: 1px solid rgba(129,140,248,0.35);
+}
 .tt-hint kbd {
   font: inherit;
   font-weight: 600;

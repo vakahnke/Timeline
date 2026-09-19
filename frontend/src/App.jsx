@@ -11,11 +11,15 @@ import TeamsPage from './pages/TeamsPage'
 // Code-split the heavy timeline route (canvas ruler + CPM + drag math).
 const ProjectTimeline = lazy(() => import('./pages/ProjectTimeline'))
 
+// Set VITE_DEMO_BANNER at build time (e.g. on a public demo host) to show a notice bar.
+const DEMO_BANNER = import.meta.env.VITE_DEMO_BANNER || ''
+
 export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
+          {DEMO_BANNER && <div className="demo-banner" role="note">{DEMO_BANNER}</div>}
           <Routes>
             <Route path="/login"    element={<PublicOnly><LoginPage /></PublicOnly>} />
             <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />

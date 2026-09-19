@@ -1,8 +1,20 @@
 #!/usr/bin/env sh
 set -e
 
-DB_HOST="${POSTGRES_HOST:-db}"
-DB_PORT="${POSTGRES_PORT:-5432}"
+# Where to wait for Postgres: POSTGRES_HOST/PORT if set, else parsed from DATABASE_URL
+# (managed hosts like Railway only provide the URL).
+if [ -z "${POSTGRES_HOST:-}" ] && [ -n "${DATABASE_URL:-}" ]; then
+  eval "$(python - <<'PY'
+import os
+from urllib.parse import urlparse
+u = urlparse(os.environ['DATABASE_URL'])
+print(f'DB_HOST={u.hostname or "db"}; DB_PORT={u.port or 5432}')
+PY
+)"
+else
+  DB_HOST="${POSTGRES_HOST:-db}"
+  DB_PORT="${POSTGRES_PORT:-5432}"
+fi
 
 echo "Waiting for Postgres at ${DB_HOST}:${DB_PORT}..."
 until nc -z "$DB_HOST" "$DB_PORT"; do

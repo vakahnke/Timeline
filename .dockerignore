@@ -1,0 +1,28 @@
+# Build context for deploy/railway.Dockerfile (context = repo root).
+.git
+.github
+.claude
+docs
+terraform
+nginx
+deploy/*.sh
+dist
+*.md
+!frontend/README.md
+
+# Frontend: never ship host node_modules or a stale build into the image.
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Backend: local artifacts and secrets.
+backend/__pycache__
+backend/**/__pycache__
+backend/*.sqlite3
+backend/staticfiles
+backend/media
+backend/.venv
+backend/.pytest_cache
+.env
+.env.*
+!.env.example

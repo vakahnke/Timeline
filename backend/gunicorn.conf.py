@@ -1,7 +1,7 @@
 import os
 
 # Network
-bind = '0.0.0.0:8000'
+bind = '0.0.0.0:' + os.environ.get('PORT', '8000')   # PORT is set by hosts like Railway
 
 # Workers — driven by WEB_CONCURRENCY (set per instance size; rule of thumb 2*vCPU+1,
 # but it's memory-bound: each sync worker is a full Django process ~120 MB).

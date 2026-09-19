@@ -96,6 +96,14 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Optional: serve the built frontend (Vite dist/) from Django itself, so a single
+# container can run the whole app without nginx (used by the Railway demo image).
+# WhiteNoise serves the files at the site root; urls.py adds the SPA fallback route.
+SPA_DIST = env('SPA_DIST', default='')
+if SPA_DIST:
+    WHITENOISE_ROOT = SPA_DIST
+    WHITENOISE_INDEX_FILE = True
+
 STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
