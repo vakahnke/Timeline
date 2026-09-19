@@ -1,13 +1,18 @@
 # Keeps dependencies current. Security fixes are opened as soon as an advisory is published
 # (repository setting "Dependabot security updates"); the schedules below cover routine updates.
-# Minor and patch updates are grouped into one pull request per ecosystem to keep the noise down;
-# major versions arrive on their own so each can be read and tested.
+#
+# Tuned to stay quiet:
+# - increase-if-necessary: no pull request when the allowed range already admits the new version
+# - minor and patch updates arrive as ONE pull request per ecosystem
+# - packages that must move together (react + react-dom, vite + its plugin) are grouped
+# - Node stays on an LTS line on purpose, so Docker major bumps for node are ignored
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /backend
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    open-pull-requests-limit: 3
     groups:
       python-minor-and-patch:
         update-types: [minor, patch]
@@ -15,15 +20,28 @@ updates:
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    open-pull-requests-limit: 3
     groups:
+      react:
+        patterns: [react, react-dom]
+      build-tools:
+        patterns: [vite, "@vitejs/*"]
       npm-minor-and-patch:
         update-types: [minor, patch]
 
   - package-ecosystem: docker
     directories: [/backend, /frontend, /deploy]
     schedule: { interval: monthly }
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+    groups:
+      actions:
+        patterns: ["*"]
