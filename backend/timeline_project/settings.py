@@ -167,7 +167,7 @@ SPECTACULAR_SETTINGS = {
                    'Authenticate via JWT (POST /api/auth/token/), then send '
                    'Authorization: Bearer <access>. All project data is scoped to '
                    'projects you are a member of.',
-    'VERSION': '1.1.0',
+    'VERSION': '1.2.0',
     'SERVE_INCLUDE_SCHEMA': False,        # don't expose the raw schema in the UIs
     'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
     'SWAGGER_UI_SETTINGS': {'persistAuthorization': True},

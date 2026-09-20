@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-20
+
 ### Added
 - **Lessons learned.** A template said "worked in 9 of 11 closed-out runs" and nothing about the
   other two. Now what people type when they close out a project appears on the template's page,
@@ -26,6 +28,12 @@ and versions follow [Semantic Versioning](https://semver.org/).
   comment", are gone: a typed lesson goes to Lessons learned, and the dialog says so. Lessons sent
   or posted before stay where they are, and nothing earlier is published. The API ignores
   `lesson_to_owner` and `post_as_comment` from older clients instead of refusing them.
+- README: a shorter first line, the meaning of the name up front, and shorter cost and sharing
+  bullets that link to the user guide.
+
+### Upgrading
+- One migration, `projects/0013_lessons_learned`, which only adds columns and a table. It runs by
+  itself when the backend container starts. No settings change.
 
 ## [1.1.0] - 2026-09-20
 
@@ -130,5 +138,6 @@ The first tagged release. Everything below is in it.
   platforms like Railway.
 - Django 6.1, React 19, Vite 8, PostgreSQL 15+. Dependabot, secret scanning and CI are enabled.
 
+[1.2.0]: https://github.com/vakahnke/seedcorn/releases/tag/v1.2.0
 [1.1.0]: https://github.com/vakahnke/seedcorn/releases/tag/v1.1.0
 [1.0.0]: https://github.com/vakahnke/seedcorn/releases/tag/v1.0.0
