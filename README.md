@@ -408,9 +408,10 @@ are the easiest way in, and one of them needs no coding at all. Questions and id
 Some directions that would be good contributions, roughly in order of effort:
 
 - A signed-in "change password" screen: [design](docs/design/password-reset.md) (reset by email is built)
-- Template library, phases 2 and 3: export and import a template as a file, versions with a
-  "what I learned" note, and a community gallery: [design](docs/design/template-library.md)
-  (the library inside one server is built)
+- Template library, phase 2: hand a template to anyone as a file or a link, versions with a
+  "what I learned" note, and author pages: [design](docs/design/template-library-phase2.md)
+- Template library, phase 3: a community gallery reviewed through pull requests:
+  [design](docs/design/template-library.md) (the library inside one server is built)
 - A subscribable calendar feed, so calendars stay current without exporting again:
   [design](docs/design/icalendar-export.md) (the one-off `.ics` export is built)
 - Import from Microsoft Project XML:

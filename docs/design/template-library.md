@@ -216,7 +216,9 @@ created. Imported templates start **private**.
 - **Phase 1 — the instance library.** Visibility (private / teams / instance), the publish review
   step, the Library page with preview, search, tags and sorting, votes, comments, forking, and
   provenance on new projects. *The track record appears as soon as projects start from templates.*
-- **Phase 2 — files and links.** Export, import (file and URL) with the hostile-file checks,
+- **Phase 2 — files and links** (now designed in detail in
+  [template-library-phase2.md](template-library-phase2.md), which replaces the server-side URL
+  fetch below with a fetch by the browser). Export, import (file and URL) with the hostile-file checks,
   versions with "what I learned" notes, optional public preview pages.
 - **Phase 3 — the community gallery.** The folder and Action in the repository, the Community tab,
   one-click import, the submit flow.
