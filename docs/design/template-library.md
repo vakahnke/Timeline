@@ -188,6 +188,9 @@ created. Imported templates start **private**.
 - The app reads `index.json` over HTTPS (cached for a day), shows those templates under a
   **Community** tab, and imports one with a click. Operators can switch it off
   (`COMMUNITY_TEMPLATES=0`); air-gapped instances lose nothing else.
+- **The index address is a setting** (`TEMPLATE_REGISTRY_URL`, a list), not a constant. An
+  organisation can point its instances at its own private index of house playbooks, and the
+  file format is versioned and documented so anyone can publish one.
 - Community votes and discussion live on GitHub (a Discussions thread per template; 👍 reactions
   are counted into `index.json` by the same Action), so instances never need a GitHub token. The
   track record stays local: an instance only knows its own runs.
