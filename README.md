@@ -1,27 +1,32 @@
 # Seedcorn
 
-> **Formerly "Timeline".** Same project, same license, same code; the old links redirect here.
-> *Seedcorn* is the grain a farmer keeps back from this harvest to plant the next one. That is what
-> a plan that worked is.
-
 [![CI](https://github.com/vakahnke/seedcorn/actions/workflows/ci.yml/badge.svg)](https://github.com/vakahnke/seedcorn/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/vakahnke/seedcorn?color=8b93ff)](https://github.com/vakahnke/seedcorn/releases)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://demo.seedcorn.io)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED.svg)](#run-it-yourself-in-two-minutes)
 
-**Plan it. Try the plan. Adjust the plan as you go and share the successful result.**
+**Plan it. Run it. Adjust as you go. Share the plan that worked.**
+
+*Seedcorn* is the grain a farmer keeps back from this harvest to plant the next one.
+That is what a plan that worked is.
+
+*Formerly "Timeline": same project, same license, same code; the old links redirect here.*
 
 Seedcorn is a self-hosted project planner for the person who has to get something
 big done, often for the first time: a product launch, a fundraise, an office move,
-a hiring push, a first marathon. You work out the steps and put them on a timeline you
-can actually grab. Then you run the project from it, and the plan changes as you learn:
-you move dates, add what you missed, and drop what turned out not to matter. A plan that
-changes is a plan that is being used. When the work is done, what you have is the plan
-that actually got you there. Save it as a template and share it with your team, and the
-next launch, the next round, or the next person starts from a route that is known to work
-instead of a blank page. A shared plan carries its track record: how many projects ran
-it, how they finished, and what they cost.
+a hiring push, a first marathon.
+
+You work out the steps and put them on a timeline you can actually grab. Then you run
+the project from it, and the plan changes as you learn: you move dates, add what you
+missed, and drop what turned out not to matter. A plan that changes is a plan that is
+being used.
+
+When the work is done, what you have is the plan that actually got you there. Save it
+as a template and share it with your team, and the next launch, the next round, or the
+next person starts from a route that is known to work instead of a blank page. A shared
+plan carries its track record: how many projects ran it, how they finished, and what
+they cost.
 
 The timeline is drawn on canvas, so dragging, zooming, dependency arrows and the
 critical path stay smooth with hundreds of events on screen, including on a phone.
