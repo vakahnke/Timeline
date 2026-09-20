@@ -15,6 +15,14 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Sharing a template is a review step: you see every note and to-do title that would be shared,
   anything that looks like an email address, phone number or link is pointed out, and you can
   leave out notes or to-dos or share without your name.
+- **Closing out a project.** When the last event in a project that came from a template reaches
+  100%, its owner is offered three optional questions: how the plan worked (it worked, it worked
+  with changes, it did not work, we stopped early), what it cost in money and/or person-days, and
+  what to change next time. "Not now" is remembered, and **Close out…** is always in the gear menu.
+  A template then shows "worked in 9 of 11 closed-out runs" and "typically costs about $14,000",
+  under stricter rules than the time figure: a middle figure only, never a lowest or highest, three
+  figures in one currency before anything appears, rounded, never converted, and a per-run switch
+  to keep the numbers out. `DEFAULT_CURRENCY` sets the currency offered first.
 - `TEMPLATE_LIBRARY` (`instance`, `teams` or `off`) lets an operator cap how far templates can be
   shared. Flagged templates and comments appear in the Django admin.
 

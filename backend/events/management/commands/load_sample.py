@@ -83,8 +83,14 @@ LIBRARY_COMMENTS = [
                'starting it the day after kickoff was the fix.'),
     ('viewer', 'Worth adding a security questionnaire step for larger customers. It cost us a week once.'),
 ]
-# Finished runs behind its track record: each run's real length as a multiple of the plan.
-LIBRARY_RUNS = [1.0, 1.04, 1.1, 1.22]
+# Finished runs behind its track record: each run's real length as a multiple of the plan, and
+# how its owner closed it out (outcome, cost in USD, person-days).
+LIBRARY_RUNS = [
+    (1.0,  'worked',              11500, 38),
+    (1.04, 'worked',              13200, 44),
+    (1.1,  'worked_with_changes', 14600, 47),
+    (1.22, 'worked_with_changes', 19800, 61),
+]
 
 # Multi-week projects instantiated from built-in templates, anchored relative to
 # today (in weeks) so some work is done, some is in flight, and some is upcoming.
@@ -274,7 +280,7 @@ class Command(BaseCommand):
         """One shared template with votes, comments and a track record, so the template library
         has something in it besides the built-ins. The finished runs behind the track record belong
         to an account nobody can sign in to, which keeps them off the demo users' dashboards."""
-        from projects.models import ProjectTemplate, TemplateComment, TemplateVote
+        from projects.models import ProjectTemplate, RunCloseout, TemplateComment, TemplateVote
 
         author = users['editor']
         if ProjectTemplate.objects.filter(owner=author, name=LIBRARY_TEMPLATE['name']).exists():
@@ -294,7 +300,7 @@ class Command(BaseCommand):
         runner.save()
         spec = {'categories': tpl.categories, 'tasks': tpl.tasks}
         now = timezone.now()
-        for n, stretch in enumerate(LIBRARY_RUNS):
+        for n, (stretch, outcome, cost, days) in enumerate(LIBRARY_RUNS):
             start = now - timedelta(days=60 + 45 * n)
             project = create_project_from_spec(
                 spec, name=f'{tpl.name} (run {n + 1})', description='', start=start, owner=runner,
@@ -304,6 +310,8 @@ class Command(BaseCommand):
                 ev.end = start + (ev.end - start) * stretch
                 ev.percent_complete = 100
                 ev.save(update_fields=['start', 'end', 'percent_complete'])
+            RunCloseout.objects.create(project=project, outcome=outcome, cost_amount=cost,
+                                       cost_currency='USD', effort_person_days=days, closed_by=runner)
         self.stdout.write(self.style.SUCCESS(
             f'Seeded the template library: "{tpl.name}" shared by editor, {len(LIBRARY_RUNS)} finished runs.'))
 

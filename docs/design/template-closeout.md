@@ -1,6 +1,6 @@
 # Closing out a run: what it cost and how well it worked — Design Document
 
-**Status:** Draft
+**Status:** Phase A built (2026-09-20); phases B and C are still design
 **Last updated:** 2026-09-20
 **Scope:** A short, optional close-out when a project finishes, and what a template then shows from the close-outs of its runs. Touches the project model and API, the project page, and the template library's track record.
 
@@ -219,6 +219,21 @@ exactly the templates worth sharing: the ones made from a project that went well
 - **Later / maybe:** an expected cost on the template to compare against; the close-out as a
   final block on the status report; figures limited to recent years as prices drift.
 
+### 5.1 What phase A built
+
+As designed, with the proposals in section 7 taken as the answers: cost totals are visible to
+everyone who can see the template; money and effort are both offered; the four outcome answers as
+written; three figures minimum; owners only; the default currency is a server setting
+(`DEFAULT_CURRENCY`). Notes:
+
+- **Close out…** sits in the always-visible part of the gear menu on every screen size, because the
+  toolbar has no button for it and "Not now" must never be a dead end.
+- Members who are not owners can open a close-out read-only from the **Closed out** marker.
+- "Finished" in the track record now means every event is at 100% **or** the run was closed out
+  with any answer but "stopped"; "stopped" is its own count.
+- The lesson is stored with the project and goes nowhere else yet. Reaching the template's owner,
+  the post-as-comment option and the original run counting (3.5) are phase B.
+
 ## 6. Cost & risk
 
 - **Effort:** Phase A **M** (one model, one endpoint, a banner, a dialog, aggregate code and its
@@ -242,11 +257,11 @@ exactly the templates worth sharing: the ones made from a project that went well
 
 ## 7. Open questions / decisions needed
 
-- [ ] **Who may see a template's cost totals:** everyone who can see the template (proposed), or
+- [x] **Who may see a template's cost totals:** everyone who can see the template (proposed), or
       only its owner, or the owner's choice per template?
-- [ ] **Money, effort, or both?** Proposed both, each optional.
-- [ ] **The four outcome answers:** are these the right words?
-- [ ] **Minimum before showing:** three, as for time (proposed), or five for cost?
-- [ ] **Should the original project count as the template's first run** (3.5)? Proposed yes.
-- [ ] **Should non-owners who are editors be able to close out?** Proposed no: owners only.
-- [ ] **Default currency:** a server setting (proposed), or per user?
+- [x] **Money, effort, or both?** Proposed both, each optional.
+- [x] **The four outcome answers:** are these the right words?
+- [x] **Minimum before showing:** three, as for time (proposed), or five for cost?
+- [x] **Should the original project count as the template's first run** (3.5)? Proposed yes.
+- [x] **Should non-owners who are editors be able to close out?** Proposed no: owners only.
+- [x] **Default currency:** a server setting (proposed), or per user?

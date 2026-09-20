@@ -58,6 +58,7 @@ Defined in `.env` and injected into the containers.
 | `DJANGO_SECURE_SSL_REDIRECT` | backend | prod, behind TLS |
 | `RUN_COLLECTSTATIC` | backend | `0` dev, `1` prod (entrypoint runs `collectstatic`) |
 | `REQUIRE_ACCOUNT_APPROVAL` | backend | `1` (default): new sign-ups inactive until approved; `0` to disable |
+| `DEFAULT_CURRENCY` | backend | Three-letter currency offered first when a project is closed out (default `USD`). Figures are never converted |
 | `TEMPLATE_LIBRARY` | backend | How far a saved template may be shared: `instance` (default; teams or everyone signed in), `teams`, or `off` (templates stay private) |
 | `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | backend | Gmail account + App Password. Empty ⇒ console backend (dev) |
 | `EMAIL_HOST` / `EMAIL_PORT` / `EMAIL_USE_TLS` | backend | SMTP server (default `smtp.gmail.com` / `587` / on) |

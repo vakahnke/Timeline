@@ -18,7 +18,7 @@ function fmtDuration(ms) {
   return parts.join(' ') || '0m'
 }
 
-export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onStatusReport, onExport, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, onResetSettings, projectStart, projectEnd, onEditStart }) {
+export default function Toolbar({ projectName, onBack, canEdit = true, isOwner = false, view = 'timeline', onViewChange, onUndo, onRedo, canUndo = false, canRedo = false, onOpenMembers, onManageWorkloads, onStatusReport, onExport, onCloseout, closedOut = false, onSaveTemplate, pxPerHour, onZoomIn, onZoomOut, onFit, onViewPeriod, onNew, onNewCategory, settings, onSettingsChange, onResetSettings, projectStart, projectEnd, onEditStart }) {
   const [showSettings, setShowSettings] = useState(false)
   const popoverRef = useRef(null)
   const gearRef    = useRef(null)
@@ -45,6 +45,9 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
       <button className="btn-back" onClick={onBack} title="Back to projects">←</button>
       <h1>{projectName || 'Timeline'}</h1>
       {!canEdit && <span className="ro-badge" title="You have view-only access">View only</span>}
+      {closedOut && (
+        <button className="closed-badge" onClick={onCloseout} title="This project has been closed out. Open to see the answers.">Closed out</button>
+      )}
       {/* Phones: forces a line break so row 1 = back/title/undo/gear, row 2 = views/zoom/new. */}
       <div className="tb-break" aria-hidden="true" />
       <div className="view-toggle" role="group" aria-label="View mode">
@@ -170,6 +173,16 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
                 title={`Auto-pan speed when dragging an event to the edge: ${settings.autoPanSpeed ?? 64} px/frame`}
               />
             </div>
+
+            {/* Always here, on every screen: the toolbar has no button for it. Owners close a run out
+                (also one that stopped early); anyone can read a close-out once there is one. */}
+            {(isOwner || closedOut) && (
+              <>
+                <div className="settings-title">When it is over</div>
+                <button className="settings-action" onClick={() => { onCloseout?.(); setShowSettings(false) }}
+                        title="What it cost and how the plan worked">{closedOut ? 'Close-out…' : 'Close out…'}</button>
+              </>
+            )}
 
             {/* On phones the toolbar hides these (tb-collapsible); surface them here instead. */}
             <div className="settings-mobile">

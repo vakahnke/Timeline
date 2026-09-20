@@ -122,6 +122,13 @@ export const api = {
     create: (d)   => req(url.projects(), { method: 'POST', body: body(d) }),
     update: (id, d) => req(url.project(id), { method: 'PATCH', body: body(d) }),
     remove: (id)  => req(url.project(id), { method: 'DELETE' }),
+    // What the run cost and how the plan worked. `get` resolves to null when there is none yet.
+    closeout: {
+      get:     (id)    => req(`/projects/${id}/closeout/`),
+      save:    (id, d) => req(`/projects/${id}/closeout/`, { method: 'PUT', body: body(d) }),
+      remove:  (id)    => req(`/projects/${id}/closeout/`, { method: 'DELETE' }),
+      dismiss: (id)    => req(`/projects/${id}/closeout/dismiss/`, { method: 'POST' }),
+    },
     // File exports: each resolves to { blob, filename }.
     exportCalendar:  (id, only = 'all') => req(`/projects/${id}/calendar.ics${only === 'milestones' ? '?only=milestones' : ''}`, { blob: true }),
     exportMsProject: (id, tz)           => req(`/projects/${id}/export/msproject.xml${tz ? `?timezone=${encodeURIComponent(tz)}` : ''}`, { blob: true }),

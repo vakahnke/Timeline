@@ -5,7 +5,7 @@ import { useToast } from '../ui/ToastProvider'
 import TemplateModal from '../components/TemplateModal'
 import PublishModal from '../components/library/PublishModal'
 import TemplatePreview from '../components/library/TemplatePreview'
-import { GROUPS, VISIBILITY_LABEL, ratioText, spanText } from '../components/library/libraryModel'
+import { GROUPS, VISIBILITY_LABEL, moneyText, outcomeText, ratioText, spanText } from '../components/library/libraryModel'
 import { LibraryHeader } from './TemplateLibraryPage'
 import '../library.css'
 
@@ -17,6 +17,9 @@ function TrackRecord({ rec }) {
   }
   const ratio = ratioText(rec.typical_ratio)
   const need = rec.min_finished_runs - rec.finished
+  const outcome = outcomeText(rec)
+  const money = moneyText(rec.cost)
+  const o = rec.outcomes
   return (
     <>
       <dl className="lib-record">
@@ -24,13 +27,28 @@ function TrackRecord({ rec }) {
         <div><dt>Finished</dt><dd>{rec.finished}</dd></div>
         <div><dt>In flight</dt><dd>{rec.in_flight}</dd></div>
         <div><dt>Stalled</dt><dd>{rec.abandoned}</dd></div>
+        {rec.stopped > 0 && <div><dt>Stopped</dt><dd>{rec.stopped}</dd></div>}
       </dl>
       <p className={ratio ? 'lib-record-ratio' : 'dim'}>
         {ratio
           ? `Against the plan, it ${ratio}.`
           : `How it runs against the plan appears after ${rec.min_finished_runs} finished runs (${need} to go).`}
       </p>
-      <p className="dim lib-note">Totals only. It never shows which projects, or whose.</p>
+      {outcome && (
+        <p className="lib-record-line">The plan {outcome}.
+          <span className="dim"> {o.worked} as it is · {o.worked_with_changes} with changes · {o.did_not_work} did not work · {o.stopped} stopped early</span></p>
+      )}
+      {(money || rec.effort) && (
+        <p className="lib-record-line">It typically costs
+          {money && <> about <strong>{money}</strong> <span className="dim">(middle of {rec.cost.runs} runs)</span></>}
+          {money && rec.effort && ' and'}
+          {rec.effort && <> about <strong>{rec.effort.median_days.toLocaleString()} person-days</strong> <span className="dim">(middle of {rec.effort.runs} runs)</span></>}.
+        </p>
+      )}
+      {rec.closed > 0 && !outcome && !money && !rec.effort && (
+        <p className="dim">{rec.closed} run{rec.closed === 1 ? ' has' : 's have'} been closed out. How the plan worked and what it costs appear after three.</p>
+      )}
+      <p className="dim lib-note">Totals only. It never shows which projects, or whose, and never a lowest or highest figure.</p>
     </>
   )
 }

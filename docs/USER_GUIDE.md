@@ -200,9 +200,33 @@ Open a template to see its page:
   totals only: the page never shows which projects, or whose. If a project is confidential, its
   owner can open **Edit project** on the dashboard and untick **Count this project in its
   template's track record**.
+- **How the plan worked and what it costs** appear once three runs have been closed out (see
+  [Closing out a project](#closing-out-a-project)): "worked in 9 of 11 closed-out runs" and
+  "typically costs about $14,000". The cost is a middle figure, rounded, from at least three runs in
+  the same currency. No lowest, highest or single run's figure is ever shown, and currencies are
+  never converted or mixed.
 - **Vote and comment.** One upvote per person, which you can take back. Comments show your
   username. You can delete your own comments; the template's owner and admins can delete any.
   **Report** flags a template or a comment for an admin.
+
+#### Closing out a project
+
+When the last event in a project that was started from a template reaches 100%, its **owner** sees
+a quiet offer at the top of the project: *This project is finished. Close it out.* It asks three
+things about the **plan**, all optional, and you can change the answers later:
+
+1. **How did the plan work?** It worked · It worked, with changes · It did not work · We stopped early.
+2. **What did it cost?** Money (with a currency), person-days of effort, either, both or neither. A
+   rough figure is better than none. **Include my numbers in the template's totals** is ticked by
+   default; untick it to keep the figures on this project only.
+3. **What would you change next time?** A sentence or two, kept with the project.
+
+**Not now** is remembered and the offer does not come back. You can always reach it from the gear
+menu, **Close out…**, which is also how you record a project that stopped early, or close out a
+project that did not come from a template. A closed-out project shows a **Closed out** marker by its
+name; members can open it to read the answers, and only owners can change or remove them. Closing
+out settles the run in its template's track record: it counts as finished (or stopped), not as in
+flight, even if some events never reached 100%.
 
 **Sharing one of yours.** On your template's page choose **Edit details or share…**. Give it a
 one-line summary, a shelf and tags, then choose who can see it: only you, teams you choose (any

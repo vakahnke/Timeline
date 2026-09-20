@@ -3,8 +3,6 @@
 .lib-sub { margin-top: 4px; font-size: 12px; max-width: 60ch; }
 .lib-note { font-size: 11px; margin-top: 6px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.link-btn { background: none; border: 0; padding: 0; color: var(--text-dim); cursor: pointer; font-size: 11px; text-decoration: underline; }
-.link-btn:hover { color: var(--text-bright); }
 
 /* ── Controls ─────────────────────────────────────────────────────────────── */
 .lib-controls { display: flex; gap: 10px; margin-bottom: 10px; }
@@ -88,10 +86,12 @@
 .lib-desc { font-size: 13px; line-height: 1.65; white-space: pre-wrap; max-width: 68ch; }
 .lib-manage { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 16px; border-top: 1px solid var(--border); }
 
-.lib-record { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.lib-record { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 8px; margin-bottom: 10px; }
 .lib-record dt { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
 .lib-record dd { font-size: 22px; color: var(--text-bright); font-variant-numeric: tabular-nums; font-weight: 600; }
 .lib-record-ratio { font-size: 13px; color: var(--success); }
+.lib-record-line { font-size: 13px; color: var(--text-bright); margin-top: 6px; }
+.lib-record-line .dim { font-size: 11.5px; }
 
 /* The plan drawing */
 .tl-preview {

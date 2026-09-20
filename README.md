@@ -67,6 +67,12 @@ people find it.
   finished, and, once three have finished, how they ran against the plan:
   "typically runs 7% long". Totals only; it never shows which projects or whose,
   and an owner can keep a confidential project out of it.
+- **What it cost and whether it worked.** When a project that came from a template is
+  finished, its owner can close it out in a minute: how the plan worked, what it cost in
+  money or person-days, and what to change. The template then says "worked in 9 of 11
+  closed-out runs" and "typically costs about $14,000". Cost is handled more carefully
+  than dates: a middle figure only, never a lowest or highest, nothing until three runs
+  in the same currency have answered, rounded, and any run can keep its numbers out.
 - **Vote and comment.** One upvote each, and a comment thread for what worked and
   what to change. The built-in plans take votes and comments too.
 - **Make your own copy** of any template to adapt, and it remembers where it came from.
@@ -400,8 +406,9 @@ are the easiest way in, and one of them needs no coding at all. Questions and id
 Some directions that would be good contributions, roughly in order of effort:
 
 - A signed-in "change password" screen: [design](docs/design/password-reset.md) (reset by email is built)
-- Closing out a finished project, so a template learns what its runs cost and how well the plan
-  worked, not only how long they took: [design](docs/design/template-closeout.md)
+- Close-out, next steps: the project a template was saved from counts as its first run, and
+  lessons reach the template's owner: [design](docs/design/template-closeout.md) (the close-out
+  itself is built)
 - Template library, phases 2 and 3: export and import a template as a file, versions with a
   "what I learned" note, and a community gallery: [design](docs/design/template-library.md)
   (the library inside one server is built)

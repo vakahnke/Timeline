@@ -13,6 +13,7 @@ import CategoryModal from '../components/CategoryModal'
 import MembersPanel from '../components/MembersPanel'
 import WorkloadModal from '../components/WorkloadModal'
 import ProjectStartModal from '../components/ProjectStartModal'
+import CloseoutModal from '../components/CloseoutModal'
 import ExportModal from '../components/ExportModal'
 import Board from '../components/Board'
 
@@ -97,6 +98,7 @@ export default function ProjectTimeline() {
   const { user } = useAuth()
 
   const [project,        setProject]      = useState(null)
+  const [showCloseout,   setShowCloseout] = useState(false)
   const [members,        setMembers]      = useState([])
   const [events,         setEvents]       = useState([])
   const [apiCategories,  setApiCategories]= useState([])
@@ -578,6 +580,17 @@ export default function ProjectTimeline() {
   const projectStart = events.length ? Math.min(...events.map(e => new Date(e.start).getTime())) : null
   const projectEnd   = events.length ? Math.max(...events.map(e => new Date(e.end).getTime()))   : null
 
+  // Offer the close-out once, quietly, when a run that came from a template is completely done.
+  // The server says whether it was already answered or waved away; "done" is read from the events
+  // on screen so the offer appears the moment the last one reaches 100%.
+  const allDone = events.length > 0 && events.every(e => (e.percent_complete ?? 0) >= 100)
+  const offerCloseout = isOwner && !!project?.source_template_key && allDone
+    && ['none', 'offered'].includes(project?.closeout_state)
+  const dismissCloseout = async () => {
+    setProject(p => ({ ...p, closeout_state: 'dismissed' }))
+    try { await api.projects.closeout.dismiss(projectId) } catch { /* it will simply be offered again */ }
+  }
+
   return (
     <div className="app">
       <Toolbar
@@ -596,6 +609,8 @@ export default function ProjectTimeline() {
         onManageWorkloads={() => setShowWorkloads(true)}
         onSaveTemplate={saveAsTemplate}
         onExport={() => setShowExport(true)}
+        onCloseout={() => setShowCloseout(true)}
+        closedOut={project?.closeout_state === 'closed'}
         pxPerHour={pxPerHour}
         onZoomIn={() => timelineRef.current?.zoomBy(1.6)}
         onZoomOut={() => timelineRef.current?.zoomBy(1 / 1.6)}
@@ -614,6 +629,15 @@ export default function ProjectTimeline() {
         projectEnd={projectEnd}
         onEditStart={() => setShowReschedule(true)}
       />
+      {offerCloseout && (
+        <div className="closeout-banner" role="status">
+          <span><strong>This project is finished.</strong> Close it out: what it cost and how the plan worked. It takes a minute and helps the next run.</span>
+          <span className="closeout-banner-actions">
+            <button className="btn-primary" onClick={() => setShowCloseout(true)}>Close it out</button>
+            <button onClick={dismissCloseout}>Not now</button>
+          </span>
+        </div>
+      )}
       {view === 'board' ? (
         <Board
           projectId={projectId}
@@ -707,6 +731,11 @@ export default function ProjectTimeline() {
           canEdit={canEdit}
           onClose={() => setShowWorkloads(false)}
         />
+      )}
+      {showCloseout && project && (
+        <CloseoutModal project={project} canEdit={isOwner} onClose={() => setShowCloseout(false)}
+                       onSaved={() => { setShowCloseout(false); setProject(p => ({ ...p, closeout_state: 'closed' })); flash('Closed out. Thank you.', 'saved') }}
+                       onRemoved={() => { setShowCloseout(false); setProject(p => ({ ...p, closeout_state: 'none' })); flash('Close-out removed', 'saved') }} />
       )}
       {showExport && <ExportModal projectId={projectId} events={events} onClose={() => setShowExport(false)} />}
       {showReschedule && projectStart != null && (

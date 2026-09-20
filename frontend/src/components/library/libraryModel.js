@@ -32,12 +32,30 @@ export function ratioText(ratio) {
   return `typically runs ${Math.abs(pct)}% ${pct > 0 ? 'long' : 'short'}`
 }
 
+// "worked in 9 of 11 closed-out runs". Both "worked" answers count as worked. Null below the minimum.
+export function outcomeText(rec) {
+  const o = rec?.outcomes
+  if (!o) return null
+  const answered = o.worked + o.worked_with_changes + o.did_not_work + o.stopped
+  return `worked in ${o.worked + o.worked_with_changes} of ${answered} closed-out runs`
+}
+
+// "about $14,000" in the currency the figures were given in. No conversion, ever.
+export function moneyText(cost) {
+  if (!cost) return null
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: cost.currency, maximumFractionDigits: 0 }).format(cost.median)
+  } catch { return `${cost.median.toLocaleString()} ${cost.currency}` }
+}
+
 // One line for a card. Says nothing at all until somebody has used the plan.
 export function recordLine(rec) {
   if (!rec || !rec.started) return null
   const parts = [`Started ${rec.started}`, `finished ${rec.finished}`]
   const ratio = ratioText(rec.typical_ratio)
   if (ratio) parts.push(ratio)
+  const o = rec.outcomes
+  if (o) parts.push(`worked ${o.worked + o.worked_with_changes} of ${o.worked + o.worked_with_changes + o.did_not_work + o.stopped}`)
   return parts.join(' · ')
 }
 

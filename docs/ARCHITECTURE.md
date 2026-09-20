@@ -211,6 +211,15 @@ before that rule existed. `backend/projects/tests_template_reuse.py` holds this 
   100%, *stalled* when it is unfinished and its last date is more than 60 days past, otherwise *in
   flight*. `typical_ratio` is the median of actual length over planned length across finished runs
   and stays null below three of them. Aggregates only; `Project.count_in_track_record` opts a run out.
+- **Close-out** (`RunCloseout`, one per project; `docs/design/template-closeout.md`): outcome, cost
+  amount and currency, person-days, a lesson, and `share_figures`. `GET|PUT|DELETE
+  /api/projects/<id>/closeout/` (read: members; write: owners, from `get_role`) and
+  `…/closeout/dismiss/`. `ProjectSerializer.closeout_state` is `none | offered | dismissed | closed`;
+  `offered` means it came from a template and every event is at 100%. `library.track_records` adds
+  `stopped`, `closed`, `outcomes`, `cost` and `effort`, each null below `MIN_CLOSEOUTS` (3). Cost is a
+  median only, in the most common currency, never converted, rounded by `round_sig` to two figures;
+  no minimum, maximum or mean is computed at all. Lessons never leave the project.
+  `backend/projects/tests_closeout.py` holds these rules; `check-closeout.mjs` walks the UI.
 - The frontend is `pages/TemplateLibraryPage.jsx`, `pages/TemplatePage.jsx` and
   `components/library/` (`TemplatePreview.jsx` draws the plan as SVG on relative time;
   `PublishModal.jsx` is the review step). `backend/projects/tests_template_library.py` holds the

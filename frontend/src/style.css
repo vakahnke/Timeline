@@ -1445,6 +1445,37 @@ fieldset.modal-body:disabled { opacity: 1; }
 
 .modal-wide { width: 560px; }
 
+.link-btn { background: none; border: 0; padding: 0; color: var(--text-dim); cursor: pointer; font-size: 11px; text-decoration: underline; }
+.link-btn:hover { color: var(--text-bright); }
+
+/* ── Close-out ────────────────────────────────────────────────────────────── */
+.closeout-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  padding: 8px 16px; background: rgba(52,211,153,0.08); border-bottom: 1px solid rgba(52,211,153,0.25);
+  color: var(--text-bright); font-size: 12.5px; line-height: 1.45; flex-shrink: 0; user-select: text;
+}
+.closeout-banner strong { color: var(--success); font-weight: 600; }
+.closeout-banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.closed-badge {
+  font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;
+  color: var(--success); background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3);
+  border-radius: 999px; padding: 2px 8px;
+}
+.closeout .modal-body { max-height: min(74vh, 700px); overflow-y: auto; }
+.closeout-intro { font-size: 12px; }
+.closeout-set { border: 1px solid var(--border-mid); border-radius: 8px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.closeout-set legend { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); padding: 0 4px; }
+.closeout-choice { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text-bright); cursor: pointer; line-height: 1.45; }
+.closeout-choice input { accent-color: var(--accent); margin-top: 3px; flex-shrink: 0; }
+.closeout-choice strong { font-weight: 600; }
+.closeout-cost { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 10px; }
+.closeout-money { display: flex; gap: 6px; }
+.closeout-money input { flex: 1; min-width: 0; }
+.closeout-money select { width: 78px; flex-shrink: 0; }
+.closeout-note { font-size: 11px; }
+.closeout-remove { margin-right: auto; }
+@media (max-width: 560px) { .closeout-cost { grid-template-columns: 1fr; } }
+
 .check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--text-bright); cursor: pointer; line-height: 1.45; }
 .check-row input { accent-color: var(--accent); margin-top: 2px; flex-shrink: 0; }
 .label-hint { text-transform: none; font-weight: 400; letter-spacing: 0; color: var(--text-dimmer); }
