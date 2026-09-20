@@ -99,6 +99,7 @@ export default function ProjectTimeline() {
 
   const [project,        setProject]      = useState(null)
   const [showCloseout,   setShowCloseout] = useState(false)
+  const [closeoutIntro,  setCloseoutIntro] = useState(null)
   const [members,        setMembers]      = useState([])
   const [events,         setEvents]       = useState([])
   const [apiCategories,  setApiCategories]= useState([])
@@ -527,10 +528,17 @@ export default function ProjectTimeline() {
     try {
       await api.templates.save({ project: Number(projectId), name: tplName.trim() })
       flash('Template saved. It is private to you; share it from Templates.', 'saved')
+      // This project is now the template's first run. If it is finished and its owner has not
+      // said how it went, this is the moment to ask: the template then starts with real numbers.
+      const done = eventsRef.current.length > 0 && eventsRef.current.every(e => (e.percent_complete ?? 0) >= 100)
+      if (role === 'owner' && done && project?.closeout_state !== 'closed') {
+        setCloseoutIntro('This project is the new template\'s first run, so what it cost and how the plan worked become the template\'s first numbers.')
+        setShowCloseout(true)
+      }
     } catch (err) {
       flash('Error: ' + err.message, 'error')
     }
-  }, [projectId, project, flash])
+  }, [projectId, project, flash, role])
 
   // Successors are stored as the OTHER event's depends_on, so after saving this event we
   // add/remove its id on each successor. Recorded as one group step so it undoes cleanly.
@@ -733,7 +741,8 @@ export default function ProjectTimeline() {
         />
       )}
       {showCloseout && project && (
-        <CloseoutModal project={project} canEdit={isOwner} onClose={() => setShowCloseout(false)}
+        <CloseoutModal project={project} canEdit={isOwner} intro={closeoutIntro}
+                       onClose={() => { setShowCloseout(false); setCloseoutIntro(null) }}
                        onSaved={() => { setShowCloseout(false); setProject(p => ({ ...p, closeout_state: 'closed' })); flash('Closed out. Thank you.', 'saved') }}
                        onRemoved={() => { setShowCloseout(false); setProject(p => ({ ...p, closeout_state: 'none' })); flash('Close-out removed', 'saved') }} />
       )}

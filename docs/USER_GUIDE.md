@@ -219,7 +219,11 @@ things about the **plan**, all optional, and you can change the answers later:
 2. **What did it cost?** Money (with a currency), person-days of effort, either, both or neither. A
    rough figure is better than none. **Include my numbers in the template's totals** is ticked by
    default; untick it to keep the figures on this project only.
-3. **What would you change next time?** A sentence or two, kept with the project.
+3. **What would you change next time?** A sentence or two. Two tick boxes decide where it goes:
+   **Send this to the template's owner** (on by default; they see the text and the date, never
+   which project it came from, unless they are on that project anyway) and **Also post it as a
+   comment** on the template, under your username (off by default, and posted once). With both
+   off it stays with the project. For a built-in template there is no owner to send it to.
 
 **Not now** is remembered and the offer does not come back. You can always reach it from the gear
 menu, **Close out…**, which is also how you record a project that stopped early, or close out a
@@ -227,6 +231,14 @@ project that did not come from a template. A closed-out project shows a **Closed
 name; members can open it to read the answers, and only owners can change or remove them. Closing
 out settles the run in its template's track record: it counts as finished (or stopped), not as in
 flight, even if some events never reached 100%.
+
+**The first run.** A template remembers the project it was saved from, and that project counts as
+the plan's first run in its track record. If you save a *finished* project as a template, you are
+asked to close it out there and then, so the template starts with real numbers. (That first run
+is left out of "typically runs N% long", because its length *is* the plan's length.)
+
+**Lessons from runs.** On a template you own, the page lists what people who ran the plan said they
+would change. Only you see this list.
 
 **Sharing one of yours.** On your template's page choose **Edit details or share…**. Give it a
 one-line summary, a shelf and tags, then choose who can see it: only you, teams you choose (any

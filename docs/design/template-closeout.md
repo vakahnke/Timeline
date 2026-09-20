@@ -1,6 +1,6 @@
 # Closing out a run: what it cost and how well it worked — Design Document
 
-**Status:** Phase A built (2026-09-20); phases B and C are still design
+**Status:** Phases A and B built (2026-09-20); phase C waits for library phase 2
 **Last updated:** 2026-09-20
 **Scope:** A short, optional close-out when a project finishes, and what a template then shows from the close-outs of its runs. Touches the project model and API, the project page, and the template library's track record.
 
@@ -233,6 +233,24 @@ written; three figures minimum; owners only; the default currency is a server se
   with any answer but "stopped"; "stopped" is its own count.
 - The lesson is stored with the project and goes nowhere else yet. Reaching the template's owner,
   the post-as-comment option and the original run counting (3.5) are phase B.
+
+### 5.2 What phase B built
+
+- **The original run counts** (3.5): `ProjectTemplate.origin_project`, set when a template is saved
+  from a project. It counts as started, as finished when done or closed out, and its close-out
+  counts toward outcome and cost. It is **left out of the plan-versus-actual ratio**, a point the
+  design above missed: its length is the plan's length, so it would always read "on plan" and drag
+  the figure toward it. Saving a finished project as a template opens the close-out dialog with a
+  line saying why. The origin is never exposed and never copied to a fork.
+- **Lessons reach the owner:** `GET /api/templates/<key>/lessons/`, the template's owner only (not
+  staff), text and date, the project named only if the owner is on it. The template page shows them
+  under "Lessons from runs · only you see these".
+- **Consent is per lesson.** Phase A's dialog said the lesson is "kept with this project", so the
+  migration marks every earlier close-out as not sent. From now on the dialog has two tick boxes:
+  send to the template's owner (on by default), and post as a comment (off by default, posted once,
+  under the closer's name, only on a template they can still see).
+- Built-in templates have no owner, so there a lesson can only stay with the project or be posted
+  as a comment.
 
 ## 6. Cost & risk
 

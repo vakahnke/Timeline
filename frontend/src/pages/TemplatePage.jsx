@@ -53,6 +53,29 @@ function TrackRecord({ rec }) {
   )
 }
 
+// For the template's owner: what people who ran the plan said they would change.
+function Lessons({ template }) {
+  const [rows, setRows] = useState(null)
+  useEffect(() => { api.templates.lessons(template.key).then(setRows).catch(() => setRows([])) }, [template.key])
+  if (!rows || rows.length === 0) return null
+  return (
+    <section className="lib-section">
+      <h2>Lessons from runs <span className="dim">· {rows.length} · only you see these</span></h2>
+      <ul className="lib-comments">
+        {rows.map((row, i) => (
+          <li key={i}>
+            <div className="lib-comment-head">
+              <span className="dim">{when(row.closed_at)}{row.project ? ` · ${row.project}` : ''}</span>
+            </div>
+            <p>{row.lesson}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="dim lib-note">Sent by people who closed out a project started from this plan. Projects you are not on are not named.</p>
+    </section>
+  )
+}
+
 function Comments({ template }) {
   const [rows, setRows] = useState(null)
   const [body, setBody] = useState('')
@@ -245,6 +268,7 @@ export default function TemplatePage() {
           {!t.is_mine && !t.official && <button className="link-btn" onClick={report}>Report</button>}
         </section>
 
+        {t.is_mine && <Lessons template={t} />}
         <Comments template={t} />
       </main>
 

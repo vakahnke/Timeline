@@ -73,6 +73,8 @@ people find it.
   closed-out runs" and "typically costs about $14,000". Cost is handled more carefully
   than dates: a middle figure only, never a lowest or highest, nothing until three runs
   in the same currency have answered, rounded, and any run can keep its numbers out.
+  The project a template was saved from counts as its first run, and "what I would
+  change" can go back to the template's owner, so the plan gets better each time.
 - **Vote and comment.** One upvote each, and a comment thread for what worked and
   what to change. The built-in plans take votes and comments too.
 - **Make your own copy** of any template to adapt, and it remembers where it came from.
@@ -406,9 +408,6 @@ are the easiest way in, and one of them needs no coding at all. Questions and id
 Some directions that would be good contributions, roughly in order of effort:
 
 - A signed-in "change password" screen: [design](docs/design/password-reset.md) (reset by email is built)
-- Close-out, next steps: the project a template was saved from counts as its first run, and
-  lessons reach the template's owner: [design](docs/design/template-closeout.md) (the close-out
-  itself is built)
 - Template library, phases 2 and 3: export and import a template as a file, versions with a
   "what I learned" note, and a community gallery: [design](docs/design/template-library.md)
   (the library inside one server is built)

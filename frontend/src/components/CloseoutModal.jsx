@@ -13,8 +13,10 @@ const OUTCOMES = [
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'INR', 'BRL', 'MXN']
 
 // Members who are not owners see the answers but cannot change them (the server decides too).
-export default function CloseoutModal({ project, canEdit = true, onSaved, onRemoved, onClose }) {
+// `intro` replaces the opening line (used right after saving the project as a template).
+export default function CloseoutModal({ project, canEdit = true, intro = null, onSaved, onRemoved, onClose }) {
   const fromTemplate = !!project.source_template_key
+  const template = project.source_template     // { key, name (null if no longer visible), has_owner }
   const [loading,  setLoading]  = useState(true)
   const [existing, setExisting] = useState(false)
   const [outcome,  setOutcome]  = useState('')
@@ -23,6 +25,9 @@ export default function CloseoutModal({ project, canEdit = true, onSaved, onRemo
   const [effort,   setEffort]   = useState('')
   const [lesson,   setLesson]   = useState('')
   const [share,    setShare]    = useState(true)
+  const [toOwner,  setToOwner]  = useState(true)
+  const [asComment, setAsComment] = useState(false)
+  const [posted,   setPosted]   = useState(false)
   const [busy,     setBusy]     = useState(false)
   const [error,    setError]    = useState('')
 
@@ -38,6 +43,8 @@ export default function CloseoutModal({ project, canEdit = true, onSaved, onRemo
         setEffort(c.effort_person_days == null ? '' : String(Number(c.effort_person_days)))
         setLesson(c.lesson || '')
         setShare(c.share_figures !== false)
+        setToOwner(c.lesson_to_owner !== false)
+        setPosted(!!c.posted_as_comment)
       }
     }).catch(() => { if (!cancelled) setError('Could not load the close-out.') })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -63,6 +70,7 @@ export default function CloseoutModal({ project, canEdit = true, onSaved, onRemo
       await api.projects.closeout.save(project.id, {
         outcome, cost_amount: cost, cost_currency: cost === null ? '' : currency,
         effort_person_days: days, lesson: lesson.trim(), share_figures: share,
+        lesson_to_owner: toOwner, post_as_comment: asComment && !posted,
       })
       onSaved()
     } catch (err) {
@@ -91,6 +99,7 @@ export default function CloseoutModal({ project, canEdit = true, onSaved, onRemo
           {loading ? <p className="dim">Loading…</p> : (
             <>
               <p className="dim closeout-intro">
+                {!canEdit ? null : intro ? `${intro} ` : ''}
                 {canEdit ? 'Three questions about the plan, all optional. You can change the answers later.'
                          : 'What this project\'s owner said about the run. Only an owner can change it.'}
               </p>
@@ -136,7 +145,27 @@ export default function CloseoutModal({ project, canEdit = true, onSaved, onRemo
               <div className="field">
                 <label htmlFor="co-lesson">What would you change next time?</label>
                 <textarea id="co-lesson" readOnly={!canEdit} value={lesson} onChange={e => setLesson(e.target.value)} maxLength={500}
-                          placeholder="One or two sentences. Kept with this project." />
+                          placeholder="One or two sentences." />
+              </div>
+              {/* Outside .field on purpose: its label and input styles are for text boxes. */}
+              <div className="closeout-lesson-opts">
+                {canEdit && template?.has_owner && (
+                  <label className="check-row">
+                    <input type="checkbox" checked={toOwner} onChange={e => setToOwner(e.target.checked)} />
+                    <span>Send this to the template's owner
+                      <span className="label-hint"> · so the plan can be improved. They see the text and the date, not which project it came from. Untick to keep it with this project.</span></span>
+                  </label>
+                )}
+                {canEdit && template?.name && (posted
+                  ? <p className="dim closeout-note">Posted as a comment on “{template.name}”.</p>
+                  : (
+                    <label className="check-row">
+                      <input type="checkbox" checked={asComment} onChange={e => setAsComment(e.target.checked)} />
+                      <span>Also post it as a comment on “{template.name}”
+                        <span className="label-hint"> · under your username, where everyone who can see the template can read it.</span></span>
+                    </label>
+                  ))}
+                {canEdit && !template?.has_owner && <p className="dim closeout-note">Kept with this project.</p>}
               </div>
             </>
           )}

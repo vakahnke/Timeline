@@ -192,6 +192,7 @@ export const api = {
     unpublish:   (key)    => req(url.templateDo(key, 'unpublish'), { method: 'POST' }),
     fork:        (key)    => req(url.templateDo(key, 'fork'), { method: 'POST' }),
     vote:        (key, on) => req(url.templateDo(key, 'vote'), { method: on ? 'POST' : 'DELETE' }),
+    lessons:     (key)    => req(url.templateDo(key, 'lessons')),
     report:      (key, d) => req(url.templateDo(key, 'report'), { method: 'POST', body: body(d) }),
     comments:       (key)         => req(url.templateDo(key, 'comments')),
     addComment:     (key, d)      => req(url.templateDo(key, 'comments'), { method: 'POST', body: body(d) }),

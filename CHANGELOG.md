@@ -23,6 +23,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
   under stricter rules than the time figure: a middle figure only, never a lowest or highest, three
   figures in one currency before anything appears, rounded, never converted, and a per-run switch
   to keep the numbers out. `DEFAULT_CURRENCY` sets the currency offered first.
+- **The project a template was saved from counts as its first run**, so a new template starts with
+  one real data point instead of none. Saving a finished project as a template offers its
+  close-out there and then. That first run never enters the plan-versus-actual figure, since its
+  length is the plan's length.
+- **Lessons reach the template's owner.** "What would you change next time?" can be sent to the
+  owner of the template the project came from (text and date only, never which project) and,
+  separately, posted as a comment under your own name. Both are your choice on each close-out.
 - `TEMPLATE_LIBRARY` (`instance`, `teams` or `off`) lets an operator cap how far templates can be
   shared. Flagged templates and comments appear in the Django admin.
 

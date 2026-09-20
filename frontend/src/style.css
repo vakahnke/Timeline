@@ -1473,6 +1473,8 @@ fieldset.modal-body:disabled { opacity: 1; }
 .closeout-money input { flex: 1; min-width: 0; }
 .closeout-money select { width: 78px; flex-shrink: 0; }
 .closeout-note { font-size: 11px; }
+.closeout-lesson-opts { display: flex; flex-direction: column; gap: 8px; margin-top: -4px; }
+.closeout-lesson-opts:empty { display: none; }
 .closeout-remove { margin-right: auto; }
 @media (max-width: 560px) { .closeout-cost { grid-template-columns: 1fr; } }
 

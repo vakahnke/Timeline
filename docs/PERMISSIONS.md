@@ -43,7 +43,9 @@ One rule, enforced on the server for every request:
   checked against the database. Publishing to the whole instance shows the author's username to
   people outside their directory, so it is the author's choice each time (`author_display`), and
   notes and to-dos the author holds back are filtered for everyone else on every path, including
-  copies and new projects. A template's track record is aggregates only.
+  copies and new projects. A template's track record is aggregates only. Closing out a project is
+  for its owners (members may read it). The lessons list of a template is for that template's owner
+  alone, not staff, and names a project only when the owner already has access to it.
   `backend/projects/tests_template_library.py` attacks these points.
 - **The React app hides controls as a courtesy, not as security.** `my_role` is sent to the client
   so it can grey out buttons; the server never reads it back.
