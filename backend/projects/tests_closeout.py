@@ -204,3 +204,132 @@ class WhatATemplateShows(CloseoutCase):
         self.assertNotIn('SECRET-LESSON', body)
         self.assertNotIn('4321', body)
         self.assertIn("'median': 4300.0", body)
+
+
+class TheOriginalRun(CloseoutCase):
+    """Phase B: the project a template was saved from is the plan's first run."""
+
+    def save_template(self, project, user=None):
+        res = self.as_(user or self.owner).post('/api/templates/', {'project': project.id, 'name': 'From a real run'}, format='json')
+        self.assertEqual(res.status_code, 201, res.data)
+        return res.data['key']
+
+    def test_a_new_template_starts_with_one_run_not_none(self):
+        self.project.events.update(percent_complete=100)
+        key = self.save_template(self.project)
+        rec = track_records([key])[key]
+        self.assertEqual((rec['started'], rec['finished'], rec['in_flight']), (1, 1, 0))
+
+    def test_its_closeout_is_the_templates_first_word_but_still_needs_three(self):
+        self.close(self.project, outcome='worked', cost_amount='5000')
+        key = self.save_template(self.project)
+        rec = track_records([key])[key]
+        self.assertEqual((rec['closed'], rec['outcomes'], rec['cost']), (1, None, None))
+        for _ in range(2):
+            self.close(self.run_of(key, self.owner), outcome='worked', cost_amount='7000')
+        rec = track_records([key])[key]
+        self.assertEqual((rec['closed'], rec['outcomes']['worked'], rec['cost']['median']), (3, 3, 7000.0))
+
+    def test_the_original_run_never_enters_the_ratio(self):
+        self.project.events.update(percent_complete=100)
+        key = self.save_template(self.project)
+        for _ in range(2):
+            self.run_of(key, self.owner).events.update(percent_complete=100)
+        self.assertIsNone(track_records([key])[key]['typical_ratio'])        # 3 finished, only 2 comparable
+        self.run_of(key, self.owner).events.update(percent_complete=100)
+        self.assertIsNotNone(track_records([key])[key]['typical_ratio'])
+
+    def test_the_original_run_honours_the_opt_out(self):
+        key = self.save_template(self.project)
+        self.as_(self.owner).patch(f'/api/projects/{self.project.id}/', {'count_in_track_record': False}, format='json')
+        self.assertEqual(track_records([key])[key]['started'], 0)
+
+    def test_the_origin_is_never_exposed_or_copied_to_a_fork(self):
+        key = self.save_template(self.project)
+        self.as_(self.owner).patch(f'/api/templates/{key}/', {'visibility': 'instance'}, format='json')
+        detail = self.as_(self.stranger).get(f'/api/templates/{key}/').data
+        self.assertNotIn('origin_project', detail)
+        self.assertNotIn(self.project.name, str(detail['track_record']))
+        fork = self.as_(self.stranger).post(f'/api/templates/{key}/fork/').data
+        self.assertIsNone(ProjectTemplate.objects.get(pk=fork['id']).origin_project_id)
+        self.assertEqual(fork['track_record']['started'], 0)
+
+
+class LessonsReachTheOwner(CloseoutCase):
+    def setUp(self):
+        super().setUp()
+        self.author = User.objects.create_user('tia', 'tia@example.com', 'pw')
+        self.tpl = ProjectTemplate.objects.create(
+            owner=self.author, name='Shared plan', visibility='instance', categories=[],
+            tasks=[{'title': 'A', 'category': 'X', 'start_offset_minutes': 0, 'duration_minutes': 60}])
+        self.key = f'saved:{self.tpl.id}'
+        self.lessons_url = f'/api/templates/{self.key}/lessons/'
+        self.run = self.run_of(self.key, self.owner)
+
+    def lessons(self):
+        res = self.as_(self.author).get(self.lessons_url)
+        self.assertEqual(res.status_code, 200)
+        return res.data
+
+    def test_only_the_templates_owner_reads_them(self):
+        self.close(self.run, lesson='Book the venue first.')
+        self.assertEqual(self.as_(self.owner).get(self.lessons_url).status_code, 403)     # can see the template, not these
+        self.assertEqual(self.as_(self.stranger).get(self.lessons_url).status_code, 403)
+        staff = User.objects.create_user('sam', 'sam@example.com', 'pw', is_staff=True)
+        self.assertEqual(self.as_(staff).get(self.lessons_url).status_code, 403)
+        self.as_(self.author).post(f'/api/templates/{self.key}/unpublish/')
+        self.assertEqual(self.as_(self.owner).get(self.lessons_url).status_code, 404)     # and now not even that
+
+    def test_text_and_date_and_no_project_name_for_someone_elses_project(self):
+        self.close(self.run, lesson='Book the venue first.', cost_amount='4321', outcome='did_not_work')
+        (row,) = self.lessons()
+        self.assertEqual(set(row), {'lesson', 'closed_at', 'project'})
+        self.assertEqual((row['lesson'], row['project']), ('Book the venue first.', None))
+        self.assertNotIn('4321', str(row))
+
+    def test_the_project_is_named_when_the_owner_is_on_it_anyway(self):
+        mine = self.run_of(self.key, self.author)
+        self.close(mine, user=self.author, lesson='Mine.')
+        self.assertEqual(self.lessons()[0]['project'], mine.name)
+
+    def test_the_writer_can_keep_a_lesson_to_the_project(self):
+        self.close(self.run, lesson='Private thought.', lesson_to_owner=False)
+        self.assertEqual(self.lessons(), [])
+
+    def test_a_run_kept_out_of_the_record_sends_nothing(self):
+        self.close(self.run, lesson='From a confidential run.')
+        self.as_(self.owner).patch(f'/api/projects/{self.run.id}/', {'count_in_track_record': False}, format='json')
+        self.assertEqual(self.lessons(), [])
+
+    def test_lessons_written_before_this_existed_stay_private(self):
+        from importlib import import_module
+        from django.apps import apps
+        self.close(self.run, lesson='Written when the dialog said it stays with the project.')
+        import_module('projects.migrations.0012_closeout_lessons_and_origin').keep_earlier_lessons_private(apps, None)
+        self.assertEqual(self.lessons(), [])
+
+    def test_posting_as_a_comment_is_opt_in_once_and_under_your_own_name(self):
+        from .models import TemplateComment
+        self.close(self.run, lesson='Start a week earlier.')
+        self.assertFalse(TemplateComment.objects.exists())
+        res = self.close(self.run, lesson='Start a week earlier.', post_as_comment=True)
+        self.assertTrue(res.data['posted_as_comment'])
+        self.close(self.run, lesson='Start a week earlier!', post_as_comment=True)
+        comment = TemplateComment.objects.get()
+        self.assertEqual((comment.template_key, comment.author_id, comment.body), (self.key, self.owner.id, 'Start a week earlier.'))
+
+    def test_no_comment_on_a_template_you_can_no_longer_see_or_without_a_lesson(self):
+        from .models import TemplateComment
+        self.close(self.run, lesson='', post_as_comment=True)
+        self.as_(self.author).post(f'/api/templates/{self.key}/unpublish/')
+        self.close(self.run, lesson='Too late.', post_as_comment=True)
+        self.assertFalse(TemplateComment.objects.exists())
+
+    def test_the_project_names_its_template_only_if_you_can_still_see_it(self):
+        one = self.as_(self.owner).get(f'/api/projects/{self.run.id}/').data['source_template']
+        self.assertEqual(one, {'key': self.key, 'name': 'Shared plan', 'has_owner': True})
+        self.as_(self.author).post(f'/api/templates/{self.key}/unpublish/')
+        self.assertIsNone(self.as_(self.owner).get(f'/api/projects/{self.run.id}/').data['source_template']['name'])
+        self.assertFalse(self.as_(self.owner).get(f'/api/projects/{self.project.id}/').data['source_template']['has_owner'])  # a built-in
+        listed = self.as_(self.owner).get('/api/projects/').data
+        self.assertTrue(all(p['source_template'] is None for p in listed))                 # never computed for the list

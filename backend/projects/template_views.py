@@ -16,7 +16,7 @@ from .models import (HiddenBuiltinTemplate, Project, ProjectTemplate, Team, Temp
                      TemplateReport, TemplateVote)
 from .permissions import get_role
 from .serializers import (InstantiateTemplateSerializer, ProjectSerializer, SaveTemplateSerializer,
-                          TemplateCommentSerializer, TemplateDetailSerializer,
+                          TemplateCommentSerializer, TemplateDetailSerializer, TemplateLessonSerializer,
                           TemplateListItemSerializer, TemplateReportSerializer,
                           TemplateUpdateSerializer)
 from .templates import create_project_from_spec, spec_from_project
@@ -107,7 +107,7 @@ class TemplateViewSet(viewsets.ViewSet):
         spec = spec_from_project(project)
         tpl = ProjectTemplate.objects.create(
             owner=request.user, name=data['name'], description=data.get('description', ''),
-            categories=spec['categories'], tasks=spec['tasks'],
+            categories=spec['categories'], tasks=spec['tasks'], origin_project=project,
         )
         found = library.Resolved(f'saved:{tpl.id}', saved=tpl, user=request.user)
         return Response(library.describe([found], request.user)[0], status=status.HTTP_201_CREATED)
@@ -323,6 +323,18 @@ class TemplateViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+    @extend_schema(responses=TemplateLessonSerializer(many=True), parameters=[_KEY])
+    @action(detail=True, methods=['get'])
+    def lessons(self, request, pk=None):
+        """What people who ran this plan said they would change. For the template's owner only."""
+        found = library.resolve(pk, request.user)
+        if not found:
+            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        if not found.is_mine:
+            return Response({'detail': 'Only the template\'s owner can read these.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        return Response(library.lessons_for(found, request.user))
 
     @extend_schema(request=TemplateReportSerializer, responses=None, parameters=[_KEY])
     @action(detail=True, methods=['post'])

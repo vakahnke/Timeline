@@ -202,11 +202,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         serializer = RunCloseoutSerializer(existing, data=request.data)
         serializer.is_valid(raise_exception=True)
-        if existing:
-            serializer.save()
-        else:
-            serializer.save(project=project, closed_by=request.user)
-        return Response(serializer.data, status=status.HTTP_200_OK if existing else status.HTTP_201_CREATED)
+        post = serializer.validated_data.pop('post_as_comment', False)
+        closeout = serializer.save() if existing else serializer.save(project=project, closed_by=request.user)
+        if post:
+            self._post_lesson(closeout, request.user)
+        return Response(RunCloseoutSerializer(closeout).data, status=status.HTTP_200_OK if existing else status.HTTP_201_CREATED)
+
+    @staticmethod
+    def _post_lesson(closeout, user):
+        """Post the lesson as a comment on the template the project came from: once, under the
+        closer's own name, and only if they can still see that template."""
+        from . import library
+        from .models import TemplateComment
+        key = closeout.project.source_template_key
+        if closeout.posted_comment_id or not closeout.lesson or not key or not library.resolve(key, user):
+            return
+        closeout.posted_comment = TemplateComment.objects.create(template_key=key, author=user, body=closeout.lesson)
+        closeout.save(update_fields=['posted_comment'])
 
     @extend_schema(request=None, responses=None)
     @action(detail=True, methods=['post'], url_path='closeout/dismiss')

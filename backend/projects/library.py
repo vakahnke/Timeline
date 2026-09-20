@@ -178,6 +178,32 @@ def _effort_totals(closeouts):
     return {'median_days': round_sig(median(days)), 'runs': len(days)}
 
 
+def origin_projects(keys):
+    """{project id: template key} for the projects these saved templates were made from."""
+    ids = [int(k.split(':', 1)[1]) for k in keys if k.startswith('saved:') and k.split(':', 1)[1].isdigit()]
+    if not ids:
+        return {}
+    return {project_id: f'saved:{template_id}' for template_id, project_id in
+            ProjectTemplate.objects.filter(pk__in=ids, origin_project__isnull=False)
+            .values_list('id', 'origin_project_id')}
+
+
+def lessons_for(found, user):
+    """What people who ran this plan said they would change, for the template's OWNER only (the
+    view checks that). Only lessons whose writer chose to send them, from runs that count. Text
+    and date; the project is named only when the owner is on that project anyway."""
+    from .permissions import get_role
+    origins = origin_projects([found.key])
+    rows = (RunCloseout.objects
+            .filter(Q(project__source_template_key=found.key) | Q(project_id__in=list(origins)),
+                    project__count_in_track_record=True, lesson_to_owner=True)
+            .exclude(lesson='')
+            .select_related('project')
+            .order_by('-closed_at'))
+    return [{'lesson': c.lesson, 'closed_at': c.closed_at,
+             'project': c.project.name if get_role(user, c.project_id) else None} for c in rows]
+
+
 def track_records(keys, now=None):
     """{key: record} for the given template keys, from the projects that were started from them.
 
@@ -186,18 +212,26 @@ def track_records(keys, now=None):
     over the planned length, median) stays None until MIN_FINISHED_RUNS runs have finished.
     """
     now = now or timezone.now()
+    keys = list(keys)
+    origins = origin_projects(keys)                      # {project id: template key}
     runs = defaultdict(list)
     rows = (Project.objects
-            .filter(source_template_key__in=list(keys), count_in_track_record=True)
+            .filter(Q(source_template_key__in=keys) | Q(id__in=list(origins)), count_in_track_record=True)
             .annotate(n=Count('events'),
                       done=Count('events', filter=Q(events__percent_complete__gte=100)),
                       first=Min('events__start'), last=Max('events__end'))
             .values('id', 'source_template_key', 'source_template_span', 'n', 'done', 'first', 'last'))
     for r in rows:
-        runs[r['source_template_key']].append(r)
+        if r['source_template_key'] in keys:
+            runs[r['source_template_key']].append(r)
+        if r['id'] in origins:
+            # The project a template was saved from is the plan's first run. Its length IS the
+            # plan's length, so it says nothing about how runs compare with the plan: it counts,
+            # but stays out of the ratio.
+            runs[origins[r['id']]].append({**r, 'source_template_span': None})
     closeout_by_project = {
         c['project_id']: c for c in RunCloseout.objects
-        .filter(project__source_template_key__in=list(keys), project__count_in_track_record=True)
+        .filter(project_id__in=[r['id'] for rs in runs.values() for r in rs])
         .values('project_id', 'outcome', 'cost_amount', 'cost_currency', 'effort_person_days', 'share_figures')}
 
     out = {}

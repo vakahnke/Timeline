@@ -60,6 +60,12 @@ class RunCloseout(models.Model):
     lesson    = models.TextField(blank=True, default='')
     # "Include my numbers in the template's totals." Off keeps cost and effort on this project only.
     share_figures = models.BooleanField(default=True)
+    # "Send this to the template's owner." The lesson is otherwise kept with the project.
+    lesson_to_owner = models.BooleanField(default=True)
+    # Set when the closer chose to post the lesson as a comment on the template, so it is
+    # posted once and not again on every edit.
+    posted_comment = models.ForeignKey('TemplateComment', on_delete=models.SET_NULL, null=True,
+                                       blank=True, related_name='+')
     closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
                                   related_name='+')
     closed_at  = models.DateTimeField(auto_now_add=True)
@@ -135,6 +141,11 @@ class ProjectTemplate(models.Model):
     # The template this one was copied from ("make my own copy"), as a key, so a copy of a
     # built-in can be recorded too.
     forked_from_key = models.CharField(max_length=120, blank=True, default='')
+    # The project this template was saved from. It is the plan's first run: it counts in the track
+    # record, and its close-out is the template's first word on cost and outcome. Never copied to
+    # a fork, and never shown to anyone.
+    origin_project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='templates_saved_from')
 
     class Meta:
         ordering = ['name']

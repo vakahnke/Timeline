@@ -72,6 +72,12 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'joined_at']
 
 
+class SourceTemplateSerializer(serializers.Serializer):
+    key       = serializers.CharField()
+    name      = serializers.CharField(allow_null=True, help_text='Null if you can no longer see it.')
+    has_owner = serializers.BooleanField(help_text='False for built-ins: there is nobody to send a lesson to.')
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     my_role      = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
@@ -81,14 +87,15 @@ class ProjectSerializer(serializers.ModelSerializer):
     progress     = serializers.SerializerMethodField()
     event_count  = serializers.SerializerMethodField()
     closeout_state = serializers.SerializerMethodField()
+    source_template = serializers.SerializerMethodField()
 
     class Meta:
         model  = Project
         fields = ['id', 'name', 'description', 'committed_end', 'status_thresholds', 'owner', 'my_role', 'member_count',
                   'start', 'end', 'progress', 'event_count', 'source_template_key', 'count_in_track_record',
-                  'closeout_state', 'created_at', 'updated_at']
+                  'closeout_state', 'source_template', 'created_at', 'updated_at']
         read_only_fields = ['id', 'owner', 'my_role', 'member_count', 'start', 'end', 'source_template_key',
-                            'closeout_state',
+                            'closeout_state', 'source_template',
                             'progress', 'event_count', 'created_at', 'updated_at']
 
     def validate_status_thresholds(self, value):
@@ -129,6 +136,19 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_event_count(self, obj):
         return getattr(obj, 'ev_count', 0)
 
+    @extend_schema_field(SourceTemplateSerializer(allow_null=True))
+    def get_source_template(self, obj):
+        """The template this project came from, for the close-out dialog. Only on a single
+        project (not the list), and it names the template only if you may still see it."""
+        view = self.context.get('view')
+        if not obj.source_template_key or getattr(view, 'action', None) != 'retrieve':
+            return None
+        from . import library
+        found = library.resolve(obj.source_template_key, self.context['request'].user)
+        return {'key': obj.source_template_key, 'name': found.name if found else None,
+                'has_owner': obj.source_template_key.startswith('saved:')
+                             and ProjectTemplate.objects.filter(pk=obj.source_template_key.split(':', 1)[1]).exists()}
+
     @extend_schema_field(serializers.ChoiceField(choices=['none', 'offered', 'dismissed', 'closed']))
     def get_closeout_state(self, obj):
         """closed: answered. dismissed: an owner said "not now". offered: it came from a template
@@ -163,12 +183,20 @@ CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'INR', 'BRL', 'MX
 
 class RunCloseoutSerializer(serializers.ModelSerializer):
     closed_by = serializers.CharField(source='closed_by.username', read_only=True, default=None)
+    # Ask for the lesson to be posted as a comment on the template, once, under your own name.
+    post_as_comment   = serializers.BooleanField(write_only=True, required=False, default=False)
+    posted_as_comment = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_posted_as_comment(self, obj):
+        return obj.posted_comment_id is not None
 
     class Meta:
         model  = RunCloseout
         fields = ['outcome', 'cost_amount', 'cost_currency', 'effort_person_days', 'lesson',
-                  'share_figures', 'closed_by', 'closed_at', 'updated_at']
-        read_only_fields = ['closed_by', 'closed_at', 'updated_at']
+                  'share_figures', 'lesson_to_owner', 'post_as_comment', 'posted_as_comment',
+                  'closed_by', 'closed_at', 'updated_at']
+        read_only_fields = ['posted_as_comment', 'closed_by', 'closed_at', 'updated_at']
         extra_kwargs = {'lesson': {'max_length': 500, 'trim_whitespace': True}}
 
     def validate_cost_amount(self, value):
@@ -195,6 +223,12 @@ class RunCloseoutSerializer(serializers.ModelSerializer):
         if amount is None:
             data['cost_currency'] = ''
         return data
+
+
+class TemplateLessonSerializer(serializers.Serializer):
+    lesson    = serializers.CharField()
+    closed_at = serializers.DateTimeField()
+    project   = serializers.CharField(allow_null=True, help_text='Named only if you are on that project.')
 
 
 class CostTotalsSerializer(serializers.Serializer):
