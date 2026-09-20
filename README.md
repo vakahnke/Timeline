@@ -6,7 +6,7 @@
 [![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://web-production-28ba24.up.railway.app)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED.svg)](#run-it-yourself-in-two-minutes)
 
-**Plan it once. Do it. Keep the plan that worked.**
+**Plan it. Try the plan. Adjust the plan as you go and share the successful result.**
 
 Timeline is a self-hosted project planner for the person who has to get something
 big done, often for the first time: a product launch, a fundraise, an office move,

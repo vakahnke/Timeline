@@ -8,7 +8,8 @@
 
 ## 0. Problem / motivating requirements
 
-The README's promise is "keep the plan that worked". Today that plan can only be kept by the one
+The README's promise is to "share the successful result" (at the time of writing: "keep the plan
+that worked"). Today that plan can only be kept by the one
 person who saved it. A team cannot see each other's templates, cannot tell a good one from an
 abandoned one, and cannot hand one to someone at another company.
 

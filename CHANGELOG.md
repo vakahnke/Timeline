@@ -41,7 +41,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
   template keeps key-milestone flags and each event's to-do list, and no longer carries progress:
   a project started from it begins at zero percent with every to-do open and assigned to you.
   Templates saved earlier also start at zero.
-- The README leads with what Timeline is for: plan it once, do it, keep the plan that worked.
+- The README leads with what Timeline is for: plan it, try the plan, adjust it as you go, and
+  share the successful result.
 
 ### Fixed
 - An event about 140px wide could not be Ctrl/⌘-dragged by its centre, because the hover buttons

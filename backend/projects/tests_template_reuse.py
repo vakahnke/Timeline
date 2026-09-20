@@ -1,6 +1,6 @@
 """A finished project becomes a plan you can run again.
 
-The README's promise is "keep the plan that worked": save any project as a template, start the
+The README's promise is to "share the successful result": save any project as a template, start the
 next one from it on a new date. These tests hold that promise through the real API: the plan comes
 back whole, and nothing that belonged to the first run (dates, progress, who did what) comes with it.
 """
