@@ -7,7 +7,7 @@ from django.template.response import TemplateResponse
 from .access_report import build_report
 from .emails import notify_user_account_activated
 from .models import (EffectiveAccessReport, HiddenBuiltinTemplate, Project, ProjectMembership,
-                     ProjectTeam, ProjectTemplate, Team, TemplateComment, TemplateReport)
+                     ProjectTeam, ProjectTemplate, RunCloseout, Team, TemplateComment, TemplateReport)
 from .permissions import is_org_admin
 
 User = get_user_model()
@@ -128,12 +128,24 @@ class HiddenBuiltinTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(TemplateReport)
 class TemplateReportAdmin(admin.ModelAdmin):
-    """Templates and comments that people have flagged. Unpublish the template in the app (or
-    set its visibility to Private here), delete the comment below, then tick Resolved."""
-    list_display  = ['template_key', 'comment', 'reporter', 'reason', 'resolved', 'created_at']
+    """Templates, comments and lessons that people have flagged. Unpublish the template in the app
+    (or set its visibility to Private here), delete the comment below, or take the lesson down from
+    the template's page in the app ("Take down", shown to admins), then tick Resolved."""
+    list_display  = ['template_key', 'comment', 'reported_lesson', 'reporter', 'reason', 'resolved', 'created_at']
     list_filter   = ['resolved']
     list_editable = ['resolved']
-    readonly_fields = ['reporter', 'template_key', 'comment', 'reason', 'created_at']
+    readonly_fields = ['reporter', 'template_key', 'comment', 'reported_lesson', 'reason', 'created_at']
+    exclude = ['lesson_ref']
+
+    @admin.display(description='Lesson')
+    def reported_lesson(self, obj):
+        """The words only. Who wrote a lesson is theirs to say, on the template's page."""
+        if not obj.lesson_ref:
+            return ''
+        closeout = RunCloseout.objects.filter(lesson_ref=obj.lesson_ref).first()
+        if not closeout or not closeout.lesson:
+            return '(no longer there)'
+        return closeout.lesson + (' (taken down)' if closeout.lesson_removed_at else '')
 
 
 @admin.register(TemplateComment)

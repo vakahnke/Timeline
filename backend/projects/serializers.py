@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import (Project, ProjectMembership, ProjectTeam, ProjectTemplate, Role, RunCloseout, Team,
-                     TemplateComment)
+                     TemplateComment, TemplateOwnerNote)
 from .permissions import is_org_admin
 
 User = get_user_model()
@@ -75,7 +75,7 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
 class SourceTemplateSerializer(serializers.Serializer):
     key       = serializers.CharField()
     name      = serializers.CharField(allow_null=True, help_text='Null if you can no longer see it.')
-    has_owner = serializers.BooleanField(help_text='False for built-ins: there is nobody to send a lesson to.')
+    has_owner = serializers.BooleanField(help_text='False for built-ins.')
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -183,20 +183,27 @@ CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'INR', 'BRL', 'MX
 
 class RunCloseoutSerializer(serializers.ModelSerializer):
     closed_by = serializers.CharField(source='closed_by.username', read_only=True, default=None)
-    # Ask for the lesson to be posted as a comment on the template, once, under your own name.
-    post_as_comment   = serializers.BooleanField(write_only=True, required=False, default=False)
+    # From before Lessons learned. Read-only now: an older client that still sends
+    # ``lesson_to_owner`` or ``post_as_comment`` is not refused, and nothing happens.
     posted_as_comment = serializers.SerializerMethodField()
+    lesson_removed    = serializers.SerializerMethodField()
 
     @extend_schema_field(serializers.BooleanField())
     def get_posted_as_comment(self, obj):
         return obj.posted_comment_id is not None
 
+    @extend_schema_field(serializers.BooleanField(help_text='Taken down from the template\'s Lessons learned '
+                                                            'by its owner or an admin. It stays on the project.'))
+    def get_lesson_removed(self, obj):
+        return obj.lesson_removed_at is not None
+
     class Meta:
         model  = RunCloseout
         fields = ['outcome', 'cost_amount', 'cost_currency', 'effort_person_days', 'lesson',
-                  'share_figures', 'lesson_to_owner', 'post_as_comment', 'posted_as_comment',
-                  'closed_by', 'closed_at', 'updated_at']
-        read_only_fields = ['posted_as_comment', 'closed_by', 'closed_at', 'updated_at']
+                  'share_figures', 'lesson_public', 'lesson_anonymous', 'lesson_removed',
+                  'lesson_to_owner', 'posted_as_comment', 'closed_by', 'closed_at', 'updated_at']
+        read_only_fields = ['lesson_removed', 'lesson_to_owner', 'posted_as_comment',
+                            'closed_by', 'closed_at', 'updated_at']
         extra_kwargs = {'lesson': {'max_length': 500, 'trim_whitespace': True}}
 
     def validate_cost_amount(self, value):
@@ -229,6 +236,34 @@ class TemplateLessonSerializer(serializers.Serializer):
     lesson    = serializers.CharField()
     closed_at = serializers.DateTimeField()
     project   = serializers.CharField(allow_null=True, help_text='Named only if you are on that project.')
+
+
+class OwnerNoteSerializer(serializers.ModelSerializer):
+    text     = serializers.CharField(max_length=300, trim_whitespace=True)
+    position = serializers.IntegerField(min_value=0, required=False, write_only=True,
+                                        help_text='Where it should sit in the list, from 0.')
+
+    class Meta:
+        model  = TemplateOwnerNote
+        fields = ['id', 'text', 'position']
+        read_only_fields = ['id']
+
+
+class RunLessonSerializer(serializers.Serializer):
+    id      = serializers.UUIDField(help_text='Not a project or close-out id.')
+    text    = serializers.CharField()
+    outcome = serializers.ChoiceField(choices=RunCloseout.Outcome.choices, allow_blank=True)
+    month   = serializers.CharField(help_text='YYYY-MM')
+    author  = serializers.CharField(allow_null=True, help_text='Null when signed Anonymous, for every caller.')
+    is_mine = serializers.BooleanField()
+
+
+class LessonsLearnedSerializer(serializers.Serializer):
+    notes         = OwnerNoteSerializer(many=True)
+    runs          = RunLessonSerializer(many=True)
+    total         = serializers.IntegerField()
+    can_add_notes = serializers.BooleanField()
+    can_remove    = serializers.BooleanField()
 
 
 class CostTotalsSerializer(serializers.Serializer):
@@ -289,6 +324,7 @@ class TemplateDetailSerializer(TemplateListItemSerializer):
     categories   = serializers.ListField(child=serializers.DictField())
     tasks        = serializers.ListField(child=serializers.DictField())
     library_mode = serializers.ChoiceField(choices=['instance', 'teams', 'off'])
+    lessons_learned = LessonsLearnedSerializer()
 
 
 def _clean_tags(value):
@@ -346,6 +382,7 @@ class TemplateCommentSerializer(serializers.ModelSerializer):
 class TemplateReportSerializer(serializers.Serializer):
     reason  = serializers.CharField(required=False, allow_blank=True, max_length=1000)
     comment = serializers.IntegerField(required=False, help_text='Id of the comment being reported, if any.')
+    lesson  = serializers.UUIDField(required=False, help_text='Id of the lesson being reported, if any.')
 
 
 class SaveTemplateSerializer(serializers.Serializer):

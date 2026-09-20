@@ -14,7 +14,7 @@ from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 
 from .models import (HiddenBuiltinTemplate, Project, ProjectTemplate, RunCloseout, Team,
-                     TemplateComment, TemplateVote)
+                     TemplateComment, TemplateOwnerNote, TemplateVote)
 from .templates_builtin import BUILTIN_GROUPS, BUILTIN_TEMPLATES
 
 # A track record shows how a plan ran only once this many runs have finished, so that one
@@ -188,20 +188,45 @@ def origin_projects(keys):
             .values_list('id', 'origin_project_id')}
 
 
+def lessons_of_runs(key):
+    """Close-outs with a lesson, from the runs that count toward this template's track record."""
+    origins = origin_projects([key])
+    return (RunCloseout.objects
+            .filter(Q(project__source_template_key=key) | Q(project_id__in=list(origins)),
+                    project__count_in_track_record=True)
+            .exclude(lesson=''))
+
+
 def lessons_for(found, user):
-    """What people who ran this plan said they would change, for the template's OWNER only (the
-    view checks that). Only lessons whose writer chose to send them, from runs that count. Text
-    and date; the project is named only when the owner is on that project anyway."""
+    """Lessons sent privately to the template's OWNER (the view checks that) before Lessons learned
+    existed. Nothing new arrives here. Text and date; the project is named only when the owner is
+    on that project anyway. A lesson since saved as public is under Lessons learned instead."""
     from .permissions import get_role
-    origins = origin_projects([found.key])
-    rows = (RunCloseout.objects
-            .filter(Q(project__source_template_key=found.key) | Q(project_id__in=list(origins)),
-                    project__count_in_track_record=True, lesson_to_owner=True)
-            .exclude(lesson='')
-            .select_related('project')
-            .order_by('-closed_at'))
+    rows = (lessons_of_runs(found.key).filter(lesson_to_owner=True, lesson_public=False)
+            .select_related('project').order_by('-closed_at'))
     return [{'lesson': c.lesson, 'closed_at': c.closed_at,
              'project': c.project.name if get_role(user, c.project_id) else None} for c in rows]
+
+
+def lessons_learned(found, user):
+    """"Lessons learned" on a template's page, for everyone who can see the template: its owner's
+    notes first, then what each run learned, newest first, in its writer's words.
+
+    Computed from the close-outs, never copied, so an edited, cleared or deleted lesson cannot
+    linger. A run's lesson shows how that run went, the month, and its writer's username unless
+    they signed it Anonymous; then nobody is told, the template's owner and admins included. It
+    never carries a project, a close-out id or a cost. Only lessons saved through the dialog that
+    says they appear here are shown (``lesson_public``)."""
+    rows = (lessons_of_runs(found.key)
+            .filter(lesson_public=True, lesson_removed_at__isnull=True)
+            .select_related('closed_by').order_by('-closed_at', '-id'))
+    runs = [{'id': str(c.lesson_ref), 'text': c.lesson, 'outcome': c.outcome,
+             'month': c.closed_at.strftime('%Y-%m'),
+             'author': c.closed_by.username if c.closed_by and not c.lesson_anonymous else None,
+             'is_mine': c.closed_by_id == user.id} for c in rows]
+    notes = [{'id': n.id, 'text': n.text} for n in TemplateOwnerNote.objects.filter(template_key=found.key)]
+    return {'notes': notes, 'runs': runs, 'total': len(runs),
+            'can_add_notes': found.is_mine, 'can_remove': found.is_mine or bool(user.is_staff)}
 
 
 def track_records(keys, now=None):

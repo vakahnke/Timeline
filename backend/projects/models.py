@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -42,9 +44,10 @@ class Project(models.Model):
 
 class RunCloseout(models.Model):
     """What a finished (or stopped) project's owner said about the run: how the plan worked, what
-    it cost, and what they would change. Every answer is optional. A template shows these only as
-    totals across its runs, under the rules in ``library.track_records``.
-    See docs/design/template-closeout.md."""
+    it cost, and what they would change. Every answer is optional. A template shows outcome and
+    cost only as totals across its runs, under the rules in ``library.track_records``. The lesson
+    is different: it appears on the template's page under "Lessons learned" (section 8 of the
+    design), in its writer's words. See docs/design/template-closeout.md."""
 
     class Outcome(models.TextChoices):
         WORKED       = 'worked',              'It worked'
@@ -60,10 +63,20 @@ class RunCloseout(models.Model):
     lesson    = models.TextField(blank=True, default='')
     # "Include my numbers in the template's totals." Off keeps cost and effort on this project only.
     share_figures = models.BooleanField(default=True)
-    # "Send this to the template's owner." The lesson is otherwise kept with the project.
-    lesson_to_owner = models.BooleanField(default=True)
-    # Set when the closer chose to post the lesson as a comment on the template, so it is
-    # posted once and not again on every edit.
+    # Lessons learned. The lesson is shown on the template's page only if it was saved through
+    # the dialog that says so; earlier lessons stay where their dialog said they would.
+    lesson_public    = models.BooleanField(default=False)
+    # Signed with the closer's username, or shown as "Anonymous" to everyone.
+    lesson_anonymous = models.BooleanField(default=False)
+    # What the template's page calls this lesson, so it never carries a project or close-out id.
+    lesson_ref       = models.UUIDField(default=uuid.uuid4, editable=False, db_index=True)
+    # Taken down by the template's owner or an admin. The writer keeps it on their project.
+    lesson_removed_at = models.DateTimeField(null=True, blank=True)
+    lesson_removed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                          null=True, blank=True, related_name='+')
+    # Before Lessons learned: "send this to the template's owner" and "also post it as a comment".
+    # Nothing sets these any more; they keep the earlier lessons where they were sent.
+    lesson_to_owner = models.BooleanField(default=False)
     posted_comment = models.ForeignKey('TemplateComment', on_delete=models.SET_NULL, null=True,
                                        blank=True, related_name='+')
     closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
@@ -188,14 +201,36 @@ class TemplateComment(models.Model):
         return f'{self.author} on {self.template_key}: {self.body[:40]}'
 
 
+class TemplateOwnerNote(models.Model):
+    """A note from a template's owner, shown first under "Lessons learned" on its page: what no
+    single run said. Seven at most, in the owner's order. Copied when the template is copied."""
+    MAX_PER_TEMPLATE = 7
+
+    template_key = models.CharField(max_length=120, db_index=True)
+    text         = models.CharField(max_length=300)
+    position     = models.PositiveSmallIntegerField(default=0)
+    created_by   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                     related_name='+')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['position', 'id']
+
+    def __str__(self):
+        return f'{self.template_key}: {self.text[:40]}'
+
+
 class TemplateReport(models.Model):
-    """Someone flagged a published template, or a comment on one, for staff to look at. Staff
-    review these in the Django admin and can unpublish the template or delete the comment."""
+    """Someone flagged a published template, a comment on one, or a lesson under its "Lessons
+    learned", for staff to look at. Staff review these in the Django admin and can unpublish the
+    template, delete the comment or take the lesson down."""
     reporter     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                      related_name='+')
     template_key = models.CharField(max_length=120, db_index=True)
     comment      = models.ForeignKey(TemplateComment, on_delete=models.CASCADE, null=True, blank=True,
                                      related_name='reports')
+    lesson_ref   = models.UUIDField(null=True, blank=True)       # RunCloseout.lesson_ref
     reason       = models.TextField(blank=True, default='')
     created_at   = models.DateTimeField(auto_now_add=True)
     resolved     = models.BooleanField(default=False)

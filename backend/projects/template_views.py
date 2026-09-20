@@ -12,11 +12,11 @@ from rest_framework.throttling import UserRateThrottle
 
 from . import library
 from .directory import is_known
-from .models import (HiddenBuiltinTemplate, Project, ProjectTemplate, Team, TemplateComment,
-                     TemplateReport, TemplateVote)
+from .models import (HiddenBuiltinTemplate, Project, ProjectTemplate, RunCloseout, Team, TemplateComment,
+                     TemplateOwnerNote, TemplateReport, TemplateVote)
 from .permissions import get_role
-from .serializers import (InstantiateTemplateSerializer, ProjectSerializer, SaveTemplateSerializer,
-                          TemplateCommentSerializer, TemplateDetailSerializer, TemplateLessonSerializer,
+from .serializers import (InstantiateTemplateSerializer, LessonsLearnedSerializer, OwnerNoteSerializer,
+                          ProjectSerializer, SaveTemplateSerializer, TemplateCommentSerializer, TemplateDetailSerializer, TemplateLessonSerializer,
                           TemplateListItemSerializer, TemplateReportSerializer,
                           TemplateUpdateSerializer)
 from .templates import create_project_from_spec, spec_from_project
@@ -82,6 +82,7 @@ class TemplateViewSet(viewsets.ViewSet):
         item = library.describe([found], request.user)[0]
         item.update(found.spec())
         item['library_mode'] = library.library_mode()
+        item['lessons_learned'] = library.lessons_learned(found, request.user)
         return item
 
     @extend_schema(responses=TemplateDetailSerializer, parameters=[_KEY])
@@ -195,6 +196,7 @@ class TemplateViewSet(viewsets.ViewSet):
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         TemplateVote.objects.filter(template_key=key).delete()
         TemplateComment.objects.filter(template_key=key).delete()
+        TemplateOwnerNote.objects.filter(template_key=key).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _retire_builtin(self, request, slug):
@@ -225,6 +227,11 @@ class TemplateViewSet(viewsets.ViewSet):
             group=src.group if src else library.BUILTIN_GROUPS.get(found.key.split(':', 1)[1], 'other'),
             forked_from_key=found.key,
         )
+        # The owner's notes are part of the plan, so a copy starts with them. What runs learned
+        # stays with the original, as its track record does; the copy links back to it.
+        TemplateOwnerNote.objects.bulk_create([
+            TemplateOwnerNote(template_key=f'saved:{tpl.id}', text=n.text, position=n.position, created_by=request.user)
+            for n in TemplateOwnerNote.objects.filter(template_key=found.key)])
         mine = library.Resolved(f'saved:{tpl.id}', saved=tpl, user=request.user)
         return Response(self._detail(mine, request), status=status.HTTP_201_CREATED)
 
@@ -336,10 +343,99 @@ class TemplateViewSet(viewsets.ViewSet):
                             status=status.HTTP_403_FORBIDDEN)
         return Response(library.lessons_for(found, request.user))
 
+    # --- Lessons learned (docs/design/template-closeout.md, section 8) ----------------------------
+
+    @extend_schema(responses=LessonsLearnedSerializer, parameters=[_KEY])
+    @action(detail=True, methods=['get'], url_path='lessons-learned')
+    def lessons_learned(self, request, pk=None):
+        """The owner's notes, then what each run learned. For everyone who can see the template."""
+        found = library.resolve(pk, request.user)
+        if not found:
+            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        return Response(library.lessons_learned(found, request.user))
+
+    @extend_schema(request=None, responses=LessonsLearnedSerializer, parameters=[
+        _KEY, OpenApiParameter('lesson_id', OpenApiTypes.UUID, OpenApiParameter.PATH)])
+    @action(detail=True, methods=['post'], url_path=r'lessons-learned/(?P<lesson_id>[0-9a-f-]{36})/remove')
+    def lesson_remove(self, request, pk=None, lesson_id=None):
+        """Take one run's lesson down. The template's owner, or an admin (which is how built-in
+        templates are looked after). The words are someone else's, so they cannot be reworded; the
+        writer keeps the lesson on their project."""
+        found = library.resolve(pk, request.user)
+        if not found:
+            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        if not (found.is_mine or request.user.is_staff):
+            return Response({'detail': 'Only the template\'s owner or an admin can take a lesson down.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        # Looked up among THIS template's lessons, so an id from elsewhere is a 404.
+        closeout = get_object_or_404(library.lessons_of_runs(found.key), lesson_ref=lesson_id,
+                                     lesson_public=True, lesson_removed_at__isnull=True)
+        RunCloseout.objects.filter(pk=closeout.pk).update(          # not save(): updated_at is the writer's
+            lesson_removed_at=timezone.now(), lesson_removed_by=request.user)
+        return Response(library.lessons_learned(found, request.user))
+
+    def _owned(self, pk, request):
+        """(found, None) for a saved template the caller owns, else (None, the refusal)."""
+        found = library.resolve(pk, request.user)
+        if not found:
+            return None, Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        if not found.is_mine:
+            return None, Response({'detail': 'Only the template\'s owner can write its notes.'},
+                                  status=status.HTTP_403_FORBIDDEN)
+        return found, None
+
+    @staticmethod
+    def _place(note, position, key):
+        """Put ``note`` at ``position`` among the template's notes and renumber them all."""
+        notes = [n for n in TemplateOwnerNote.objects.filter(template_key=key) if n.pk != note.pk]
+        notes.insert(min(position, len(notes)), note)
+        for i, n in enumerate(notes):
+            if n.position != i:
+                n.position = i
+                n.save(update_fields=['position'])
+
+    @extend_schema(request=OwnerNoteSerializer, responses=LessonsLearnedSerializer, parameters=[_KEY])
+    @action(detail=True, methods=['post'], url_path='owner-notes')
+    def owner_notes(self, request, pk=None):
+        """Add a note of your own to your template's Lessons learned. Seven at most."""
+        found, refusal = self._owned(pk, request)
+        if refusal:
+            return refusal
+        serializer = OwnerNoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        count = TemplateOwnerNote.objects.filter(template_key=found.key).count()
+        if count >= TemplateOwnerNote.MAX_PER_TEMPLATE:
+            return Response({'detail': f'{TemplateOwnerNote.MAX_PER_TEMPLATE} notes at most. Edit or delete one first.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        position = serializer.validated_data.pop('position', count)
+        note = serializer.save(template_key=found.key, created_by=request.user, position=count)
+        self._place(note, position, found.key)
+        return Response(library.lessons_learned(found, request.user), status=status.HTTP_201_CREATED)
+
+    @extend_schema(request=OwnerNoteSerializer, responses=LessonsLearnedSerializer, parameters=[
+        _KEY, OpenApiParameter('note_id', OpenApiTypes.INT, OpenApiParameter.PATH)])
+    @action(detail=True, methods=['patch', 'delete'], url_path=r'owner-notes/(?P<note_id>\d+)')
+    def owner_note_detail(self, request, pk=None, note_id=None):
+        """Reword, move or delete one of your notes."""
+        found, refusal = self._owned(pk, request)
+        if refusal:
+            return refusal
+        note = get_object_or_404(TemplateOwnerNote, pk=note_id, template_key=found.key)
+        if request.method == 'DELETE':
+            note.delete()
+        else:
+            serializer = OwnerNoteSerializer(note, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            position = serializer.validated_data.pop('position', None)
+            serializer.save()
+            if position is not None:
+                self._place(note, position, found.key)
+        return Response(library.lessons_learned(found, request.user))
+
     @extend_schema(request=TemplateReportSerializer, responses=None, parameters=[_KEY])
     @action(detail=True, methods=['post'])
     def report(self, request, pk=None):
-        """Flag a template, or one comment on it, for an admin to look at."""
+        """Flag a template, or one comment or lesson on it, for an admin to look at."""
         found = library.resolve(pk, request.user)
         if not found:
             return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
@@ -349,6 +445,10 @@ class TemplateViewSet(viewsets.ViewSet):
         if serializer.validated_data.get('comment'):
             comment = get_object_or_404(TemplateComment, pk=serializer.validated_data['comment'],
                                         template_key=found.key)
+        lesson_ref = serializer.validated_data.get('lesson')
+        if lesson_ref and not library.lessons_of_runs(found.key).filter(
+                lesson_ref=lesson_ref, lesson_public=True, lesson_removed_at__isnull=True).exists():
+            return Response(NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         TemplateReport.objects.create(reporter=request.user, template_key=found.key, comment=comment,
-                                      reason=serializer.validated_data.get('reason', ''))
+                                      lesson_ref=lesson_ref, reason=serializer.validated_data.get('reason', ''))
         return Response(status=status.HTTP_204_NO_CONTENT)
