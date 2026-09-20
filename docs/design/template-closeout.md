@@ -1,6 +1,6 @@
 # Closing out a run: what it cost and how well it worked — Design Document
 
-**Status:** Phases A and B built (2026-09-20); phase C waits for library phase 2
+**Status:** Phases A and B built (2026-09-20); phase C waits for library phase 2; the addendum in section 8 (Lessons learned) is designed and waits for a go-ahead to build
 **Last updated:** 2026-09-20
 **Scope:** A short, optional close-out when a project finishes, and what a template then shows from the close-outs of its runs. Touches the project model and API, the project page, and the template library's track record.
 
@@ -218,6 +218,8 @@ exactly the templates worth sharing: the ones made from a project that went well
   totals, never as individual runs.
 - **Later / maybe:** an expected cost on the template to compare against; the close-out as a
   final block on the status report; figures limited to recent years as prices drift.
+- **Phases D1 and D2 — the runs that did not work** are designed in section 8 and do not depend
+  on library phase 2.
 
 ### 5.1 What phase A built
 
@@ -283,3 +285,182 @@ written; three figures minimum; owners only; the default currency is a server se
 - [x] **Should the original project count as the template's first run** (3.5)? Proposed yes.
 - [x] **Should non-owners who are editors be able to close out?** Proposed no: owners only.
 - [x] **Default currency:** a server setting (proposed), or per user?
+
+---
+
+## 8. Addendum: what the runs that did not work have to teach
+
+**Status:** Design settled (2026-09-20): every question in 8.6 is answered. Not yet approved to build; nothing here is built.
+
+### 8.0 Problem
+
+A template says "worked in 9 of 11 closed-out runs". The two that did not work are the most
+useful thing the template knows (R6 says so), and the person choosing the plan cannot learn
+anything from them. Four gaps, all found by reading the code as built:
+
+- **The next person sees a count and no reason.** A lesson goes to the project and, by default,
+  privately to the template's owner. It reaches anyone else only if the closer ticked "also post
+  it as a comment", which is off by default, or if the owner quietly changed the plan.
+- **The lesson waits on someone who did not learn it.** The person who ran the project writes it;
+  the template's owner has to notice it and act. An owner who never looks is where lessons stop.
+- **Every outcome gets the same question.** `CloseoutModal.jsx` asks "What would you change next
+  time?" whether the answer above it was "It worked" or "It did not work". That is the right
+  question for a run that worked and a weak one for a run that did not.
+- **Nothing connects a lesson to the plan.** Phase C turns lessons into the draft of a version's
+  "what I learned" note, and phase C waits on library phase 2, which is on hold.
+
+One more requirement:
+
+- **R8. The next person learns from the runs that did not work.** What went wrong, and when not to
+  use this plan, should be on the template's page before someone starts from it, in the words of
+  the person who learned it. A run that did not work is knowledge, and sharing it is the point of
+  the library.
+
+Not in scope: a post-mortem form, root-cause categories, anything that names a run, and anything
+that waits for template versions.
+
+### 8.1 Design
+
+**1. The question follows the answer.** The label above the lesson box changes with the outcome
+chosen above it. Same field, same 500 characters:
+
+| Outcome | The question |
+|---|---|
+| It worked | What would you change next time? |
+| It worked, with changes | What did you have to change, and why? |
+| It did not work | What went wrong? When would you not use this plan? |
+| We stopped early | What stopped it? Was there an early sign the plan could have caught? |
+| (none chosen) | What would you change next time? |
+
+Text already typed stays when the outcome changes; only the label moves. The wording stays about
+the plan (R5): "what went wrong", never "who" or "why did you".
+
+**2. A typed lesson goes straight to the template.** Both of phase B's tick boxes ("Send this to
+the template's owner", "Also post it as a comment") go away. Under the lesson box, one plain line
+says where the words go, and one choice says how it is signed:
+
+> This appears under **Lessons learned** on the template's page, with how the plan worked.
+>
+> Signed: **( • ) My name**  **(   ) Anonymous**
+
+The name is the default: a lesson is a contribution, the writer gets the credit, and the next
+person knows who to ask. **Anonymous** shows the entry as "Anonymous" to everyone, the template's
+owner included. The choice can be changed later by reopening the close-out. The project's name is
+not shown either way.
+
+Details:
+
+- The dialog runs the sharing review's check (`suspectIn` in `libraryModel.js`) on the lesson as it
+  is typed and points out an email address, an @name, a phone number or a link, as it does for any
+  text headed for a shared page.
+- A project with **Count this project in its template's track record** unticked contributes
+  nothing to the template, the lesson included, as today.
+- A project that did not come from a template has no template to go to; the lesson stays with the
+  project, and the line under the box says that instead.
+- **Lessons saved before this ships** were typed under a dialog that said where they would go, so
+  they stay there: with the project and, if sent, on the owner's private list. A lesson becomes
+  public only when it is saved through the new dialog (`RunCloseout.lesson_public`).
+
+**3. "Lessons learned" on the template page**, directly under the Track record, so the count and
+the reasons sit together: "Worked in 9 of 11 closed-out runs", and under it what each run learned.
+
+- Each entry shows the lesson, who wrote it (their username, as comments do, or "Anonymous"), how
+  that run went ("It did not work"), and the month and year. No project name, no cost. Newest
+  first.
+- **The owner's notes come first.** The template's owner can add up to seven entries of their own
+  (300 characters each), marked "From the plan's owner", for what no single run said: "Not a fit for
+  a team under four people: the review steps assume someone independent."
+- **The owner can take an entry down**, not rewrite it: the words are someone else's. If a lesson
+  is wrong or out of date, the owner removes it and may write their own note instead. The
+  writer still sees their lesson on their project, with a line saying it was taken down. Admins can
+  take down any entry, which is how built-in templates, having no owner, are looked after. **Report**
+  works on an entry as it does on a comment.
+- Editing or clearing the lesson in the close-out changes or removes the entry. Deleting the
+  close-out or the project removes it. Turning off the track-record tick removes it.
+- **It is shown once more, at the moment it matters:** when someone starts a project from the
+  template (`TemplateModal.jsx`), under the start date: "Before you start: what earlier runs
+  learned", the owner's notes and the five newest, with a link to the rest. Read-only, nothing to
+  acknowledge, nothing blocked.
+- **Copies.** A copy is a new template with its own runs, as for the track record. The owner's
+  notes are copied; run lessons stay with the original, which the copy already links to.
+- **Built-in templates get lessons too**, from the first run that types one.
+
+**4. The owner's private list winds down.** "Lessons from runs · only you see these" keeps showing
+the lessons that were sent to it before this ships, and gets nothing new. When it is empty it is
+not shown.
+
+### 8.2 Data model and API
+
+- `RunCloseout.lesson_anonymous` (bool, default false). The name shown is `closed_by`'s.
+- `RunCloseout.lesson_public` (bool, default false; set when a lesson is saved through the new
+  dialog) and `RunCloseout.lesson_removed_at` / `lesson_removed_by` (taken down by the template's
+  owner or an admin). `lesson_to_owner` and `posted_comment` stay for the lessons that used them.
+- **`TemplateOwnerNote`**: `template_key` (as `TemplateComment`), `text` (300), `position`,
+  `created_by`, `created_at`, `updated_at`.
+- Lessons learned is **computed, not copied**: the close-outs of the template's runs (the same set
+  `lessons_for` uses) with a lesson, `lesson_public`, not removed, in the track record. One source
+  of truth, so an edited or deleted lesson can never linger on a template.
+- `GET /api/templates/<key>/` gains `lessons_learned: {notes: [{id, text}], runs: [{id, text,
+  outcome, month, author}], total}`. `author` is null for an anonymous lesson, for every caller. `id` for a run's lesson is an opaque id that is not the project's or
+  the close-out's. Fields are only added.
+- `POST /api/templates/<key>/owner-notes/`, `PATCH | DELETE …/owner-notes/<id>/` — the template's
+  owner. `POST …/lessons-learned/<id>/remove/` — the template's owner or an admin.
+  `TemplateReport` gains an optional lesson reference.
+- The close-out API stops accepting `lesson_to_owner` and `post_as_comment` for new saves (ignored,
+  not an error, so an old client does not break).
+- Migrations are additive.
+
+### 8.3 Alternatives considered
+
+- **Send lessons to the template's owner, who rewords and publishes them.** The first draft of this
+  addendum. The lesson is written by the person who learned it and then waits on someone who did
+  not. Most would never be published. Dropped.
+- **Keep a tick box ("show this on the template").** A choice the writer has to reason about, for a
+  question the line under the box already answers. Someone who typed a lesson, told where it goes,
+  has agreed to it; someone who does not want it there does not type it.
+- **Summarise lessons automatically.** The app has no language model and should not send close-out
+  text anywhere.
+- **Failure categories to tick** (scope, people, money, timing). Countable, and the counts would say
+  nothing a planner can act on. "Book the venue first" is the useful unit.
+- **Wait for phase C.** Version notes are the right long-term home for "what I learned", and they
+  are on hold. This section does not depend on versions and folds into them later.
+
+### 8.4 Phasing
+
+D1 and D2 ship together as one release; they are listed apart because D1 has no new surface.
+
+- **Phase D1 — ask better. (S)** The question follows the answer; the tick boxes go; the line and
+  the name-or-anonymous choice under the box; the `suspectIn` check in the dialog.
+- **Phase D2 — Lessons learned. (M)** The computed list on the template page, the owner's notes,
+  taking an entry down, report, the list in the start-from-template dialog, built-ins, user guide
+  and a README bullet. *Satisfies R8.*
+- **Later / maybe:** pin a lesson or note to an event, so it appears in the new project at the step
+  where it applies; lessons travel in the exported file with library phase 2; lessons per template
+  version (phase C).
+
+### 8.5 Cost and risk
+
+- **Effort:** D1 **S**, D2 **M**. Additive migrations; existing close-outs and lessons are untouched.
+- **Moderation.** Public text written by anyone who ran the plan. Covered by take-down, report, and
+  the 500-character limit, as comments are.
+- **Tests** as in `tests_closeout.py`: a lesson saved before the change is not published; no
+  response carries a cost figure or a project or close-out id; an anonymous lesson carries no
+  author for any caller, the template's owner and admins included; a removed, cleared or opted-out lesson
+  disappears at once; only the owner or an admin can take one down.
+- **Perf:** one more query on the template page, none on the library list. No timeline impact.
+
+### 8.6 Open questions / decisions needed
+
+- [x] **The section's name:** **Lessons learned** (decided 2026-09-20; "What to watch for" and
+      "Known pitfalls" were the alternatives).
+- [x] **The four questions in 8.1:** used as written (decided 2026-09-20), including "We stopped
+      early", where the reason often has nothing to do with the plan.
+- [x] **Where a typed lesson goes:** straight to the template's page, no tick boxes, no owner in
+      between (decided 2026-09-20). This replaced the first draft's send-to-owner design.
+- [x] **Built-in templates:** they get lessons like any other; admins take entries down (follows
+      from the decision above).
+- [x] **D1 alone first, or D1 and D2 together?** Together, as one release (decided 2026-09-20).
+- [x] **Show the list in the start-from-template dialog:** yes, the owner's notes and the five
+      newest, read-only (decided 2026-09-20).
+- [x] **The owner can take a lesson down but not reword it,** and can add their own note instead
+      (decided 2026-09-20).
