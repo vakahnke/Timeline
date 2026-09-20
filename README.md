@@ -82,11 +82,10 @@ people find it.
   and an owner can keep a confidential project out of it.
 - **What it cost and whether it worked.** When a project that came from a template is
   finished, its owner can close it out in a minute: how the plan worked, what it cost in
-  money or person-days, and what to change. The template then says "worked in 9 of 11
-  closed-out runs" and "typically costs about $14,000". Cost is handled more carefully
-  than dates: a middle figure only, never a lowest or highest, nothing until three runs
-  in the same currency have answered, rounded, and any run can keep its numbers out.
-  The project a template was saved from counts as its first run.
+  money or person-days, and what they learned. The template then says "worked in 9 of 11
+  closed-out runs" and "typically costs about $14,000". Cost is shown carefully: a typical
+  figure only, and nothing until enough runs have answered
+  ([the rules](docs/USER_GUIDE.md#the-template-library)).
 - **Lessons learned, in the words of the people who ran it.** "Worked in 9 of 11" is half the
   story. Closing out asks a question that fits the answer ("What went wrong? When would you not use
   this plan?"), and the lesson goes straight onto the template's page, signed or anonymous, with
@@ -96,10 +95,8 @@ people find it.
   what to change. The built-in plans take votes and comments too.
 - **Make your own copy** of any template to adapt, and it remembers where it came from.
 - **Sharing is a review, not a switch.** A template is cut from a real project, so
-  before it leaves your hands you are shown every note and to-do title that other
-  people would get, with anything that looks like an email address, phone number or
-  link pointed out. Leave the notes or to-dos out, or share it without your name.
-  Your own copy keeps everything.
+  before it leaves your hands you are shown everything other people would get, and you
+  choose what to leave out ([how sharing works](docs/USER_GUIDE.md#the-template-library)).
 
 ![A template's page: the plan, its track record, and the lessons learned by the people who ran it](docs/images/template-page.png)
 
@@ -119,8 +116,8 @@ library of your own:
   Frame-Off Classic Car Restore, Hand-Knit Sweater, Open Water Diver Certification,
   Build a Steel-String Acoustic
 
-The hobby plans are not a joke. They are there because the tool is for anyone who
-has to do a big thing well, and a marathon has dependencies too.
+The hobby plans are there on purpose: the tool is for anyone who has to do a big
+thing well, and a marathon has dependencies too.
 
 ![The template picker](docs/images/templates.png)
 
@@ -185,8 +182,8 @@ opt-in items sit beside it: a drafted **what moved since last report** line, and
 agreed; old baselines are kept. The same panel holds the project's **limits** for
 the status rule: how late counts as Off track.
 
-Try it on the [live demo](#live-demo): open **Startup MVP: Idea to Launch** and
-click **Status report**. Details are in the [user guide](docs/USER_GUIDE.md) and
+Try it on the [live demo](https://demo.seedcorn.io) (sign in as `demo` / `demo12345`):
+open **Startup MVP: Idea to Launch** and click **Status report**. Details are in the [user guide](docs/USER_GUIDE.md) and
 the [design doc](docs/design/status-one-pager.md).
 
 ## Live demo
