@@ -369,6 +369,8 @@ are the easiest way in, and one of them needs no coding at all. Questions and id
 Some directions that would be good contributions, roughly in order of effort:
 
 - A signed-in "change password" screen: [design](docs/design/password-reset.md) (reset by email is built)
+- A template library: explore, vote on, comment on and share plans, with a track record of how
+  each one actually ran: [design](docs/design/template-library.md)
 - A subscribable calendar feed, so calendars stay current without exporting again:
   [design](docs/design/icalendar-export.md) (the one-off `.ics` export is built)
 - Import from Microsoft Project XML:
