@@ -10,10 +10,14 @@
 
 Timeline is a self-hosted project planner for the person who has to get something
 big done, often for the first time: a product launch, a fundraise, an office move,
-a hiring push, a first marathon. You work out the steps, put them on a timeline you
-can actually grab, and run the project from it. When it is done, you save the plan
-as a template, and the next launch, the next round, or the next person on your team
-starts from a plan that already worked instead of a blank page.
+a hiring push, a first marathon. You work out the steps and put them on a timeline you
+can actually grab. Then you run the project from it, and the plan changes as you learn:
+you move dates, add what you missed, and drop what turned out not to matter. A plan that
+changes is a plan that is being used. When the work is done, what you have is the plan
+that actually got you there. Save it as a template and share it with your team, and the
+next launch, the next round, or the next person starts from a route that is known to work
+instead of a blank page. A shared plan carries its track record: how many projects ran
+it, how they finished, and what they cost.
 
 The timeline is drawn on canvas, so dragging, zooming, dependency arrows and the
 critical path stay smooth with hundreds of events on screen, including on a phone.
