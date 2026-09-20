@@ -400,6 +400,8 @@ are the easiest way in, and one of them needs no coding at all. Questions and id
 Some directions that would be good contributions, roughly in order of effort:
 
 - A signed-in "change password" screen: [design](docs/design/password-reset.md) (reset by email is built)
+- Closing out a finished project, so a template learns what its runs cost and how well the plan
+  worked, not only how long they took: [design](docs/design/template-closeout.md)
 - Template library, phases 2 and 3: export and import a template as a file, versions with a
   "what I learned" note, and a community gallery: [design](docs/design/template-library.md)
   (the library inside one server is built)

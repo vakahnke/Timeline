@@ -259,8 +259,8 @@ cost (a number and a currency, or "skip"), how well it worked (a simple scale), 
 to change. The template then shows them the same way it shows time: as aggregates ("median cost
 $14k · 9 of 11 runs rated it worked"), only above a minimum number of runs, never per project. The
 one-line lesson is the natural seed for phase 2's "what I learned" version note. Cost is more
-sensitive than dates, so it is optional per run and follows the same opt-out. The app has no notion
-of cost today, so this needs its own design pass before it is built.
+sensitive than dates, so it is optional per run and follows the same opt-out. **It now has its own
+design document: [template-closeout.md](template-closeout.md).**
 
 ## 6. Cost & risk
 
