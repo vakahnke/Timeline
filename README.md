@@ -7,7 +7,7 @@
 [![CI](https://github.com/vakahnke/seedcorn/actions/workflows/ci.yml/badge.svg)](https://github.com/vakahnke/seedcorn/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/vakahnke/seedcorn?color=8b93ff)](https://github.com/vakahnke/seedcorn/releases)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://web-production-28ba24.up.railway.app)
+[![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://demo.seedcorn.io)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED.svg)](#run-it-yourself-in-two-minutes)
 
 **Plan it. Try the plan. Adjust the plan as you go and share the successful result.**
@@ -29,7 +29,7 @@ When leadership asks where the project stands, one click turns the same schedule
 a one-page status report you can print, save as a PDF, or download as a fully
 editable PowerPoint slide.
 
-**[Try the live demo](https://web-production-28ba24.up.railway.app)** (sign in as
+**[Try the live demo](https://demo.seedcorn.io)** (sign in as
 `demo` / `demo12345`) · [Run it in two minutes](#run-it-yourself-in-two-minutes) ·
 [Templates](#templates-the-plan-that-worked) ·
 [The status report](#the-status-report-your-schedule-as-a-leadership-slide) ·
@@ -182,7 +182,7 @@ the [design doc](docs/design/status-one-pager.md).
 
 ## Live demo
 
-**https://web-production-28ba24.up.railway.app**
+**https://demo.seedcorn.io**
 
 Sign in as `demo` with password `demo12345` (or `editor` / `viewer` with the same
 password to see the other roles), or register your own account. The demo is
