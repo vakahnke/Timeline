@@ -14,6 +14,7 @@ from events.views import (CategoryViewSet, CommentViewSet, EventViewSet, MyTasks
 from events.views import BaselineViewSet, ProjectCalendarView, ProjectMsProjectView
 
 from .auth import EmailOrUsernameTokenObtainPairView
+from .template_views import TemplateViewSet
 from .views import (
     HealthView,
     LogoutView,
@@ -21,7 +22,6 @@ from .views import (
     ProjectViewSet,
     RegisterView,
     TeamViewSet,
-    TemplateViewSet,
     UserListView,
 )
 

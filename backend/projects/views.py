@@ -13,27 +13,22 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .access_report import project_access
 from .emails import notify_admin_new_registration
-from .models import HiddenBuiltinTemplate, Project, ProjectMembership, ProjectTeam, ProjectTemplate, Role, Team
+from .models import Project, ProjectMembership, ProjectTeam, Role, Team
 from .permissions import IsProjectMember, IsProjectOwner, IsTeamOwnerOrReadOnly, get_role, is_org_admin
 from .serializers import (
     AddMemberSerializer,
     AddTeamToProjectSerializer,
     IdentifierSerializer,
-    InstantiateTemplateSerializer,
     LogoutSerializer,
     MeSerializer,
     ProjectMembershipSerializer,
     ProjectSerializer,
     ProjectTeamSerializer,
     RegisterSerializer,
-    SaveTemplateSerializer,
     TeamSerializer,
-    TemplateListItemSerializer,
     UserSerializer,
 )
-from .directory import is_known, known_users
-from .templates import create_project_from_spec, spec_from_project
-from .templates_builtin import BUILTIN_TEMPLATES, builtin_spec
+from .directory import known_users
 
 User = get_user_model()
 
@@ -170,6 +165,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         if not self._require_editor(request):
             return Response({'detail': 'Editor role required.'}, status=status.HTTP_403_FORBIDDEN)
+        # Whether a run counts toward its template's track record is the owner's call.
+        if ('count_in_track_record' in request.data
+                and get_role(request.user, self.kwargs.get('pk')) != Role.OWNER):
+            return Response({'count_in_track_record': 'Only an owner can change this.'},
+                            status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -284,148 +284,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if not deleted:
             return Response({'detail': 'Team assignment not found.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-def _hidden_builtin_slugs():
-    return set(HiddenBuiltinTemplate.objects.values_list('slug', flat=True))
-
-
-def _builtin_items():
-    hidden = _hidden_builtin_slugs()
-    return [{
-        'key': f'builtin:{slug}',
-        'source': 'builtin',
-        'name': spec['name'],
-        'description': spec['description'],
-        'category_count': len(spec['categories']),
-        'task_count': len(spec['tasks']),
-    } for slug, spec in BUILTIN_TEMPLATES.items() if slug not in hidden]
-
-
-def _saved_items(user):
-    return [{
-        'key': f'saved:{tpl.id}',
-        'source': 'saved',
-        'id': tpl.id,
-        'name': tpl.name,
-        'description': tpl.description,
-        'category_count': len(tpl.categories or []),
-        'task_count': len(tpl.tasks or []),
-    } for tpl in ProjectTemplate.objects.filter(owner=user)]
-
-
-def _resolve_template(key, user):
-    """Return (spec, default_name, default_description) for a template key, or None."""
-    if key.startswith('builtin:'):
-        slug = key.split(':', 1)[1]
-        if slug in _hidden_builtin_slugs():     # retired by an admin -> no longer usable
-            return None
-        spec = builtin_spec(slug)
-        return (spec, spec['name'], spec['description']) if spec else None
-    if key.startswith('saved:'):
-        try:
-            tpl = ProjectTemplate.objects.get(pk=int(key.split(':', 1)[1]), owner=user)
-        except (ProjectTemplate.DoesNotExist, ValueError):
-            return None
-        return ({'categories': tpl.categories, 'tasks': tpl.tasks}, tpl.name, tpl.description)
-    return None
-
-
-class TemplateViewSet(viewsets.ViewSet):
-    """Built-in + user-saved project templates, and instantiation."""
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(responses=TemplateListItemSerializer(many=True))
-    def list(self, request):
-        return Response(_builtin_items() + _saved_items(request.user))
-
-    @extend_schema(request=SaveTemplateSerializer, responses=TemplateListItemSerializer)
-    def create(self, request):
-        """Save an existing project (that you're a member of) as a reusable template."""
-        serializer = SaveTemplateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-        if get_role(request.user, data['project']) is None:
-            return Response({'detail': 'You are not a member of that project.'},
-                            status=status.HTTP_403_FORBIDDEN)
-        project = Project.objects.get(pk=data['project'])
-        spec = spec_from_project(project)
-        tpl = ProjectTemplate.objects.create(
-            owner=request.user, name=data['name'], description=data.get('description', ''),
-            categories=spec['categories'], tasks=spec['tasks'],
-        )
-        return Response({
-            'key': f'saved:{tpl.id}', 'source': 'saved', 'id': tpl.id,
-            'name': tpl.name, 'description': tpl.description,
-            'category_count': len(tpl.categories), 'task_count': len(tpl.tasks),
-        }, status=status.HTTP_201_CREATED)
-
-    @extend_schema(responses=None, parameters=[
-        OpenApiParameter('id', OpenApiTypes.STR, OpenApiParameter.PATH,
-                         description='Saved template id (numeric), or built-in slug (admins only).'),
-    ])
-    def destroy(self, request, pk=None):
-        """Delete a template. A numeric `pk` deletes one of your own saved templates; a
-        built-in slug retires that built-in globally (admins only)."""
-        try:
-            saved_pk = int(pk)
-        except (TypeError, ValueError):
-            return self._retire_builtin(request, pk)
-
-        deleted, _ = ProjectTemplate.objects.filter(pk=saved_pk, owner=request.user).delete()
-        if not deleted:
-            return Response({'detail': 'Template not found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def _retire_builtin(self, request, slug):
-        """Hide a built-in template for everyone. Restricted to admin (staff) accounts."""
-        if not request.user.is_staff:
-            return Response({'detail': 'Only admins can delete built-in templates.'},
-                            status=status.HTTP_403_FORBIDDEN)
-        if slug not in BUILTIN_TEMPLATES:
-            return Response({'detail': 'Template not found.'}, status=status.HTTP_404_NOT_FOUND)
-        HiddenBuiltinTemplate.objects.get_or_create(
-            slug=slug, defaults={'hidden_by': request.user})
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @extend_schema(request=InstantiateTemplateSerializer, responses=ProjectSerializer)
-    @action(detail=False, methods=['post'])
-    def instantiate(self, request):
-        """Create a project from a template, anchored to a start date, for a chosen owner."""
-        serializer = InstantiateTemplateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        resolved = _resolve_template(data['key'], request.user)
-        if resolved is None:
-            return Response({'detail': 'Unknown template.'}, status=status.HTTP_400_BAD_REQUEST)
-        spec, default_name, default_description = resolved
-
-        identifier = (data.get('owner') or '').strip()
-        if identifier:
-            target = (User.objects.filter(email__iexact=identifier).first()
-                      or User.objects.filter(username__iexact=identifier).first())
-            # You can set up a project for someone you already work with, not for any account in the
-            # system: otherwise anyone could drop unsolicited projects into a stranger's list. The
-            # same message covers "no such user" so this cannot be used to discover accounts.
-            if not target or not target.is_active or not is_known(request.user, target):
-                return Response({'owner': 'You can only create a project for yourself or for someone you already '
-                                          'share a project or team with.'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            target = request.user
-
-        project = create_project_from_spec(
-            spec,
-            name=(data.get('name') or default_name),
-            description=(data.get('description') or default_description),
-            start=data['start'],
-            owner=target,
-            also_owner=request.user,
-        )
-        return Response(
-            ProjectSerializer(project, context={'request': request}).data,
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class TeamViewSet(viewsets.ModelViewSet):

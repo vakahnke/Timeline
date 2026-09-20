@@ -4,7 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import Project, ProjectMembership, ProjectTeam, Role, Team
+from .models import Project, ProjectMembership, ProjectTeam, ProjectTemplate, Role, Team, TemplateComment
 from .permissions import is_org_admin
 
 User = get_user_model()
@@ -83,8 +83,9 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Project
         fields = ['id', 'name', 'description', 'committed_end', 'status_thresholds', 'owner', 'my_role', 'member_count',
-                  'start', 'end', 'progress', 'event_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'owner', 'my_role', 'member_count', 'start', 'end',
+                  'start', 'end', 'progress', 'event_count', 'source_template_key', 'count_in_track_record',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'owner', 'my_role', 'member_count', 'start', 'end', 'source_template_key',
                             'progress', 'event_count', 'created_at', 'updated_at']
 
     def validate_status_thresholds(self, value):
@@ -137,14 +138,104 @@ class ProjectSerializer(serializers.ModelSerializer):
         return membership.role if membership else None
 
 
+class TrackRecordSerializer(serializers.Serializer):
+    started           = serializers.IntegerField()
+    finished          = serializers.IntegerField()
+    in_flight         = serializers.IntegerField()
+    abandoned         = serializers.IntegerField()
+    typical_ratio     = serializers.FloatField(allow_null=True, help_text='Median actual/planned length of '
+                                               'finished runs; null until enough runs have finished.')
+    min_finished_runs = serializers.IntegerField()
+
+
 class TemplateListItemSerializer(serializers.Serializer):
-    key            = serializers.CharField()
-    source         = serializers.ChoiceField(choices=['builtin', 'saved'])
-    id             = serializers.IntegerField(required=False)
-    name           = serializers.CharField()
-    description    = serializers.CharField()
-    category_count = serializers.IntegerField()
-    task_count     = serializers.IntegerField()
+    """Documents the shape built by ``library.describe``. Fields are only ever added."""
+    key             = serializers.CharField()
+    source          = serializers.ChoiceField(choices=['builtin', 'saved'])
+    id              = serializers.IntegerField(required=False)
+    name            = serializers.CharField()
+    description     = serializers.CharField()
+    summary         = serializers.CharField()
+    group           = serializers.ChoiceField(choices=ProjectTemplate.Group.choices)
+    tags            = serializers.ListField(child=serializers.CharField())
+    category_count  = serializers.IntegerField()
+    task_count      = serializers.IntegerField()
+    milestone_count = serializers.IntegerField()
+    span_minutes    = serializers.IntegerField()
+    official        = serializers.BooleanField()
+    is_mine         = serializers.BooleanField()
+    can_edit        = serializers.BooleanField()
+    can_delete      = serializers.BooleanField()
+    visibility      = serializers.ChoiceField(choices=ProjectTemplate.Visibility.choices)
+    author          = serializers.CharField(allow_null=True, help_text='Null when the author chose not to be named.')
+    published_at    = serializers.DateTimeField(allow_null=True)
+    votes           = serializers.IntegerField()
+    voted           = serializers.BooleanField()
+    comment_count   = serializers.IntegerField()
+    track_record    = TrackRecordSerializer()
+
+
+class TemplateDetailSerializer(TemplateListItemSerializer):
+    categories   = serializers.ListField(child=serializers.DictField())
+    tasks        = serializers.ListField(child=serializers.DictField())
+    library_mode = serializers.ChoiceField(choices=['instance', 'teams', 'off'])
+
+
+def _clean_tags(value):
+    seen, out = set(), []
+    for raw in value:
+        tag = ' '.join(str(raw).split())[:30]
+        if tag and tag.lower() not in seen:
+            seen.add(tag.lower())
+            out.append(tag)
+    if len(out) > 8:
+        raise serializers.ValidationError('Eight tags at most.')
+    return out
+
+
+class TemplateUpdateSerializer(serializers.Serializer):
+    name           = serializers.CharField(max_length=200, required=False)
+    description    = serializers.CharField(required=False, allow_blank=True, max_length=5000)
+    summary        = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    group          = serializers.ChoiceField(choices=ProjectTemplate.Group.choices, required=False)
+    tags           = serializers.ListField(child=serializers.CharField(), required=False)
+    visibility     = serializers.ChoiceField(choices=ProjectTemplate.Visibility.choices, required=False)
+    shared_with_teams = serializers.ListField(child=serializers.IntegerField(), required=False)
+    author_display = serializers.ChoiceField(choices=ProjectTemplate.AuthorDisplay.choices, required=False)
+    share_notes    = serializers.BooleanField(required=False)
+    share_todos    = serializers.BooleanField(required=False)
+
+    def validate_tags(self, value):
+        return _clean_tags(value)
+
+
+class TemplateCommentSerializer(serializers.ModelSerializer):
+    author     = serializers.CharField(source='author.username', read_only=True)
+    is_mine    = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+    body       = serializers.CharField(max_length=4000, trim_whitespace=True)
+
+    class Meta:
+        model  = TemplateComment
+        fields = ['id', 'author', 'body', 'is_mine', 'can_delete', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'author', 'is_mine', 'can_delete', 'created_at', 'updated_at']
+
+    def _user(self):
+        return self.context['request'].user
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_mine(self, obj):
+        return obj.author_id == self._user().id
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_can_delete(self, obj):
+        user, template = self._user(), self.context.get('template')
+        return obj.author_id == user.id or bool(user.is_staff) or bool(template and template.is_mine)
+
+
+class TemplateReportSerializer(serializers.Serializer):
+    reason  = serializers.CharField(required=False, allow_blank=True, max_length=1000)
+    comment = serializers.IntegerField(required=False, help_text='Id of the comment being reported, if any.')
 
 
 class SaveTemplateSerializer(serializers.Serializer):

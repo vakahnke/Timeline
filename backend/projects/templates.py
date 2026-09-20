@@ -45,13 +45,18 @@ def spec_from_project(project):
 
 
 @transaction.atomic
-def create_project_from_spec(spec, *, name, description, start, owner, also_owner=None):
+def create_project_from_spec(spec, *, name, description, start, owner, also_owner=None, source_key=''):
     """Create a Project (with categories + events) from a template spec.
 
     `start` anchors task offsets. `owner` becomes the project Owner; if `also_owner`
-    is a different user, they are added as a co-Owner so they can manage it too.
+    is a different user, they are added as a co-Owner so they can manage it too. ``source_key``
+    records which template the project came from, and the plan's length at that moment, which is
+    what the template's track record is later measured against (library.track_records).
     """
-    project = Project.objects.create(name=name, description=description, owner=owner)
+    from .library import span_minutes
+    project = Project.objects.create(
+        name=name, description=description, owner=owner, source_template_key=source_key,
+        source_template_span=(span_minutes(spec.get('tasks', [])) or None) if source_key else None)
     ProjectMembership.objects.create(project=project, user=owner, role=Role.OWNER)
     if also_owner is not None and also_owner.id != owner.id:
         ProjectMembership.objects.get_or_create(

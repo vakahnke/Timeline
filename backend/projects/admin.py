@@ -7,7 +7,7 @@ from django.template.response import TemplateResponse
 from .access_report import build_report
 from .emails import notify_user_account_activated
 from .models import (EffectiveAccessReport, HiddenBuiltinTemplate, Project, ProjectMembership,
-                     ProjectTeam, ProjectTemplate, Team)
+                     ProjectTeam, ProjectTemplate, Team, TemplateComment, TemplateReport)
 from .permissions import is_org_admin
 
 User = get_user_model()
@@ -106,8 +106,10 @@ class EffectiveAccessAdmin(admin.ModelAdmin):
 
 @admin.register(ProjectTemplate)
 class ProjectTemplateAdmin(admin.ModelAdmin):
-    list_display  = ['name', 'owner', 'created_at']
+    list_display  = ['name', 'owner', 'visibility', 'published_at', 'created_at']
+    list_filter   = ['visibility', 'group']
     search_fields = ['name', 'owner__username']
+    filter_horizontal = ['shared_with_teams']
 
 
 @admin.register(Team)
@@ -122,3 +124,19 @@ class HiddenBuiltinTemplateAdmin(admin.ModelAdmin):
     # A row here = a retired built-in template. Delete the row to restore the built-in.
     list_display  = ['slug', 'hidden_by', 'created_at']
     search_fields = ['slug']
+
+
+@admin.register(TemplateReport)
+class TemplateReportAdmin(admin.ModelAdmin):
+    """Templates and comments that people have flagged. Unpublish the template in the app (or
+    set its visibility to Private here), delete the comment below, then tick Resolved."""
+    list_display  = ['template_key', 'comment', 'reporter', 'reason', 'resolved', 'created_at']
+    list_filter   = ['resolved']
+    list_editable = ['resolved']
+    readonly_fields = ['reporter', 'template_key', 'comment', 'reason', 'created_at']
+
+
+@admin.register(TemplateComment)
+class TemplateCommentAdmin(admin.ModelAdmin):
+    list_display  = ['template_key', 'author', 'body', 'created_at']
+    search_fields = ['template_key', 'body', 'author__username']

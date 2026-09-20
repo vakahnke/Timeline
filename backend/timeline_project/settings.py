@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import timedelta
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -141,13 +142,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ],
-    # Only the password-reset endpoints are throttled today (docs/design/password-reset.md).
+    # Password reset (docs/design/password-reset.md) and the template library are throttled.
     # Counters live in the process-local cache, so with N gunicorn workers the effective ceiling
     # is up to N times these numbers: still a firm brake on flooding an inbox or guessing links.
     'DEFAULT_THROTTLE_RATES': {
         'password_reset_request': '5/hour',
         'password_reset_address': '3/hour',
         'password_reset_confirm': '10/hour',
+        # The template library: generous for a person, a brake on a script.
+        'template_vote':    '120/hour',
+        'template_comment': '30/hour',
+        'template_report':  '10/hour',
     },
 }
 
@@ -206,6 +211,14 @@ ACCOUNT_NOTIFY_EMAIL = env('ACCOUNT_NOTIFY_EMAIL', default=env('ADMIN_NOTIFY_EMA
 SITE_URL = env('SITE_URL', default='http://localhost:5173')
 # New registrations stay inactive until an admin approves them. Set to 0 to disable.
 REQUIRE_ACCOUNT_APPROVAL = env.bool('REQUIRE_ACCOUNT_APPROVAL', default=True)
+
+# How far a saved template may be shared (docs/design/template-library.md):
+#   instance  to chosen teams, or to everyone signed in here (the default)
+#   teams     to chosen teams only
+#   off       templates stay private to the person who saved them
+TEMPLATE_LIBRARY = env.str('TEMPLATE_LIBRARY', default='instance').strip().lower()
+if TEMPLATE_LIBRARY not in ('instance', 'teams', 'off'):
+    raise ImproperlyConfigured("TEMPLATE_LIBRARY must be 'instance', 'teams' or 'off'.")
 
 # ── Security (prod only; behind nginx TLS-terminating proxy) ──────────────────
 CSRF_TRUSTED_ORIGINS = env('DJANGO_CSRF_TRUSTED_ORIGINS')

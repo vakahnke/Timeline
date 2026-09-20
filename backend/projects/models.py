@@ -21,6 +21,13 @@ class Project(models.Model):
     # Limits for the status rule, agreed before anything slips. Empty = the defaults in
     # events/status_report.py. Keys: off_track_working_days, off_track_percent, behind_points.
     status_thresholds = models.JSONField(default=dict, blank=True)
+    # Provenance: the template this project was started from ("builtin:<slug>" / "saved:<id>") and
+    # how long that plan was at the time. It is what a template's track record is computed from
+    # (projects/library.py). Blank on projects that were not started from a template.
+    source_template_key  = models.CharField(max_length=120, blank=True, default='', db_index=True)
+    source_template_span = models.PositiveIntegerField(null=True, blank=True)   # minutes
+    # An owner can keep a confidential run out of the template's track record.
+    count_in_track_record = models.BooleanField(default=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
 
@@ -46,8 +53,28 @@ class ProjectTemplate(models.Model):
 
         categories: [{"name": str, "color": str}]
         tasks:      [{"title", "category", "start_offset_minutes", "duration_minutes",
-                      "notes", "percent_complete", "depends_on": [task_index, ...]}]
+                      "notes", "is_milestone", "depends_on": [task_index, ...],
+                      "todos": [{"title", "due_offset_days"}]}]
+
+    A template is private to its owner until they publish it to the library: to chosen teams or
+    to everyone signed in to this instance. Who may see one is decided in one place,
+    ``library.visible_templates``. See docs/design/template-library.md.
     """
+    class Visibility(models.TextChoices):
+        PRIVATE  = 'private',  'Private'
+        TEAMS    = 'teams',    'Shared with teams'
+        INSTANCE = 'instance', 'Everyone on this instance'
+
+    class Group(models.TextChoices):
+        BUSINESS = 'business', 'Business'
+        WORK     = 'work',     'Work'
+        HOBBY    = 'hobby',    'Hobby'
+        OTHER    = 'other',    'Other'
+
+    class AuthorDisplay(models.TextChoices):
+        NAME      = 'name',      'Show my name'
+        ANONYMOUS = 'anonymous', 'A member'
+
     name        = models.CharField(max_length=200)
     description = models.TextField(blank=True, default='')
     owner       = models.ForeignKey(
@@ -58,12 +85,84 @@ class ProjectTemplate(models.Model):
     categories  = models.JSONField(default=list)
     tasks       = models.JSONField(default=list)
     created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    # --- The library -------------------------------------------------------------------------
+    summary     = models.CharField(max_length=200, blank=True, default='')   # one line, for cards
+    group       = models.CharField(max_length=10, choices=Group.choices, default=Group.OTHER)
+    tags        = models.JSONField(default=list, blank=True)
+    visibility  = models.CharField(max_length=10, choices=Visibility.choices, default=Visibility.PRIVATE)
+    shared_with_teams = models.ManyToManyField('Team', related_name='shared_templates', blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    author_display = models.CharField(max_length=10, choices=AuthorDisplay.choices,
+                                      default=AuthorDisplay.NAME)
+    # What other people get. The owner always keeps the full plan; these only filter what is
+    # shown to, and copied by, everyone else. A template comes from a real project, so its notes
+    # and to-do titles are the likeliest place for something private to be hiding.
+    share_notes = models.BooleanField(default=True)
+    share_todos = models.BooleanField(default=True)
+    # The template this one was copied from ("make my own copy"), as a key, so a copy of a
+    # built-in can be recorded too.
+    forked_from_key = models.CharField(max_length=120, blank=True, default='')
 
     class Meta:
         ordering = ['name']
 
     def __str__(self):
         return self.name
+
+
+class TemplateVote(models.Model):
+    """One upvote per person per template. Keyed by the template key rather than a foreign key so
+    built-in templates, which live in code, can be voted on like any other."""
+    user         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                     related_name='template_votes')
+    template_key = models.CharField(max_length=120, db_index=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'template_key'], name='uniq_template_vote'),
+        ]
+
+    def __str__(self):
+        return f'{self.user} +1 {self.template_key}'
+
+
+class TemplateComment(models.Model):
+    """A comment on a template: what worked, what to change, what it assumes. Flat, oldest first.
+    Its author, the template's owner, or staff may delete it."""
+    template_key = models.CharField(max_length=120, db_index=True)
+    author       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                     related_name='template_comments')
+    body         = models.TextField()
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.author} on {self.template_key}: {self.body[:40]}'
+
+
+class TemplateReport(models.Model):
+    """Someone flagged a published template, or a comment on one, for staff to look at. Staff
+    review these in the Django admin and can unpublish the template or delete the comment."""
+    reporter     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                     related_name='+')
+    template_key = models.CharField(max_length=120, db_index=True)
+    comment      = models.ForeignKey(TemplateComment, on_delete=models.CASCADE, null=True, blank=True,
+                                     related_name='reports')
+    reason       = models.TextField(blank=True, default='')
+    created_at   = models.DateTimeField(auto_now_add=True)
+    resolved     = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['resolved', '-created_at']
+
+    def __str__(self):
+        return f'{self.template_key} reported by {self.reporter}'
 
 
 class HiddenBuiltinTemplate(models.Model):

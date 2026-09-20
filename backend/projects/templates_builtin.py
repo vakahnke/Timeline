@@ -570,6 +570,17 @@ BUILTIN_TEMPLATES = {
 }
 
 
+# Which shelf of the library each built-in sits on. Anything not listed is "other".
+_GROUPS = {
+    'work':     ['sprint', 'launch', 'event'],
+    'business': ['custom_shop', 'startup_mvp', 'seed_round', 'customer_discovery', 'gtm_launch',
+                 'key_hire', 'okr_quarter', 'company_setup'],
+    'hobby':    ['homebrew', 'veg_garden', 'marathon', 'dining_table', 'record_song', 'write_novel',
+                 'car_restore', 'knit_sweater', 'scuba_owd', 'build_guitar'],
+}
+BUILTIN_GROUPS = {slug: group for group, slugs in _GROUPS.items() for slug in slugs}
+
+
 def builtin_spec(slug):
     """Return the template spec dict for a built-in slug, or None."""
     return BUILTIN_TEMPLATES.get(slug)
