@@ -6,19 +6,24 @@ Everything about access is decided here, on the server, from the caller's token 
 import copy
 from collections import defaultdict
 from datetime import timedelta
+from math import floor, log10
 from statistics import median
 
 from django.conf import settings
 from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 
-from .models import (HiddenBuiltinTemplate, Project, ProjectTemplate, Team, TemplateComment,
-                     TemplateVote)
+from .models import (HiddenBuiltinTemplate, Project, ProjectTemplate, RunCloseout, Team,
+                     TemplateComment, TemplateVote)
 from .templates_builtin import BUILTIN_GROUPS, BUILTIN_TEMPLATES
 
 # A track record shows how a plan ran only once this many runs have finished, so that one
 # project's schedule can never be read off it.
 MIN_FINISHED_RUNS = 3
+# The same minimum applies to close-outs: that many runs must have answered before outcomes are
+# shown, and that many figures in ONE currency before a cost is. Cost is more sensitive than dates,
+# so it is also shown as a median only (never a lowest, highest or range) and rounded.
+MIN_CLOSEOUTS = 3
 # An unfinished run whose last date passed this long ago counts as abandoned, not in flight.
 ABANDONED_AFTER = timedelta(days=60)
 
@@ -135,6 +140,44 @@ def span_minutes(tasks):
 
 # --- Track record ----------------------------------------------------------------------------
 
+def _outcome_counts(closeouts):
+    answered = [c['outcome'] for c in closeouts if c['outcome']]
+    if len(answered) < MIN_CLOSEOUTS:
+        return None
+    return {choice: answered.count(choice) for choice in RunCloseout.Outcome.values}
+
+
+def round_sig(value, figures=2):
+    """Round to significant figures: 13,870 -> 14,000. Keeps a total readable, and blunts working
+    out one run's figure by watching the median move as runs are added."""
+    value = float(value)
+    if value == 0:
+        return 0.0
+    return round(value, figures - 1 - floor(log10(abs(value))))
+
+
+def _cost_totals(closeouts):
+    """Median of the shared money figures in the most common currency, or None below the minimum."""
+    by_currency = defaultdict(list)
+    for c in closeouts:
+        if c['share_figures'] and c['cost_amount'] is not None and c['cost_currency']:
+            by_currency[c['cost_currency']].append(c['cost_amount'])
+    if not by_currency:
+        return None
+    currency, amounts = max(by_currency.items(), key=lambda kv: (len(kv[1]), kv[0]))
+    if len(amounts) < MIN_CLOSEOUTS:
+        return None
+    return {'median': round_sig(median(amounts)), 'currency': currency, 'runs': len(amounts)}
+
+
+def _effort_totals(closeouts):
+    days = [c['effort_person_days'] for c in closeouts
+            if c['share_figures'] and c['effort_person_days'] is not None]
+    if len(days) < MIN_CLOSEOUTS:
+        return None
+    return {'median_days': round_sig(median(days)), 'runs': len(days)}
+
+
 def track_records(keys, now=None):
     """{key: record} for the given template keys, from the projects that were started from them.
 
@@ -149,17 +192,28 @@ def track_records(keys, now=None):
             .annotate(n=Count('events'),
                       done=Count('events', filter=Q(events__percent_complete__gte=100)),
                       first=Min('events__start'), last=Max('events__end'))
-            .values('source_template_key', 'source_template_span', 'n', 'done', 'first', 'last'))
+            .values('id', 'source_template_key', 'source_template_span', 'n', 'done', 'first', 'last'))
     for r in rows:
         runs[r['source_template_key']].append(r)
+    closeout_by_project = {
+        c['project_id']: c for c in RunCloseout.objects
+        .filter(project__source_template_key__in=list(keys), project__count_in_track_record=True)
+        .values('project_id', 'outcome', 'cost_amount', 'cost_currency', 'effort_person_days', 'share_figures')}
 
     out = {}
     for key in keys:
-        started = finished = abandoned = 0
-        ratios = []
+        started = finished = abandoned = stopped = 0
+        ratios, closeouts = [], []
         for r in runs.get(key, []):
             started += 1
-            if r['n'] and r['done'] == r['n']:
+            closeout = closeout_by_project.get(r['id'])
+            if closeout:
+                closeouts.append(closeout)
+            # Closing out settles a run: "we stopped early" is its own count, and any other answer
+            # means the owner calls it finished even if some events never reached 100%.
+            if closeout and closeout['outcome'] == RunCloseout.Outcome.STOPPED:
+                stopped += 1
+            elif (r['n'] and r['done'] == r['n']) or closeout:
                 finished += 1
                 planned = r['source_template_span']
                 if planned and r['first'] and r['last']:
@@ -170,10 +224,15 @@ def track_records(keys, now=None):
         out[key] = {
             'started': started,
             'finished': finished,
-            'in_flight': started - finished - abandoned,
+            'in_flight': started - finished - abandoned - stopped,
             'abandoned': abandoned,
             'typical_ratio': round(median(ratios), 3) if enough else None,
             'min_finished_runs': MIN_FINISHED_RUNS,
+            'stopped': stopped,
+            'closed': len(closeouts),
+            'outcomes': _outcome_counts(closeouts),
+            'cost': _cost_totals(closeouts),
+            'effort': _effort_totals(closeouts),
         }
     return out
 

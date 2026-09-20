@@ -325,7 +325,8 @@ class TrackRecordTests(LibraryCase):
         body = str(self.as_(self.cat).get(self.url).data['track_record'])
         self.assertNotIn('Launch playbook', body)
         self.assertEqual(set(self.as_(self.cat).get(self.url).data['track_record']),
-                         {'started', 'finished', 'in_flight', 'abandoned', 'typical_ratio', 'min_finished_runs'})
+                         {'started', 'finished', 'in_flight', 'abandoned', 'typical_ratio', 'min_finished_runs',
+                          'stopped', 'closed', 'outcomes', 'cost', 'effort'})       # totals, every one
 
     def test_proven_sort_puts_finished_plans_first(self):
         self.publish('instance')

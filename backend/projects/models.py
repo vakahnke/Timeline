@@ -28,6 +28,8 @@ class Project(models.Model):
     source_template_span = models.PositiveIntegerField(null=True, blank=True)   # minutes
     # An owner can keep a confidential run out of the template's track record.
     count_in_track_record = models.BooleanField(default=True)
+    # An owner answered "Not now" to the close-out offer; it is never offered again by itself.
+    closeout_dismissed = models.BooleanField(default=False)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
 
@@ -36,6 +38,35 @@ class Project(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class RunCloseout(models.Model):
+    """What a finished (or stopped) project's owner said about the run: how the plan worked, what
+    it cost, and what they would change. Every answer is optional. A template shows these only as
+    totals across its runs, under the rules in ``library.track_records``.
+    See docs/design/template-closeout.md."""
+
+    class Outcome(models.TextChoices):
+        WORKED       = 'worked',              'It worked'
+        WITH_CHANGES = 'worked_with_changes', 'It worked, with changes'
+        DID_NOT_WORK = 'did_not_work',        'It did not work'
+        STOPPED      = 'stopped',             'We stopped early'
+
+    project   = models.OneToOneField(Project, on_delete=models.CASCADE, related_name='closeout')
+    outcome   = models.CharField(max_length=20, choices=Outcome.choices, blank=True, default='')
+    cost_amount   = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    cost_currency = models.CharField(max_length=3, blank=True, default='')      # ISO 4217
+    effort_person_days = models.DecimalField(max_digits=9, decimal_places=1, null=True, blank=True)
+    lesson    = models.TextField(blank=True, default='')
+    # "Include my numbers in the template's totals." Off keeps cost and effort on this project only.
+    share_figures = models.BooleanField(default=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                  related_name='+')
+    closed_at  = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Close-out of {self.project}'
 
 
 class Role(models.TextChoices):

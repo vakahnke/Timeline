@@ -4,7 +4,8 @@ from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import Project, ProjectMembership, ProjectTeam, ProjectTemplate, Role, Team, TemplateComment
+from .models import (Project, ProjectMembership, ProjectTeam, ProjectTemplate, Role, RunCloseout, Team,
+                     TemplateComment)
 from .permissions import is_org_admin
 
 User = get_user_model()
@@ -79,13 +80,15 @@ class ProjectSerializer(serializers.ModelSerializer):
     end          = serializers.SerializerMethodField()
     progress     = serializers.SerializerMethodField()
     event_count  = serializers.SerializerMethodField()
+    closeout_state = serializers.SerializerMethodField()
 
     class Meta:
         model  = Project
         fields = ['id', 'name', 'description', 'committed_end', 'status_thresholds', 'owner', 'my_role', 'member_count',
                   'start', 'end', 'progress', 'event_count', 'source_template_key', 'count_in_track_record',
-                  'created_at', 'updated_at']
+                  'closeout_state', 'created_at', 'updated_at']
         read_only_fields = ['id', 'owner', 'my_role', 'member_count', 'start', 'end', 'source_template_key',
+                            'closeout_state',
                             'progress', 'event_count', 'created_at', 'updated_at']
 
     def validate_status_thresholds(self, value):
@@ -126,6 +129,23 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_event_count(self, obj):
         return getattr(obj, 'ev_count', 0)
 
+    @extend_schema_field(serializers.ChoiceField(choices=['none', 'offered', 'dismissed', 'closed']))
+    def get_closeout_state(self, obj):
+        """closed: answered. dismissed: an owner said "not now". offered: it came from a template
+        and every event is done, so the page may offer the close-out. Otherwise none."""
+        closed = getattr(obj, 'has_closeout', None)          # annotated by ProjectViewSet
+        if closed is None:
+            closed = RunCloseout.objects.filter(project=obj).exists()
+        if closed:
+            return 'closed'
+        if obj.closeout_dismissed:
+            return 'dismissed'
+        count, done = getattr(obj, 'ev_count', None), getattr(obj, 'ev_done', None)
+        if count is None or done is None:
+            count = obj.events.count()
+            done = obj.events.filter(percent_complete__gte=100).count()
+        return 'offered' if obj.source_template_key and count and done == count else 'none'
+
     @extend_schema_field(serializers.ChoiceField(choices=Role.choices, allow_null=True))
     def get_my_role(self, obj):
         request = self.context.get('request')
@@ -138,6 +158,56 @@ class ProjectSerializer(serializers.ModelSerializer):
         return membership.role if membership else None
 
 
+CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'INR', 'BRL', 'MXN']
+
+
+class RunCloseoutSerializer(serializers.ModelSerializer):
+    closed_by = serializers.CharField(source='closed_by.username', read_only=True, default=None)
+
+    class Meta:
+        model  = RunCloseout
+        fields = ['outcome', 'cost_amount', 'cost_currency', 'effort_person_days', 'lesson',
+                  'share_figures', 'closed_by', 'closed_at', 'updated_at']
+        read_only_fields = ['closed_by', 'closed_at', 'updated_at']
+        extra_kwargs = {'lesson': {'max_length': 500, 'trim_whitespace': True}}
+
+    def validate_cost_amount(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('A cost cannot be negative.')
+        return value
+
+    def validate_effort_person_days(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('Effort cannot be negative.')
+        return value
+
+    def validate_cost_currency(self, value):
+        value = (value or '').strip().upper()
+        if value and not (len(value) == 3 and value.isalpha()):
+            raise serializers.ValidationError('Use a three-letter currency code, such as USD.')
+        return value
+
+    def validate(self, data):
+        amount = data.get('cost_amount', getattr(self.instance, 'cost_amount', None))
+        currency = data.get('cost_currency', getattr(self.instance, 'cost_currency', ''))
+        if amount is not None and not currency:
+            data['cost_currency'] = settings.DEFAULT_CURRENCY
+        if amount is None:
+            data['cost_currency'] = ''
+        return data
+
+
+class CostTotalsSerializer(serializers.Serializer):
+    median   = serializers.FloatField(help_text='Median of shared figures, rounded to two significant figures.')
+    currency = serializers.CharField()
+    runs     = serializers.IntegerField()
+
+
+class EffortTotalsSerializer(serializers.Serializer):
+    median_days = serializers.FloatField()
+    runs        = serializers.IntegerField()
+
+
 class TrackRecordSerializer(serializers.Serializer):
     started           = serializers.IntegerField()
     finished          = serializers.IntegerField()
@@ -146,6 +216,12 @@ class TrackRecordSerializer(serializers.Serializer):
     typical_ratio     = serializers.FloatField(allow_null=True, help_text='Median actual/planned length of '
                                                'finished runs; null until enough runs have finished.')
     min_finished_runs = serializers.IntegerField()
+    stopped           = serializers.IntegerField(help_text='Closed out as "we stopped early".')
+    closed            = serializers.IntegerField(help_text='Runs whose owner closed them out.')
+    outcomes          = serializers.DictField(child=serializers.IntegerField(), allow_null=True,
+                                              help_text='Counts per answer; null until enough runs are closed out.')
+    cost              = CostTotalsSerializer(allow_null=True)
+    effort            = EffortTotalsSerializer(allow_null=True)
 
 
 class TemplateListItemSerializer(serializers.Serializer):

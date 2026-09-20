@@ -217,6 +217,8 @@ REQUIRE_ACCOUNT_APPROVAL = env.bool('REQUIRE_ACCOUNT_APPROVAL', default=True)
 #   teams     to chosen teams only
 #   off       templates stay private to the person who saved them
 TEMPLATE_LIBRARY = env.str('TEMPLATE_LIBRARY', default='instance').strip().lower()
+# The currency offered first when a project is closed out (docs/design/template-closeout.md).
+DEFAULT_CURRENCY = env.str('DEFAULT_CURRENCY', default='USD').strip().upper()[:3]
 if TEMPLATE_LIBRARY not in ('instance', 'teams', 'off'):
     raise ImproperlyConfigured("TEMPLATE_LIBRARY must be 'instance', 'teams' or 'off'.")
 

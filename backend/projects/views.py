@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.db.models import Avg, Count, Max, Min, Q
+from django.db.models import Avg, Count, Exists, Max, Min, OuterRef, Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status, viewsets
@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .access_report import project_access
 from .emails import notify_admin_new_registration
-from .models import Project, ProjectMembership, ProjectTeam, Role, Team
+from .models import Project, ProjectMembership, ProjectTeam, Role, RunCloseout, Team
 from .permissions import IsProjectMember, IsProjectOwner, IsTeamOwnerOrReadOnly, get_role, is_org_admin
 from .serializers import (
     AddMemberSerializer,
@@ -24,6 +24,7 @@ from .serializers import (
     ProjectMembershipSerializer,
     ProjectSerializer,
     ProjectTeamSerializer,
+    RunCloseoutSerializer,
     RegisterSerializer,
     TeamSerializer,
     UserSerializer,
@@ -133,6 +134,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
                   ev_end=Max('events__end'),
                   avg_progress=Avg('events__percent_complete'),
                   ev_count=Count('events'),
+                  ev_done=Count('events', filter=Q(events__percent_complete__gte=100)),
+                  has_closeout=Exists(RunCloseout.objects.filter(project=OuterRef('pk'))),
               )
               .prefetch_related('memberships'))   # members listed via the dedicated endpoint
         if is_org_admin(self.request.user):
@@ -177,6 +180,44 @@ class ProjectViewSet(viewsets.ModelViewSet):
         ProjectMembership.objects.create(
             project=project, user=self.request.user, role=Role.OWNER,
         )
+
+    # ── Close-out ───────────────────────────────────────────────────────────
+    # What the run cost and how the plan worked (docs/design/template-closeout.md).
+    # Read: any member. Write, delete, dismiss: owners, decided here from get_role.
+    @extend_schema(request=RunCloseoutSerializer, responses=RunCloseoutSerializer)
+    @action(detail=True, methods=['get', 'put', 'delete'], url_path='closeout')
+    def closeout(self, request, pk=None):
+        project = self.get_object()                 # membership-scoped -> non-members get 404
+        existing = RunCloseout.objects.filter(project=project).select_related('closed_by').first()
+        if request.method == 'GET':
+            if not existing:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(RunCloseoutSerializer(existing).data)
+        if get_role(request.user, project.id) != Role.OWNER:
+            return Response({'detail': 'Only an owner can close out a project.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        if request.method == 'DELETE':
+            if existing:
+                existing.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        serializer = RunCloseoutSerializer(existing, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if existing:
+            serializer.save()
+        else:
+            serializer.save(project=project, closed_by=request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK if existing else status.HTTP_201_CREATED)
+
+    @extend_schema(request=None, responses=None)
+    @action(detail=True, methods=['post'], url_path='closeout/dismiss')
+    def closeout_dismiss(self, request, pk=None):
+        """An owner answered "Not now": stop offering the close-out on this project."""
+        project = self.get_object()
+        if get_role(request.user, project.id) != Role.OWNER:
+            return Response({'detail': 'Only an owner can do this.'}, status=status.HTTP_403_FORBIDDEN)
+        project.closeout_dismissed = True
+        project.save(update_fields=['closeout_dismissed'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # ── Member management ───────────────────────────────────────────────────
     # GET: any project member (needed to populate task owner/assignee pickers).
