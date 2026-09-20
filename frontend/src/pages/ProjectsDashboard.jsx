@@ -225,6 +225,7 @@ export default function ProjectsDashboard() {
               <button onClick={resetLayout} title="Reset window positions, sizes & zoom">Reset</button>
             </>
           )}
+          <button onClick={() => navigate('/templates')}>Templates</button>
           <button onClick={() => navigate('/teams')}>Teams</button>
           <span className="dash-user">{user?.username}</span>
           <button onClick={logout}>Log out</button>

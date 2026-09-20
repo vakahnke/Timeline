@@ -1,6 +1,6 @@
 # Template Library: explore, vote, comment, share — Design Document
 
-**Status:** Draft
+**Status:** Phase 1 built (2026-09-19); phases 2 and 3 are still design
 **Last updated:** 2026-09-19
 **Scope:** Turns saved templates from a private list into a library people can browse, judge and pass around: inside one instance first, then between instances as a file or link, then as a community gallery. Touches the template model and API, a new Library page, project creation, and (phase 3) the GitHub repository.
 
@@ -223,6 +223,45 @@ created. Imported templates start **private**.
 - **Later / maybe:** following a template to hear about new versions; diffing two versions;
   suggesting a template from a project's name; a gallery website generated from `index.json`.
 
+### 5.1 What phase 1 built, and where it differs from the text above
+
+Built as designed: visibility (private / teams / instance) with `TEMPLATE_LIBRARY`, the publish
+review step with its three switches and warnings, the Library page and a page per template with the
+plan drawn out, upvotes, flat comments, "make my own copy", reporting to staff, provenance on new
+projects, and the track record (three finished runs before a ratio is shown, per-project opt-out).
+The visibility rule got its test file first (`backend/projects/tests_template_library.py`).
+
+Differences, all simplifications:
+
+- **No separate `/library/` endpoint.** `GET /api/templates/` returns everything the caller may see
+  and takes `q`, `group`, `tag`, `scope` and `sort`. The picker and the library share it.
+- **Publishing is a `PATCH` of `visibility`**, not a `publish/` endpoint. `unpublish/` exists
+  because staff need it and cannot `PATCH`.
+- **Templates are addressed by key** (`/templates/saved:12`), not by slug. Slugs arrive with public
+  links in phase 2. `forked_from` is stored as a key, so a copy of a built-in is recorded too.
+- **Notes and to-dos are held back by filtering at read time** (`share_notes`, `share_todos`), not by
+  deleting them, so the author's own template stays whole.
+- **"Abandoned" is shown as "stalled"** and means unfinished with the last date more than 60 days
+  past. Events have no modified timestamp, and this needs none.
+- **The planned length is stored on the project** at instantiation (`source_template_span`), so a
+  later edit to the template cannot rewrite the history of earlier runs.
+- **The preview is its own small SVG** (`TemplatePreview.jsx`) rather than `ReportTimeline`, which is
+  built around dated status facts. It is not zoomable; on a phone it scrolls sideways.
+- **Track records are computed per request**, one grouped query for the whole list. No cache yet.
+- **Not built:** versions and "what I learned" notes (phase 2, with the file format), and author pages.
+
+### 5.2 Proposed next: a close-out, so a template knows what a run cost and how well it worked
+
+Time is the objective the schedule can measure, and phase 1 measures it. Two things that matter
+as much cannot be computed: **what that run cost** and **how well it worked**. Proposal: when a
+project that came from a template reaches 100%, offer its owner a short, optional close-out: what it
+cost (a number and a currency, or "skip"), how well it worked (a simple scale), and one line on what
+to change. The template then shows them the same way it shows time: as aggregates ("median cost
+$14k · 9 of 11 runs rated it worked"), only above a minimum number of runs, never per project. The
+one-line lesson is the natural seed for phase 2's "what I learned" version note. Cost is more
+sensitive than dates, so it is optional per run and follows the same opt-out. The app has no notion
+of cost today, so this needs its own design pass before it is built.
+
 ## 6. Cost & risk
 
 - **Effort:** Phase 1 **L** (model, permissions, a new page, the preview, the publish review).
@@ -245,12 +284,13 @@ created. Imported templates start **private**.
 
 ## 7. Open questions / decisions needed
 
-- [ ] **How far should sharing go first?** Proposed: teams and whole-instance in phase 1.
-- [ ] **Is the track record wanted**, and are three finished runs the right minimum to show it?
-- [ ] **Upvotes only** (proposed), or something richer?
-- [ ] **Names on published templates:** the author's choice each time (proposed), or always named?
+- [x] **How far should sharing go first?** Teams and whole-instance, in phase 1.
+- [x] **Is the track record wanted?** Yes; three finished runs before a ratio is shown.
+- [x] **Upvotes only.** The richer signal is the track record, and later the close-out (5.2).
+- [x] **Names on published templates:** the author's choice each time.
 - [ ] **Public preview pages** with no sign-in: useful for sharing and for the demo; off by default?
 - [ ] **Where should the community gallery live:** a folder in this repository (proposed, brings
       contributors here) or a separate repository (keeps this one's history clean)?
 - [ ] **Licence for community templates:** CC BY 4.0 (credit required) or CC0 (no strings)?
-- [ ] **Should the built-ins be votable and commentable** like everything else? Proposed yes.
+- [x] **Built-ins are votable and commentable** like everything else.
+- [ ] **The close-out (5.2):** is cost a plain number, or bands? Who may see a template's cost figures?

@@ -524,7 +524,7 @@ export default function ProjectTimeline() {
     flash('Saving template…', 'saving')
     try {
       await api.templates.save({ project: Number(projectId), name: tplName.trim() })
-      flash('Template saved', 'saved')
+      flash('Template saved. It is private to you; share it from Templates.', 'saved')
     } catch (err) {
       flash('Error: ' + err.message, 'error')
     }

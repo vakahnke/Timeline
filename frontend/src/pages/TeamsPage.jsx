@@ -27,6 +27,7 @@ export default function TeamsPage() {
         <div className="dash-brand">Timeline</div>
         <div className="dash-userbox">
           <button onClick={() => navigate('/')}>Projects</button>
+          <button onClick={() => navigate('/templates')}>Templates</button>
           <span className="dash-user">{user?.username}</span>
           <button onClick={logout}>Log out</button>
         </div>

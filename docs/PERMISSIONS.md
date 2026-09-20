@@ -33,6 +33,18 @@ One rule, enforced on the server for every request:
   any account in the system.
 - **People on a task must have access to its project.** Owners and assignees are checked with the
   same `get_role`.
+- **Templates follow the same rule with a different unit.** A saved template belongs to one person.
+  Who else may see it is decided in one place, `library.visible_templates`: members of a team it is
+  shared with (read live), or everyone signed in once it is published to the instance, and only as
+  far as the operator's `TEMPLATE_LIBRARY` setting allows. Anyone who can see a template can use
+  it, copy it, vote and comment; only its owner can edit, share or delete it; staff can unpublish
+  it and delete comments. A template you may not see answers 404, the same as one that does not
+  exist. You can share only with teams you own or belong to; the team ids in the request are
+  checked against the database. Publishing to the whole instance shows the author's username to
+  people outside their directory, so it is the author's choice each time (`author_display`), and
+  notes and to-dos the author holds back are filtered for everyone else on every path, including
+  copies and new projects. A template's track record is aggregates only.
+  `backend/projects/tests_template_library.py` attacks these points.
 - **The React app hides controls as a courtesy, not as security.** `my_role` is sent to the client
   so it can grey out buttons; the server never reads it back.
 - **The one global override:** staff accounts (`is_staff`) are org-admins and count as Owner on

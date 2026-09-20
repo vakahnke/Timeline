@@ -6,6 +6,9 @@ export default function CreateProjectModal({ project, onSubmit, onClose }) {
   const editing = !!project
   const [name,        setName]        = useState(project?.name || '')
   const [description, setDescription] = useState(project?.description || '')
+  // Only on a project that was started from a template, and only its owner decides.
+  const fromTemplate = editing && !!project.source_template_key && project.my_role === 'owner'
+  const [counted,     setCounted]     = useState(project?.count_in_track_record !== false)
   const [error,       setError]       = useState('')
   const [saving,      setSaving]      = useState(false)
 
@@ -13,12 +16,13 @@ export default function CreateProjectModal({ project, onSubmit, onClose }) {
     if (!name.trim()) { setError('Project name is required.'); return }
     setSaving(true)
     try {
-      await onSubmit({ name: name.trim(), description: description.trim() })
+      await onSubmit({ name: name.trim(), description: description.trim(),
+                       ...(fromTemplate ? { count_in_track_record: counted } : {}) })
     } catch (err) {
       setError(`Could not ${editing ? 'save' : 'create'} project: ` + err.message)
       setSaving(false)
     }
-  }, [name, description, onSubmit, editing])
+  }, [name, description, onSubmit, editing, fromTemplate, counted])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -48,6 +52,13 @@ export default function CreateProjectModal({ project, onSubmit, onClose }) {
             <textarea value={description} onChange={e => setDescription(e.target.value)}
                       placeholder="Optional — what is this project about?" />
           </div>
+          {fromTemplate && (
+            <label className="check-row">
+              <input type="checkbox" checked={counted} onChange={e => setCounted(e.target.checked)} />
+              <span>Count this project in its template's track record
+                <span className="label-hint"> · totals only, never the project's name. Untick for confidential work.</span></span>
+            </label>
+          )}
           {error && <div className="field-error">&#10005; {error}</div>}
         </div>
 

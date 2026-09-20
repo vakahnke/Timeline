@@ -53,6 +53,39 @@ DEMO_USERS = [
     ('viewer', 'viewer@example.com', 'demo12345', Role.VIEWER),
 ]
 
+# A template the "editor" demo user has shared with everyone, for the template library.
+_D = 1440
+LIBRARY_TEMPLATE = dict(
+    name='Customer Onboarding: First 30 Days',
+    summary='Get a new customer from signed contract to a first real result in a month',
+    description=('The onboarding plan our team settled on after a dozen customers. It assumes one '
+                 'onboarding lead and a customer-side champion, and a product that needs some data '
+                 'brought over before it is useful.\n\nThe first-result milestone in week three is '
+                 'the one to protect: if it slips, the renewal conversation gets harder.'),
+    group='business',
+    tags=['onboarding', 'customer success'],
+    categories=[{'name': 'Kickoff', 'color': '#818cf8'}, {'name': 'Setup', 'color': '#4a88ff'},
+                {'name': 'Adoption', 'color': '#34d399'}, {'name': 'Review', 'color': '#fbbf24'}],
+    tasks=[
+        {'title': 'Internal handoff from sales', 'category': 'Kickoff', 'start_offset_minutes': 0 * _D, 'duration_minutes': 1 * _D, 'notes': 'Goals, promises made, who the champion is.', 'is_milestone': False, 'depends_on': [], 'todos': [{'title': 'Read the signed order form', 'due_offset_days': 0}, {'title': 'Note every promise made in the sales cycle', 'due_offset_days': 1}]},
+        {'title': 'Kickoff call', 'category': 'Kickoff', 'start_offset_minutes': 2 * _D, 'duration_minutes': 1 * _D, 'notes': 'Agree what "working" means in 30 days. Write it down.', 'is_milestone': True, 'depends_on': [0], 'todos': [{'title': 'Send the agenda a day ahead', 'due_offset_days': 1}]},
+        {'title': 'Accounts and access', 'category': 'Setup', 'start_offset_minutes': 3 * _D, 'duration_minutes': 3 * _D, 'notes': 'Single sign-on takes longest. Start it first.', 'is_milestone': False, 'depends_on': [1], 'todos': []},
+        {'title': 'Bring their data over', 'category': 'Setup', 'start_offset_minutes': 4 * _D, 'duration_minutes': 8 * _D, 'notes': 'Ask for a sample export before the real one.', 'is_milestone': False, 'depends_on': [1], 'todos': [{'title': 'Get a sample export', 'due_offset_days': 5}, {'title': 'Check the import with the champion', 'due_offset_days': 11}]},
+        {'title': 'Train the champion', 'category': 'Adoption', 'start_offset_minutes': 8 * _D, 'duration_minutes': 3 * _D, 'notes': '', 'is_milestone': False, 'depends_on': [2], 'todos': []},
+        {'title': 'Team training', 'category': 'Adoption', 'start_offset_minutes': 13 * _D, 'duration_minutes': 4 * _D, 'notes': 'Two short sessions beat one long one.', 'is_milestone': False, 'depends_on': [3, 4], 'todos': []},
+        {'title': 'First real result', 'category': 'Adoption', 'start_offset_minutes': 17 * _D, 'duration_minutes': 3 * _D, 'notes': 'The thing they bought it for, done once, end to end.', 'is_milestone': True, 'depends_on': [5], 'todos': []},
+        {'title': 'Usage check-in', 'category': 'Review', 'start_offset_minutes': 23 * _D, 'duration_minutes': 1 * _D, 'notes': 'Who has not signed in yet?', 'is_milestone': False, 'depends_on': [6], 'todos': []},
+        {'title': '30-day review with the sponsor', 'category': 'Review', 'start_offset_minutes': 29 * _D, 'duration_minutes': 1 * _D, 'notes': 'Results against the kickoff goals, and what comes next.', 'is_milestone': True, 'depends_on': [7], 'todos': [{'title': 'Pull the usage numbers', 'due_offset_days': 28}]},
+    ],
+)
+LIBRARY_COMMENTS = [
+    ('demo',   'We have run this four times now. Bringing the data over is always the long pole; '
+               'starting it the day after kickoff was the fix.'),
+    ('viewer', 'Worth adding a security questionnaire step for larger customers. It cost us a week once.'),
+]
+# Finished runs behind its track record: each run's real length as a multiple of the plan.
+LIBRARY_RUNS = [1.0, 1.04, 1.1, 1.22]
+
 # Multi-week projects instantiated from built-in templates, anchored relative to
 # today (in weeks) so some work is done, some is in flight, and some is upcoming.
 TEMPLATE_PROJECTS = [
@@ -175,6 +208,7 @@ class Command(BaseCommand):
         ))
 
         self._seed_template_projects(users)
+        self._seed_library(users)
 
     def _seed_report_history(self, project, owner, events, now):
         """A baseline and three earlier status reports, so slip, what moved and the milestone
@@ -236,6 +270,43 @@ class Command(BaseCommand):
                     'footer': {'text': ''},
                 })
 
+    def _seed_library(self, users):
+        """One shared template with votes, comments and a track record, so the template library
+        has something in it besides the built-ins. The finished runs behind the track record belong
+        to an account nobody can sign in to, which keeps them off the demo users' dashboards."""
+        from projects.models import ProjectTemplate, TemplateComment, TemplateVote
+
+        author = users['editor']
+        if ProjectTemplate.objects.filter(owner=author, name=LIBRARY_TEMPLATE['name']).exists():
+            return
+        tpl = ProjectTemplate.objects.create(
+            owner=author, visibility='instance', published_at=timezone.now() - timedelta(days=40),
+            **LIBRARY_TEMPLATE)
+        key = f'saved:{tpl.id}'
+        for username in ('demo', 'viewer', 'editor'):
+            TemplateVote.objects.get_or_create(user=users[username], template_key=key)
+        for username, body in LIBRARY_COMMENTS:
+            TemplateComment.objects.create(template_key=key, author=users[username], body=body)
+
+        runner, _ = User.objects.get_or_create(
+            username='library-history', defaults={'email': 'library-history@example.com', 'is_active': False})
+        runner.set_unusable_password()
+        runner.save()
+        spec = {'categories': tpl.categories, 'tasks': tpl.tasks}
+        now = timezone.now()
+        for n, stretch in enumerate(LIBRARY_RUNS):
+            start = now - timedelta(days=60 + 45 * n)
+            project = create_project_from_spec(
+                spec, name=f'{tpl.name} (run {n + 1})', description='', start=start, owner=runner,
+                source_key=key)
+            for ev in project.events.all():                    # how long that run really took
+                ev.start = start + (ev.start - start) * stretch
+                ev.end = start + (ev.end - start) * stretch
+                ev.percent_complete = 100
+                ev.save(update_fields=['start', 'end', 'percent_complete'])
+        self.stdout.write(self.style.SUCCESS(
+            f'Seeded the template library: "{tpl.name}" shared by editor, {len(LIBRARY_RUNS)} finished runs.'))
+
     def _seed_template_projects(self, users):
         """Instantiate a few built-in templates for the demo owner, relative to today."""
         now = timezone.now()
@@ -251,6 +322,7 @@ class Command(BaseCommand):
             project = create_project_from_spec(
                 spec, name=spec['name'], description=spec['description'],
                 start=anchor + timedelta(weeks=weeks), owner=owner,
+                source_key=f'builtin:{slug}',       # so the library shows these plans in use
             )
             for username, _email, _password, role in DEMO_USERS:
                 ProjectMembership.objects.get_or_create(

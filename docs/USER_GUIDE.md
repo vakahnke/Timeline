@@ -171,15 +171,53 @@ dependencies) shifted to a start date you choose.
   assign to another user → **Create**.
 - **Built-ins:** business plans (*Startup MVP*, *Seed Fundraising Round*, *Go-to-Market Launch*, *Hire a Key Role*, *Quarterly OKR Cycle*, …),
   work plans (*Two-Week Sprint*, *Product Launch*, *Event Plan*), and hobby builds (*Homebrew a Batch of Ale*, *First Marathon*, *Build a Steel-String Acoustic*, …).
-- **Save your own:** open a project → **Save as Template** in the toolbar. Saved templates
-  are private to you and appear alongside the built-ins in the **From Template** picker
-  (delete them there).
+- **Save your own:** open a project → **Save as Template** in the toolbar. A saved template is
+  private to you until you share it, and appears alongside the built-ins in the **From Template**
+  picker.
 - **What a template keeps:** the plan. Tracks, events, their durations and dependencies, notes,
   which events are key milestones, and the to-do list inside each event (due dates move with the
   new start date).
 - **What it leaves behind:** that one run. The dates, the progress, who was assigned each to-do and
   whether it was done, and the project's members. A project started from a template always begins
   at zero, so a finished project makes a clean starting point for the next one.
+
+### The template library
+
+**Templates** in the dashboard header opens the library: the built-in plans (marked *Official*),
+your own templates, and any that have been shared with you. Search it, filter by shelf
+(Business, Work, Hobby, Other) or tag, and sort by **Most proven**, most votes, newest or name.
+
+Open a template to see its page:
+
+- **The plan**, drawn out: tracks, events, dependency lines and ◆ key milestones, on relative time
+  ("Week 3") because a template has no dates until you use it.
+- **Use this template** asks for a name and a start date and creates the project.
+  **Make my own copy** gives you a private copy to adapt; it remembers where it came from.
+- **Track record.** A project remembers the template it was started from, so the page shows how
+  many projects were started from it, how many finished, how many are in flight, and how many
+  stalled (unfinished, with their last date more than 60 days ago). Once **three** have finished
+  it also says how they ran against the plan, for example "typically runs 7% long". These are
+  totals only: the page never shows which projects, or whose. If a project is confidential, its
+  owner can open **Edit project** on the dashboard and untick **Count this project in its
+  template's track record**.
+- **Vote and comment.** One upvote per person, which you can take back. Comments show your
+  username. You can delete your own comments; the template's owner and admins can delete any.
+  **Report** flags a template or a comment for an admin.
+
+**Sharing one of yours.** On your template's page choose **Edit details or share…**. Give it a
+one-line summary, a shelf and tags, then choose who can see it: only you, teams you choose (any
+team you own or belong to; people who later join the team see it too, and people who leave stop
+seeing it), or everyone signed in to the server.
+
+Before anything is shared you are shown **exactly what other people will get**: every name, note
+and to-do title, with anything that looks like an email address, an @name, a phone number or a
+link highlighted. Templates come from real projects, so read it. You can leave out the notes, leave
+out the to-do lists, or share it without your name (it is then listed as shared by "a member").
+Your own copy always keeps everything. When you share with the whole server, your username is
+shown to people you do not otherwise work with; the dialog says so. **Stop sharing** makes it
+private again at any time; copies other people already made, and projects already started, stay.
+
+The operator of your server can limit sharing to teams or switch it off (`TEMPLATE_LIBRARY`).
 
 ## 5. Teams
 

@@ -1445,6 +1445,8 @@ fieldset.modal-body:disabled { opacity: 1; }
 
 .modal-wide { width: 560px; }
 
+.check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--text-bright); cursor: pointer; line-height: 1.45; }
+.check-row input { accent-color: var(--accent); margin-top: 2px; flex-shrink: 0; }
 .label-hint { text-transform: none; font-weight: 400; letter-spacing: 0; color: var(--text-dimmer); }
 
 .template-list {

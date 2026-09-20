@@ -52,6 +52,36 @@ Over time a team builds up a library of plans that are known to work. A new hire
 running their first launch does not need to know how; they need the template from
 the last one and a start date.
 
+### The template library
+
+A saved template starts out private. When it is worth passing on, share it: with the
+teams you choose, or with everyone on your server. The **Templates** page is where
+people find it.
+
+![The template library](docs/images/template-library.png)
+
+- **See the plan before you use it.** Every template has a page with its tracks,
+  events, dependencies and key milestones drawn out, plus what it assumes.
+- **A track record, not just likes.** Each project remembers the template it came
+  from, so a template can show how many projects were started from it, how many
+  finished, and, once three have finished, how they ran against the plan:
+  "typically runs 7% long". Totals only; it never shows which projects or whose,
+  and an owner can keep a confidential project out of it.
+- **Vote and comment.** One upvote each, and a comment thread for what worked and
+  what to change. The built-in plans take votes and comments too.
+- **Make your own copy** of any template to adapt, and it remembers where it came from.
+- **Sharing is a review, not a switch.** A template is cut from a real project, so
+  before it leaves your hands you are shown every note and to-do title that other
+  people would get, with anything that looks like an email address, phone number or
+  link pointed out. Leave the notes or to-dos out, or share it without your name.
+  Your own copy keeps everything.
+
+![A template's page: the plan, its track record and comments](docs/images/template-page.png)
+
+An operator can limit sharing to teams, or switch it off, with `TEMPLATE_LIBRARY`.
+Still to come: handing a template to another server as a file, and a community
+gallery ([design](docs/design/template-library.md)).
+
 Timeline ships with built-in plans so you can see the idea before you have a
 library of your own:
 
@@ -314,7 +344,8 @@ All endpoints take a JWT in the `Authorization` header. The live schema at
 | GET/POST/PATCH/DELETE | `/api/projects/<id>/members/`                                 | members (owner only)               |
 | GET/POST/PATCH/DELETE | `/api/projects/<id>/events/`, `/api/projects/<id>/categories/` | viewers read, editors write       |
 | POST                  | `/api/projects/<id>/events/bulk/`                             | bulk-create events                 |
-| GET/POST/DELETE       | `/api/templates/`, `/api/templates/instantiate/`              | built-in and saved templates       |
+| GET/POST/PATCH/DELETE | `/api/templates/`, `/api/templates/<key>/`, `…/instantiate/`  | templates and the template library |
+| POST/DELETE, GET/POST | `/api/templates/<key>/vote/`, `…/comments/`, `…/fork/`, `…/unpublish/`, `…/report/` | votes, comments, copies, moderation |
 | GET/POST/PATCH/DELETE | `/api/teams/`, `/api/teams/<id>/members/`                     | reusable teams                     |
 | POST                  | `/api/projects/<id>/add-team/`                                | add a team at a role (owner only)  |
 
@@ -369,8 +400,9 @@ are the easiest way in, and one of them needs no coding at all. Questions and id
 Some directions that would be good contributions, roughly in order of effort:
 
 - A signed-in "change password" screen: [design](docs/design/password-reset.md) (reset by email is built)
-- A template library: explore, vote on, comment on and share plans, with a track record of how
-  each one actually ran: [design](docs/design/template-library.md)
+- Template library, phases 2 and 3: export and import a template as a file, versions with a
+  "what I learned" note, and a community gallery: [design](docs/design/template-library.md)
+  (the library inside one server is built)
 - A subscribable calendar feed, so calendars stay current without exporting again:
   [design](docs/design/icalendar-export.md) (the one-off `.ics` export is built)
 - Import from Microsoft Project XML:

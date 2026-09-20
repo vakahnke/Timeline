@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth/AuthContext'
 
@@ -10,7 +11,8 @@ function defaultStart() {
   return new Date(d - off).toISOString().slice(0, 16)
 }
 
-export default function TemplateModal({ onCreated, onClose }) {
+// `initialKey` opens it on one template (from the library's "Use this template").
+export default function TemplateModal({ onCreated, onClose, initialKey = null }) {
   const { user } = useAuth()
   const [templates, setTemplates] = useState([])
   const [loading,   setLoading]   = useState(true)
@@ -27,15 +29,16 @@ export default function TemplateModal({ onCreated, onClose }) {
       const items = await api.templates.list()
       setTemplates(items)
       if (items.length && !selected) {
-        setSelected(items[0].key)
-        setName(items[0].name)
+        const first = items.find(t => t.key === initialKey) || items[0]
+        setSelected(first.key)
+        setName(first.name)
       }
     } catch {
       setError('Could not load templates.')
     } finally {
       setLoading(false)
     }
-  }, [selected])
+  }, [selected, initialKey])
 
   useEffect(() => { load() }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -44,7 +47,10 @@ export default function TemplateModal({ onCreated, onClose }) {
   const isBuiltin = (t) => t.source === 'builtin'
   // Saved templates: anyone can delete their own. Built-ins are shared/global, so only
   // admins can retire them — and doing so removes them for everyone.
-  const canDelete = (t) => (t.source === 'saved') || (isBuiltin(t) && user?.is_staff)
+  const canDelete = (t) => t.can_delete ?? ((t.source === 'saved') || (isBuiltin(t) && user?.is_staff))
+  // Built in, yours, or shared with you by someone else.
+  const origin = (t) => isBuiltin(t) ? 'builtin' : t.is_mine === false ? 'shared' : 'saved'
+  const shown = initialKey ? templates.filter(t => t.key === initialKey) : templates
 
   const deleteTemplate = async (t, e) => {
     e.stopPropagation()
@@ -92,12 +98,12 @@ export default function TemplateModal({ onCreated, onClose }) {
 
         <div className="modal-body">
           <div className="field">
-            <label>Template</label>
+            <label>Template {!initialKey && <Link className="label-hint" to="/templates">· browse the library, with previews</Link>}</label>
             {loading ? (
               <p className="dim">Loading templates…</p>
             ) : (
               <div className="template-list">
-                {templates.map(t => (
+                {shown.map(t => (
                   <div
                     key={t.key}
                     className={`template-item${selected === t.key ? ' selected' : ''}`}
@@ -106,7 +112,7 @@ export default function TemplateModal({ onCreated, onClose }) {
                     <div className="template-item-main">
                       <div className="template-item-top">
                         <span className="template-name">{t.name}</span>
-                        <span className={`template-src template-src--${t.source}`}>{t.source}</span>
+                        <span className={`template-src template-src--${t.source}`}>{origin(t)}</span>
                       </div>
                       <p className="template-desc">{t.description}</p>
                       <span className="template-meta">{t.task_count} tasks · {t.category_count} categories</span>

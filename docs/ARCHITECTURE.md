@@ -57,7 +57,8 @@ Isolation is enforced in **two** places, never one:
 | `Comment` | `event`, `author`, `body` |
 | `StatusReport` | `project`, `author`, `as_of`, `layout`, `status` + `status_source` + `override_reason` + `rule_fired`, `content` (JSON page document), `snapshot` (JSON frozen facts) |
 | `Baseline` | `project`, `name`, `created_by`, `committed_end`, `planned_start/end`, `events` (JSON: each event's dates when frozen), `active` |
-| `ProjectTemplate` | `owner`, `name`, `description`, `categories` (JSON), `tasks` (JSON) |
+| `ProjectTemplate` | `owner`, `name`, `description`, `categories` (JSON), `tasks` (JSON); library fields: `visibility`, `shared_with_teams`, `summary`, `group`, `tags`, `author_display`, `share_notes`, `share_todos`, `forked_from_key` |
+| `TemplateVote`, `TemplateComment`, `TemplateReport` | keyed by template key (`saved:<id>` / `builtin:<slug>`), so built-ins take votes and comments too |
 | `HiddenBuiltinTemplate` | lets an org-admin hide a built-in template |
 
 `Event.category` is a **free-text string**, not a foreign key. The frontend groups events into
@@ -134,7 +135,7 @@ path and can never be a forgotten or forged parameter:
 /api/projects/<id>/calendar.ics
 /api/projects/<id>/export/msproject.xml
 /api/me/   /api/me/tasks/   /api/users/
-/api/templates/   /api/templates/instantiate/
+/api/templates/   /api/templates/instantiate/   /api/templates/<key>/{vote,comments,fork,unpublish,report}/
 /api/teams/       /api/teams/<id>/members/
 /api/health/
 ```
@@ -192,6 +193,28 @@ tracks, events, durations, dependencies, notes, key-milestone flags and each eve
 (titles, with due dates as day offsets). It drops dates, progress, to-do status and assignees, and
 the project's members. A new project always starts at zero percent, including from templates saved
 before that rule existed. `backend/projects/tests_template_reuse.py` holds this through the API.
+
+### The template library
+
+`backend/projects/library.py` owns the rules; `template_views.py` is the API.
+
+- **One visibility rule**, `library.visible_templates(user)`: your own templates, ones shared with a
+  team you own or belong to (read live), and ones published to the instance, each only as far as
+  `TEMPLATE_LIBRARY` (`instance` | `teams` | `off`) allows. Staff also see anything published, to
+  moderate it; nobody but the owner sees a private template. Every endpoint resolves its template
+  through `library.resolve`, and answers 404 both for "does not exist" and "not yours to see".
+- **What other people get** is filtered at read time (`Resolved.spec`): with `share_notes` or
+  `share_todos` off, everyone but the owner gets the plan without them, including through a copy
+  or a project started from it. Nothing is deleted from the owner's template.
+- **Track record** (`library.track_records`): `Project.source_template_key` and
+  `source_template_span` are written at instantiation. A run is *finished* when every event is at
+  100%, *stalled* when it is unfinished and its last date is more than 60 days past, otherwise *in
+  flight*. `typical_ratio` is the median of actual length over planned length across finished runs
+  and stays null below three of them. Aggregates only; `Project.count_in_track_record` opts a run out.
+- The frontend is `pages/TemplateLibraryPage.jsx`, `pages/TemplatePage.jsx` and
+  `components/library/` (`TemplatePreview.jsx` draws the plan as SVG on relative time;
+  `PublishModal.jsx` is the review step). `backend/projects/tests_template_library.py` holds the
+  boundary; `check-library.mjs` in the tools folder walks it in a browser as two people.
 
 ## Email
 

@@ -14,6 +14,9 @@ import TeamsPage from './pages/TeamsPage'
 const ProjectTimeline = lazy(() => import('./pages/ProjectTimeline'))
 // The status report / print tool is its own chunk: most sessions never open it.
 const StatusReportPage = lazy(() => import('./pages/StatusReportPage'))
+// The template library: browsing and a template's own page.
+const TemplateLibraryPage = lazy(() => import('./pages/TemplateLibraryPage'))
+const TemplatePage = lazy(() => import('./pages/TemplatePage'))
 
 // Set VITE_DEMO_BANNER at build time (e.g. on a public demo host) to show a notice bar.
 const DEMO_BANNER = import.meta.env.VITE_DEMO_BANNER || ''
@@ -33,6 +36,8 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<ProjectsDashboard />} />
               <Route path="/teams" element={<TeamsPage />} />
+              <Route path="/templates" element={<Suspense fallback={<RouteFallback />}><TemplateLibraryPage /></Suspense>} />
+              <Route path="/templates/:templateKey" element={<Suspense fallback={<RouteFallback />}><TemplatePage /></Suspense>} />
               <Route
                 path="/projects/:projectId"
                 element={

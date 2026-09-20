@@ -5,6 +5,19 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **A template library.** A saved template can be shared with chosen teams or with everyone on
+  the server, and the new Templates page lets people search, filter and sort what they can see.
+  Each template has its own page with the plan drawn out, upvotes, comments and "make my own
+  copy". Projects now remember the template they were started from, which gives every template a
+  track record: started, finished, in flight, stalled, and how finished runs ran against the plan
+  once three have finished. Totals only, and a project's owner can keep it out of the count.
+- Sharing a template is a review step: you see every note and to-do title that would be shared,
+  anything that looks like an email address, phone number or link is pointed out, and you can
+  leave out notes or to-dos or share without your name.
+- `TEMPLATE_LIBRARY` (`instance`, `teams` or `off`) lets an operator cap how far templates can be
+  shared. Flagged templates and comments appear in the Django admin.
+
 ### Changed
 - **A saved template is now the plan, not the record of one run.** Saving a finished project as a
   template keeps key-milestone flags and each event's to-do list, and no longer carries progress:
