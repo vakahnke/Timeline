@@ -1,3 +1,10 @@
+import brand from '../brand.json'
+
+// The product's name, everywhere a person sees it in the app. It lives in ../brand.json so the
+// build can put the same name in index.html. Someone hosting their own copy can set
+// VITE_APP_NAME at build time instead of editing the file.
+export const BRAND = import.meta.env.VITE_APP_NAME || brand.name
+
 export const RULER_HEIGHT  = 38;
 export const TRACK_HEIGHT  = 80;   // row height; tall enough that above/below name labels of adjacent rows don't collide (48px bar + 2×12px labels + clearance)
 // Low floor so multi-month / multi-year projects can be zoomed out to fit the whole span.

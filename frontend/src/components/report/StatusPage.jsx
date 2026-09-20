@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 import ReportTimeline from './ReportTimeline'
 import MilestoneTrend from './MilestoneTrend'
 import { STATUS, chosenMilestones, fmtDay, footerText, slipText, trendPoints } from './reportModel'
+import { BRAND } from '../../constants'
 
 // Text you can click and type into, right on the page. Commits on blur so React never fights the
 // caret; Enter commits a single-line field. Read-only members get plain text.
@@ -193,7 +194,7 @@ export default function StatusPage({ doc, report, facts, layout, previous, set, 
         )}
 
         {show.footer && (
-          <div className="sr-foot"><Editable value={footerText(doc, report, facts)} onChange={v => set('footer.text', v)} readOnly={ro} placeholder="Footer" maxLength={220} /><span>Timeline</span></div>
+          <div className="sr-foot"><Editable value={footerText(doc, report, facts)} onChange={v => set('footer.text', v)} readOnly={ro} placeholder="Footer" maxLength={220} /><span>{BRAND}</span></div>
         )}
       </div>
     </div>

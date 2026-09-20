@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { BRAND } from '../constants'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -42,7 +43,7 @@ export default function LoginPage() {
   return (
     <div className="auth-screen scroll-page">
       <form className="auth-card" onSubmit={submit}>
-        <div className="auth-brand">Timeline</div>
+        <div className="auth-brand">{BRAND}</div>
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-sub">Sign in to plan your projects.</p>
 

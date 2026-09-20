@@ -1,6 +1,7 @@
 import re
 from urllib.parse import parse_qs, urlparse
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.cache import cache
@@ -51,7 +52,7 @@ class PasswordResetTests(TestCase):
         self.assertTrue(self.user.check_password(NEW))
         self.assertEqual(self.c.post('/api/auth/token/', {'username': 'pm', 'password': NEW}, format='json').status_code, 200)
         self.assertEqual(self.c.post('/api/auth/token/', {'username': 'pm', 'password': 'the-old-Passw0rd'}, format='json').status_code, 401)
-        self.assertEqual(mail.outbox[-1].subject, 'Your Timeline password was changed')
+        self.assertEqual(mail.outbox[-1].subject, f'Your {settings.APP_NAME} password was changed')
 
     def test_a_link_works_once(self):
         self.c.post(REQUEST, {'email': 'pm@example.com'}, format='json')

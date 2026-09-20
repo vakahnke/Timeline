@@ -30,6 +30,9 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - **Lessons reach the template's owner.** "What would you change next time?" can be sent to the
   owner of the template the project came from (text and date only, never which project) and,
   separately, posted as a comment under your own name. Both are your choice on each close-out.
+- The product's name now comes from one place on each side: `APP_NAME` for the server (emails,
+  exported status reports, calendar files) and `frontend/brand.json` or `VITE_APP_NAME` for the
+  app. Anyone hosting their own copy can put their own name on it. Nothing looks different.
 - `TEMPLATE_LIBRARY` (`instance`, `teams` or `off`) lets an operator cap how far templates can be
   shared. Flagged templates and comments appear in the Django admin.
 

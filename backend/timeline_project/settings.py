@@ -202,8 +202,12 @@ if MAILERS['default']['BACKEND'].endswith('smtp.EmailBackend'):
         'username': _email_user,
         'password': env('EMAIL_HOST_PASSWORD', default=''),
     }
+# The product's name wherever the server says it: email subjects and sign-offs, the source mark on
+# an exported status report, the calendar PRODID. Set APP_NAME to put your own name on your copy.
+APP_NAME = env.str('APP_NAME', default='Timeline').strip() or 'Timeline'
+
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL',
-                         default=(_email_user or 'Timeline <no-reply@localhost>'))
+                         default=(_email_user or f'{APP_NAME} <no-reply@localhost>'))
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 # Where "new account pending approval" alerts go (ADMIN_NOTIFY_EMAIL accepted for parity).
 ACCOUNT_NOTIFY_EMAIL = env('ACCOUNT_NOTIFY_EMAIL', default=env('ADMIN_NOTIFY_EMAIL', default=''))

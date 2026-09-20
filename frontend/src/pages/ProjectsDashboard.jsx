@@ -9,6 +9,7 @@ import MembersPanel from '../components/MembersPanel'
 import MyTasksPanel from '../components/MyTasksPanel'
 import MovablePanel from '../components/MovablePanel'
 import useIsNarrow from '../ui/useIsNarrow'
+import { BRAND } from '../constants'
 
 function RoleBadge({ role }) {
   if (!role) return null
@@ -216,7 +217,7 @@ export default function ProjectsDashboard() {
   return (
     <div className="dashboard scroll-page">
       <header className="dash-header">
-        <div className="dash-brand">Timeline</div>
+        <div className="dash-brand">{BRAND}</div>
         <div className="dash-userbox">
           {!narrow && (
             <>

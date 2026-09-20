@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import TeamModal from '../components/TeamModal'
+import { BRAND } from '../constants'
 
 export default function TeamsPage() {
   const { user, logout } = useAuth()
@@ -24,7 +25,7 @@ export default function TeamsPage() {
   return (
     <div className="dashboard scroll-page">
       <header className="dash-header">
-        <div className="dash-brand">Timeline</div>
+        <div className="dash-brand">{BRAND}</div>
         <div className="dash-userbox">
           <button onClick={() => navigate('/')}>Projects</button>
           <button onClick={() => navigate('/templates')}>Templates</button>

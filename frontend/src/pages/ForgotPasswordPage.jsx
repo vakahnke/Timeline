@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, ApiError } from '../api'
+import { BRAND } from '../constants'
 
 // Step 1 of a password reset: ask for a link. The answer is deliberately the same whether or not
 // the address has an account, so this page cannot be used to find out who has one.
@@ -26,7 +27,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="auth-screen scroll-page">
       <form className="auth-card" onSubmit={submit}>
-        <div className="auth-brand">Timeline</div>
+        <div className="auth-brand">{BRAND}</div>
         <h1 className="auth-title">Forgot your password?</h1>
         {sent ? (
           <>

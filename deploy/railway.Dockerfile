@@ -19,6 +19,9 @@ COPY frontend/ .
 # Baked into the bundle at build time; shows a banner in the app when set.
 ARG VITE_DEMO_BANNER=""
 ENV VITE_DEMO_BANNER=$VITE_DEMO_BANNER
+# Optional: your own product name in the app (see frontend/brand.json for the default).
+ARG VITE_APP_NAME=""
+ENV VITE_APP_NAME=$VITE_APP_NAME
 RUN npm run build
 
 # ---- 2. Backend + SPA ----

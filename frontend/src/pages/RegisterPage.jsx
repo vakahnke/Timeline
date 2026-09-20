@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { BRAND } from '../constants'
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -44,7 +45,7 @@ export default function RegisterPage() {
     return (
       <div className="auth-screen scroll-page">
         <div className="auth-card">
-          <div className="auth-brand">Timeline</div>
+          <div className="auth-brand">{BRAND}</div>
           <div className="auth-check">✓</div>
           <h1 className="auth-title">Account created</h1>
           <p className="auth-sub">
@@ -60,7 +61,7 @@ export default function RegisterPage() {
   return (
     <div className="auth-screen scroll-page">
       <form className="auth-card" onSubmit={submit}>
-        <div className="auth-brand">Timeline</div>
+        <div className="auth-brand">{BRAND}</div>
         <h1 className="auth-title">Create your account</h1>
         <p className="auth-sub">Start planning projects with your team.</p>
 

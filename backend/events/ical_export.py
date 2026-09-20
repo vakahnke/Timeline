@@ -13,6 +13,7 @@ See docs/design/icalendar-export.md. The choices that matter:
 """
 from datetime import timedelta, timezone as dt_tz
 
+from django.conf import settings
 from django.utils import timezone
 from icalendar import Calendar, Event as VEvent
 
@@ -27,7 +28,7 @@ def build_ics(project, events, *, host, site_url='', now=None):
     """Return the .ics file as bytes. ``events`` must have ``depends_on`` and ``tasks`` prefetched."""
     now = (now or timezone.now()).astimezone(dt_tz.utc)
     cal = Calendar()
-    cal.add('prodid', '-//Timeline//EN')
+    cal.add('prodid', f'-//{settings.APP_NAME}//EN')
     cal.add('version', '2.0')
     cal.add('calscale', 'GREGORIAN')
     cal.add('method', 'PUBLISH')

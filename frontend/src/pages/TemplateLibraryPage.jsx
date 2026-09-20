@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import { GROUPS, VISIBILITY_LABEL, recordLine, spanText } from '../components/library/libraryModel'
 import '../library.css'
+import { BRAND } from '../constants'
 
 const SORTS = [
   { id: 'proven',  label: 'Most proven' },
@@ -22,7 +23,7 @@ export function LibraryHeader() {
   const navigate = useNavigate()
   return (
     <header className="dash-header">
-      <div className="dash-brand">Timeline</div>
+      <div className="dash-brand">{BRAND}</div>
       <div className="dash-userbox">
         <button onClick={() => navigate('/')}>Projects</button>
         <button onClick={() => navigate('/teams')}>Teams</button>

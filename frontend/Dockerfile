@@ -13,6 +13,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Optional: your own product name in the app (the default is in brand.json).
+ARG VITE_APP_NAME=""
+ENV VITE_APP_NAME=$VITE_APP_NAME
 RUN npm run build
 
 # ---- prod: nginx serving the built SPA (nginx.conf mounted via compose) ----

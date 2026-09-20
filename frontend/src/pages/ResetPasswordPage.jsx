@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api'
 import { useAuth } from '../auth/AuthContext'
+import { BRAND } from '../constants'
 
 // Step 2 of a password reset: the page an emailed link opens. The token is read once and then
 // removed from the address bar, and the page asks browsers not to send a Referer, so the secret
@@ -52,7 +53,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="auth-screen scroll-page">
       <form className="auth-card" onSubmit={submit}>
-        <div className="auth-brand">Timeline</div>
+        <div className="auth-brand">{BRAND}</div>
         <h1 className="auth-title">Choose a new password</h1>
         {state === 'checking' && <p className="auth-sub">Checking your link…</p>}
         {state === 'bad' && (

@@ -194,6 +194,16 @@ tracks, events, durations, dependencies, notes, key-milestone flags and each eve
 the project's members. A new project always starts at zero percent, including from templates saved
 before that rule existed. `backend/projects/tests_template_reuse.py` holds this through the API.
 
+### The product's name
+
+One source on each side, so it is never typed by hand. Server: `settings.APP_NAME` (env `APP_NAME`),
+used by `projects/emails.py`, the source mark and speaker notes in `events/pptx_export.py`, the
+`PRODID` in `events/ical_export.py` and the default From address. App: `BRAND` in
+`frontend/src/constants.js`, read from `frontend/brand.json` (or `VITE_APP_NAME` at build time); a
+small Vite plugin writes the same name into `index.html`. The word "Timeline" elsewhere in the code
+means the timeline *view*. `backend/projects/tests_app_name.py` renames the product and checks
+that everything follows.
+
 ### The template library
 
 `backend/projects/library.py` owns the rules; `template_views.py` is the API.
