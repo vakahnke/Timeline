@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest something Timeline should do
+about: Suggest something Seedcorn should do
 labels: enhancement
 ---
 

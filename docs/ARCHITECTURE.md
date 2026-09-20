@@ -1,6 +1,6 @@
 # Architecture
 
-Timeline is a decoupled **React single-page app** talking to a **Django REST Framework** API over
+Seedcorn is a decoupled **React single-page app** talking to a **Django REST Framework** API over
 JWT, backed by **PostgreSQL**. In production one nginx origin serves the built app and
 reverse-proxies the API.
 

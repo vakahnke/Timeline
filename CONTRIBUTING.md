@@ -1,4 +1,4 @@
-# Contributing to Timeline
+# Contributing to Seedcorn
 
 Thanks for taking the time. Contributions of every size are welcome: bug reports,
 typo fixes, new templates, new features. This page tells you how to get a change
@@ -20,8 +20,8 @@ in with the least friction.
 Everything runs in Docker with hot reload. No local Python or Node needed.
 
 ```bash
-git clone https://github.com/<you>/Timeline.git
-cd Timeline
+git clone https://github.com/<you>/seedcorn.git
+cd seedcorn
 SEED_DEMO=1 docker compose up --build
 ```
 

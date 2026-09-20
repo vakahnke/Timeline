@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { BRAND } from '../constants'
 
 function fmtDT(ms) {
   const d = new Date(ms)
@@ -43,7 +44,7 @@ export default function Toolbar({ projectName, onBack, canEdit = true, isOwner =
   return (
     <div className="toolbar">
       <button className="btn-back" onClick={onBack} title="Back to projects">←</button>
-      <h1>{projectName || 'Timeline'}</h1>
+      <h1>{projectName || BRAND}</h1>
       {!canEdit && <span className="ro-badge" title="You have view-only access">View only</span>}
       {closedOut && (
         <button className="closed-badge" onClick={onCloseout} title="This project has been closed out. Open to see the answers.">Closed out</button>

@@ -1,9 +1,24 @@
 # Changelog
 
-Notable changes to Timeline. The format follows [Keep a Changelog](https://keepachangelog.com/),
+Notable changes to Seedcorn (called "Timeline" up to version 1.0.0). The format follows [Keep a Changelog](https://keepachangelog.com/),
 and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+## [1.1.0] - 2026-09-20
+
+### Timeline is now Seedcorn
+- **The project has a new name.** "Timeline" described one view of the app and could not be found
+  by searching. *Seedcorn* is the grain a farmer keeps back from this harvest to plant the next one,
+  which is what a plan that worked is: you run a project, adjust the plan as you go, and hand the
+  version that got you there to whoever does it next. Nothing else changes: same code, same Apache
+  2.0 license, same data, same URLs inside the app. The repository moved to
+  `github.com/vakahnke/seedcorn`; the old address redirects, and existing clones keep working.
+- If you host your own copy, the name now shown in the app, in emails and in exports is "Seedcorn".
+  Set `APP_NAME` (server) and `VITE_APP_NAME` (app build) to keep the old name or use your own.
+  Mail filters built on "[Timeline]" in the subject need updating. Calendar entries already
+  imported keep updating: their IDs never contained the product's name.
+- The word "Timeline" still names the timeline *view*, as before.
 
 ### Added
 - **A template library.** A saved template can be shared with chosen teams or with everyone on
@@ -41,7 +56,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
   template keeps key-milestone flags and each event's to-do list, and no longer carries progress:
   a project started from it begins at zero percent with every to-do open and assigned to you.
   Templates saved earlier also start at zero.
-- The README leads with what Timeline is for: plan it, try the plan, adjust it as you go, and
+- The README leads with what the project is for: plan it, try the plan, adjust it as you go, and
   share the successful result.
 
 ### Fixed
@@ -93,4 +108,5 @@ The first tagged release. Everything below is in it.
   platforms like Railway.
 - Django 6.1, React 19, Vite 8, PostgreSQL 15+. Dependabot, secret scanning and CI are enabled.
 
-[1.0.0]: https://github.com/vakahnke/Timeline/releases/tag/v1.0.0
+[1.1.0]: https://github.com/vakahnke/seedcorn/releases/tag/v1.1.0
+[1.0.0]: https://github.com/vakahnke/seedcorn/releases/tag/v1.0.0

@@ -1,14 +1,18 @@
-# Timeline
+# Seedcorn
 
-[![CI](https://github.com/vakahnke/Timeline/actions/workflows/ci.yml/badge.svg)](https://github.com/vakahnke/Timeline/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/vakahnke/Timeline?color=8b93ff)](https://github.com/vakahnke/Timeline/releases)
+> **Formerly "Timeline".** Same project, same license, same code; the old links redirect here.
+> *Seedcorn* is the grain a farmer keeps back from this harvest to plant the next one. That is what
+> a plan that worked is.
+
+[![CI](https://github.com/vakahnke/seedcorn/actions/workflows/ci.yml/badge.svg)](https://github.com/vakahnke/seedcorn/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/vakahnke/seedcorn?color=8b93ff)](https://github.com/vakahnke/seedcorn/releases)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Live demo](https://img.shields.io/badge/live%20demo-try%20it-8b93ff.svg)](https://web-production-28ba24.up.railway.app)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-Docker-2496ED.svg)](#run-it-yourself-in-two-minutes)
 
 **Plan it. Try the plan. Adjust the plan as you go and share the successful result.**
 
-Timeline is a self-hosted project planner for the person who has to get something
+Seedcorn is a self-hosted project planner for the person who has to get something
 big done, often for the first time: a product launch, a fundraise, an office move,
 a hiring push, a first marathon. You work out the steps and put them on a timeline you
 can actually grab. Then you run the project from it, and the plan changes as you learn:
@@ -43,7 +47,7 @@ Most projects are not new. They are the second product launch, the fourth hire, 
 annual conference. But the plan from last time lives in someone's head, a stale
 document, or a spreadsheet nobody trusts, so every run starts over.
 
-Timeline treats a finished project as the most valuable thing you own. Any project
+Seedcorn treats a finished project as the most valuable thing you own. Any project
 can be saved as a template in one step. It keeps the tracks, the events, their
 durations and dependencies, the notes, which events are key milestones, and the to-do
 list inside each event. It forgets what belonged to that one run: the dates, the
@@ -94,7 +98,7 @@ An operator can limit sharing to teams, or switch it off, with `TEMPLATE_LIBRARY
 Still to come: handing a template to another server as a file, and a community
 gallery ([design](docs/design/template-library.md)).
 
-Timeline ships with built-in plans so you can see the idea before you have a
+Seedcorn ships with built-in plans so you can see the idea before you have a
 library of your own:
 
 - **Business:** Startup MVP: Idea to Launch, Seed Fundraising Round, Customer
@@ -115,7 +119,7 @@ has to do a big thing well, and a marathon has dependencies too.
 
 Most project managers rebuild the same slide by hand every week or two: copy the
 dates into PowerPoint, pick a color, and hope the numbers still match the plan.
-Timeline writes that page from the schedule itself. Click **Status report** in a
+Seedcorn writes that page from the schedule itself. Click **Status report** in a
 project's toolbar and it opens already filled in.
 
 ![The status report print tool: the page on the right, what it shows on the left](docs/images/status-report-tool.png)
@@ -192,8 +196,8 @@ Requires [Docker](https://docs.docker.com/get-docker/). No other setup: no `.env
 no database to install.
 
 ```bash
-git clone https://github.com/vakahnke/Timeline.git
-cd Timeline
+git clone https://github.com/vakahnke/seedcorn.git
+cd seedcorn
 SEED_DEMO=1 docker compose up --build
 ```
 
@@ -364,7 +368,7 @@ All endpoints take a JWT in the `Authorization` header. The live schema at
 ## Project structure
 
 ```
-Timeline/
+seedcorn/
 ├── backend/                 # Django + DRF
 │   ├── timeline_project/     # settings, root urls, wsgi
 │   ├── projects/             # tenancy: Project, Membership, Team, Template, auth, permissions
@@ -404,10 +408,10 @@ document that captures the current state, prior art, and the proposed design,
 so the discussion happens before the code.
 
 Open issues with context and pointers into the code are in the
-[issue tracker](https://github.com/vakahnke/Timeline/issues); the ones marked
-[good first issue](https://github.com/vakahnke/Timeline/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+[issue tracker](https://github.com/vakahnke/seedcorn/issues); the ones marked
+[good first issue](https://github.com/vakahnke/seedcorn/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 are the easiest way in, and one of them needs no coding at all. Questions and ideas are welcome in
-[Discussions](https://github.com/vakahnke/Timeline/discussions).
+[Discussions](https://github.com/vakahnke/seedcorn/discussions).
 
 Some directions that would be good contributions, roughly in order of effort:
 
@@ -437,12 +441,12 @@ I manage projects for a living. Every project I ran taught me something about ho
 run the next one, and none of my tools had a place to keep that. I wanted a planner
 where the plan is the thing you build, and a finished plan is the thing you keep:
 grab an event and move it, see what it pushes, hand leadership a slide without
-rebuilding it by hand, and when it is done, save it for next time. I did not have the coding chops to build that alone. Timeline was built with
+rebuilding it by hand, and when it is done, save it for next time. I did not have the coding chops to build that alone. Seedcorn was built with
 a great deal of help from an AI coding assistant (Claude), and every change is tested and checked
 against the running app before it ships. Bug reports, ideas and pull requests are all welcome; the
-[issues](https://github.com/vakahnke/Timeline/issues) marked *good first issue* are a fine place to start.
+[issues](https://github.com/vakahnke/seedcorn/issues) marked *good first issue* are a fine place to start.
 
-If Timeline is useful to you, a star helps other people find it.
+If Seedcorn is useful to you, a star helps other people find it.
 
 ## License
 

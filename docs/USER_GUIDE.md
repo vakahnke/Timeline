@@ -1,6 +1,6 @@
 # User Guide
 
-How to use Timeline day to day. (To run it, see the [README](../README.md) and
+How to use Seedcorn day to day. (To run it, see the [README](../README.md) and
 [Deployment](DEPLOYMENT.md).)
 
 ## 1. Accounts

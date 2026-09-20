@@ -17,7 +17,7 @@ published through GitHub once a fix is available.
 
 ## Scope
 
-Timeline is self-hosted. The things most worth reporting are:
+Seedcorn is self-hosted. The things most worth reporting are:
 
 - Any way for a user to read or change a project they are not a member of.
 - Authentication or token-handling flaws in the JWT flow.
@@ -26,7 +26,7 @@ Timeline is self-hosted. The things most worth reporting are:
   than intended.
 
 Vulnerabilities in third-party dependencies should go to those projects, but a
-note here is still useful if Timeline's usage makes the issue exploitable.
+note here is still useful if Seedcorn's usage makes the issue exploitable.
 
 ## Supported versions
 

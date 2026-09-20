@@ -156,13 +156,18 @@ REST_FRAMEWORK = {
     },
 }
 
+# The product's name wherever the server says it: email subjects and sign-offs, the source mark on
+# an exported status report, the calendar PRODID,
+# the API documentation title. Set APP_NAME to put your own name on your copy.
+APP_NAME = env.str('APP_NAME', default='Seedcorn').strip() or 'Seedcorn'
+
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Timeline API',
+    'TITLE': f'{APP_NAME} API',
     'DESCRIPTION': 'Multi-tenant, team-based project-planning API. '
                    'Authenticate via JWT (POST /api/auth/token/), then send '
                    'Authorization: Bearer <access>. All project data is scoped to '
                    'projects you are a member of.',
-    'VERSION': '1.0.0',
+    'VERSION': '1.1.0',
     'SERVE_INCLUDE_SCHEMA': False,        # don't expose the raw schema in the UIs
     'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
     'SWAGGER_UI_SETTINGS': {'persistAuthorization': True},
@@ -202,10 +207,6 @@ if MAILERS['default']['BACKEND'].endswith('smtp.EmailBackend'):
         'username': _email_user,
         'password': env('EMAIL_HOST_PASSWORD', default=''),
     }
-# The product's name wherever the server says it: email subjects and sign-offs, the source mark on
-# an exported status report, the calendar PRODID. Set APP_NAME to put your own name on your copy.
-APP_NAME = env.str('APP_NAME', default='Timeline').strip() or 'Timeline'
-
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL',
                          default=(_email_user or f'{APP_NAME} <no-reply@localhost>'))
 SERVER_EMAIL = DEFAULT_FROM_EMAIL

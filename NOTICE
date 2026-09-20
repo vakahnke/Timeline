@@ -1,4 +1,4 @@
-Timeline
+Seedcorn (formerly "Timeline")
 Copyright 2026 Adam Kahnke
 
 Licensed under the Apache License, Version 2.0. See LICENSE.
@@ -7,5 +7,5 @@ This product depends on third-party open source software that is fetched at
 build time (pip and npm) and is not vendored in this repository. Those
 components remain under their own licenses. THIRD_PARTY_LICENSES.md lists
 each direct dependency with its license and copyright holder, so that the
-required notices are preserved when Timeline is redistributed, including as a
+required notices are preserved when Seedcorn is redistributed, including as a
 built container image.

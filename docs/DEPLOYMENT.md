@@ -58,7 +58,7 @@ Defined in `.env` and injected into the containers.
 | `DJANGO_SECURE_SSL_REDIRECT` | backend | prod, behind TLS |
 | `RUN_COLLECTSTATIC` | backend | `0` dev, `1` prod (entrypoint runs `collectstatic`) |
 | `REQUIRE_ACCOUNT_APPROVAL` | backend | `1` (default): new sign-ups inactive until approved; `0` to disable |
-| `APP_NAME` | backend | The product's name in emails, exported status reports and calendar files (default `Timeline`). Set it to put your own name on your copy |
+| `APP_NAME` | backend | The product's name in emails, exported status reports and calendar files (default `Seedcorn`). Set it to put your own name on your copy |
 | `VITE_APP_NAME` | frontend (build time) | The same name inside the app and in the browser tab. A build argument, like `VITE_DEMO_BANNER`; the default is in `frontend/brand.json` |
 | `DEFAULT_CURRENCY` | backend | Three-letter currency offered first when a project is closed out (default `USD`). Figures are never converted |
 | `TEMPLATE_LIBRARY` | backend | How far a saved template may be shared: `instance` (default; teams or everyone signed in), `teams`, or `off` (templates stay private) |

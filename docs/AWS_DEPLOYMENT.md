@@ -1,6 +1,6 @@
 # AWS Deployment (EC2 + Elastic IP + Cloudflare + HTTPS)
 
-This deploys Timeline to a **single EC2 instance** — Postgres, gunicorn, and nginx all in
+This deploys Seedcorn to a **single EC2 instance** — Postgres, gunicorn, and nginx all in
 Docker on the box, behind an **elastic IP**, with DNS and TLS on **Cloudflare**. Cloudflare's
 proxy terminates browser-facing HTTPS at its edge; nginx presents a **Cloudflare Origin
 Certificate** to secure the Cloudflare→origin leg. Infrastructure is managed with **Terraform**.
@@ -58,7 +58,7 @@ Create an **A record**: `timeline.example.com → <elastic IP>`.
 ```bash
 ssh ec2-user@<elastic IP>
 cd /opt/timeline
-git clone https://github.com/vakahnke/Timeline.git .
+git clone https://github.com/vakahnke/seedcorn.git .
 cp .env.example .env
 ```
 

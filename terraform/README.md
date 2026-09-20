@@ -1,4 +1,4 @@
-# Terraform — Timeline infrastructure
+# Terraform — Seedcorn infrastructure
 
 Provisions a single EC2 instance for the production stack: a minimal VPC + public subnet +
 internet gateway, a security group (SSH restricted, 80/443 open), an Amazon Linux 2023

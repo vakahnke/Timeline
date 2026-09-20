@@ -1,12 +1,12 @@
 # Third-party licenses
 
-Timeline itself is licensed under the Apache License 2.0 (see `LICENSE` and
+Seedcorn itself is licensed under the Apache License 2.0 (see `LICENSE` and
 `NOTICE`). It depends on the open source packages below, which are downloaded
 at build time by pip and npm rather than vendored in this repository. Each stays
 under its own license, reproduced in full inside the installed package
 (`site-packages/<name>-<version>.dist-info/` for Python, `node_modules/<name>/`
 for JavaScript). This file preserves the attribution those licenses require
-when Timeline is redistributed, for example as a built container image.
+when Seedcorn is redistributed, for example as a built container image.
 
 Versions are the ranges pinned in `backend/requirements.txt` and
 `frontend/package.json`; the installed versions may be newer within those
@@ -37,8 +37,8 @@ ranges.
 | typing_extensions (via python-pptx) | PSF-2.0 | Python Software Foundation | https://github.com/python/typing_extensions |
 
 psycopg is used unmodified as a library. Its LGPL terms apply to psycopg
-itself; Timeline's own code is not derived from it. If you redistribute a build
-of Timeline, keep psycopg replaceable (it is installed from PyPI at build time)
+itself; Seedcorn's own code is not derived from it. If you redistribute a build
+of Seedcorn, keep psycopg replaceable (it is installed from PyPI at build time)
 and include its license text, which ships in the package.
 
 ## Frontend (JavaScript)
