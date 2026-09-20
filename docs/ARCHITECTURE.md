@@ -230,10 +230,21 @@ that everything follows.
   median only, in the most common currency, never converted, rounded by `round_sig` to two figures;
   no minimum, maximum or mean is computed at all. `ProjectTemplate.origin_project` makes the project
   a template was saved from its first run (`library.origin_projects`); it counts everywhere except the
-  ratio. A lesson leaves the project only by the writer's choice: `lesson_to_owner` sends it to
-  `GET /api/templates/<key>/lessons/`, which answers the template's owner and nobody else (not
-  staff), and `post_as_comment` posts it once as an ordinary `TemplateComment`.
-  `backend/projects/tests_closeout.py` holds these rules; `check-closeout.mjs` walks the UI.
+  ratio. `backend/projects/tests_closeout.py` holds these rules; `check-closeout.mjs` walks the UI.
+- **Lessons learned** (section 8 of the same design): a lesson saved with `lesson_public` appears on
+  the template's page for everyone who can see the template. `library.lessons_learned` computes it
+  from the close-outs of the template's runs (`library.lessons_of_runs`, the same set the track
+  record uses), never copies it, so an edited, cleared, deleted or opted-out lesson is gone at once.
+  An entry is the text, the outcome, `YYYY-MM`, and the closer's username, or null when
+  `lesson_anonymous`, for every caller including the owner and staff. Its public id is
+  `RunCloseout.lesson_ref` (a UUID), never a project or close-out id, and no cost travels with it.
+  `TemplateOwnerNote` (seven per template, ordered, copied by `fork`) holds the owner's own notes.
+  `POST …/lessons-learned/<ref>/remove/` takes a lesson down (owner or staff; it is looked up among
+  that template's lessons, and stays on its project with `lesson_removed_at` set);
+  `…/owner-notes/` is owner-only; `report` accepts a `lesson`. It is in the template detail and at
+  `GET …/lessons-learned/`, which the start-from-template dialog reads. Phase B's
+  `lesson_to_owner` and `posted_comment` are read-only history: `GET …/lessons/` still answers the
+  template's owner with lessons sent before, and nothing new. `check-lessons-learned.mjs` walks the UI.
 - The frontend is `pages/TemplateLibraryPage.jsx`, `pages/TemplatePage.jsx` and
   `components/library/` (`TemplatePreview.jsx` draws the plan as SVG on relative time;
   `PublishModal.jsx` is the review step). `backend/projects/tests_template_library.py` holds the

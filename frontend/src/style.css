@@ -1475,6 +1475,10 @@ fieldset.modal-body:disabled { opacity: 1; }
 .closeout-note { font-size: 11px; }
 .closeout-lesson-opts { display: flex; flex-direction: column; gap: 8px; margin-top: -4px; }
 .closeout-lesson-opts:empty { display: none; }
+.closeout-signed { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 12px; color: var(--text-bright); }
+.closeout-signed label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.closeout-signed input { accent-color: var(--accent); }
+.closeout-flag { color: var(--warn); }
 .closeout-remove { margin-right: auto; }
 @media (max-width: 560px) { .closeout-cost { grid-template-columns: 1fr; } }
 

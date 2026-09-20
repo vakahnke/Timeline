@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth/AuthContext'
+import { LessonsLearnedBrief } from './library/LessonsLearned'
 
 function defaultStart() {
   const d = new Date()
@@ -22,6 +23,18 @@ export default function TemplateModal({ onCreated, onClose, initialKey = null })
   const [owner,     setOwner]     = useState('')
   const [error,     setError]     = useState('')
   const [busy,      setBusy]      = useState(false)
+  const [learned,   setLearned]   = useState(null)   // { key, data }: Lessons learned of the selected template
+
+  // What earlier runs of the selected plan learned, shown under the start date. Read-only, and
+  // never in the way: if it cannot be loaded the dialog works as before.
+  useEffect(() => {
+    if (!selected) return
+    let cancelled = false
+    api.templates.lessonsLearned(selected)
+      .then(data => { if (!cancelled) setLearned({ key: selected, data }) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [selected])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -138,6 +151,8 @@ export default function TemplateModal({ onCreated, onClose, initialKey = null })
               <input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} />
             </div>
           </div>
+
+          {learned?.key === selected && <LessonsLearnedBrief templateKey={selected} data={learned.data} />}
 
           <div className="field">
             <label>Assign to <span className="label-hint">(email or username — defaults to you)</span></label>

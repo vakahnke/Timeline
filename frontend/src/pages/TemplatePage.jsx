@@ -5,6 +5,7 @@ import { useToast } from '../ui/ToastProvider'
 import TemplateModal from '../components/TemplateModal'
 import PublishModal from '../components/library/PublishModal'
 import TemplatePreview from '../components/library/TemplatePreview'
+import LessonsLearned from '../components/library/LessonsLearned'
 import { GROUPS, VISIBILITY_LABEL, moneyText, outcomeText, ratioText, spanText } from '../components/library/libraryModel'
 import { LibraryHeader } from './TemplateLibraryPage'
 import '../library.css'
@@ -53,7 +54,8 @@ function TrackRecord({ rec }) {
   )
 }
 
-// For the template's owner: what people who ran the plan said they would change.
+// For the template's owner: lessons that were sent to them privately before Lessons learned
+// existed. Nothing new arrives here, and the section goes away once it is empty.
 function Lessons({ template }) {
   const [rows, setRows] = useState(null)
   useEffect(() => { api.templates.lessons(template.key).then(setRows).catch(() => setRows([])) }, [template.key])
@@ -71,7 +73,7 @@ function Lessons({ template }) {
           </li>
         ))}
       </ul>
-      <p className="dim lib-note">Sent by people who closed out a project started from this plan. Projects you are not on are not named.</p>
+      <p className="dim lib-note">Sent to you privately before Lessons learned existed. New lessons appear under Lessons learned instead. Projects you are not on are not named.</p>
     </section>
   )
 }
@@ -259,6 +261,9 @@ export default function TemplatePage() {
             <TrackRecord rec={t.track_record} />
           </section>
         </div>
+
+        <LessonsLearned templateKey={t.key} data={t.lessons_learned}
+                        onChange={next => setTemplate(x => ({ ...x, lessons_learned: next }))} />
 
         <section className="lib-section lib-manage">
           {t.can_edit && <button onClick={() => setEditing(true)}>{shareable ? 'Details and sharing' : 'Edit details or share…'}</button>}

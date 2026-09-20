@@ -59,6 +59,19 @@ export function recordLine(rec) {
   return parts.join(' · ')
 }
 
+// Lessons learned: how a run went, in the words the close-out uses, and "2026-09" as "Sep 2026".
+export const OUTCOME_LABEL = {
+  worked: 'It worked',
+  worked_with_changes: 'It worked, with changes',
+  did_not_work: 'It did not work',
+  stopped: 'We stopped early',
+}
+export function monthText(month) {
+  const [y, m] = (month || '').split('-').map(Number)
+  if (!y || !m) return ''
+  return new Date(y, m - 1, 1).toLocaleDateString(undefined, { year: 'numeric', month: 'short' })
+}
+
 // What an author should look at twice before sharing: addresses, @names, phone numbers, links.
 const SUSPECT = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i, 'an email address'],

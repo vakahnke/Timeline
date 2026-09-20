@@ -5,6 +5,28 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Lessons learned.** A template said "worked in 9 of 11 closed-out runs" and nothing about the
+  other two. Now what people type when they close out a project appears on the template's page,
+  under the track record: their words, how that run went, the month, and their username or
+  *Anonymous*, never the project's name or its cost. Anonymous means nobody is told, the
+  template's owner and admins included.
+- The close-out asks a question that fits the answer: *What went wrong? When would you not use this
+  plan?* for a run that did not work, *What stopped it?* for one that stopped early.
+- A template's owner can add up to seven notes of their own, shown first and copied with the
+  template, and can take a lesson down (not reword it). Admins can take down any lesson, built-in
+  templates included, and a lesson can be reported like a comment.
+- Starting a project from a template shows the owner's notes and the five newest lessons under the
+  start date.
+- `load_sample --clear` now also reseeds the shared library template and its runs, which include
+  lessons, a run that did not work and an owner's note.
+
+### Changed
+- The close-out's two tick boxes, "Send this to the template's owner" and "Also post it as a
+  comment", are gone: a typed lesson goes to Lessons learned, and the dialog says so. Lessons sent
+  or posted before stay where they are, and nothing earlier is published. The API ignores
+  `lesson_to_owner` and `post_as_comment` from older clients instead of refusing them.
+
 ## [1.1.0] - 2026-09-20
 
 ### Timeline is now Seedcorn

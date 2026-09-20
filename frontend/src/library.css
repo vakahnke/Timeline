@@ -154,3 +154,20 @@
   .lib-chip { padding: 7px 12px; }
   .lib-vote { padding: 5px 11px; }
 }
+
+/* Lessons learned: how a run went, beside who wrote the lesson */
+.lib-outcome {
+  font-size: 10.5px; padding: 1px 7px; border-radius: 999px;
+  border: 1px solid var(--border-mid); color: var(--text-dim); white-space: nowrap;
+}
+.lib-outcome--worked, .lib-outcome--worked_with_changes { color: var(--success); border-color: rgba(52,211,153,0.4); }
+.lib-outcome--did_not_work, .lib-outcome--stopped { color: var(--warn); border-color: rgba(251,191,36,0.4); }
+.lib-comment-head { flex-wrap: wrap; }
+.lib-flag { font-size: 11.5px; color: var(--warn); }
+.lib-note-editor-foot { display: flex; gap: 10px; align-items: center; font-size: 11px; }
+
+/* The same list, read-only, in the start-from-template dialog */
+.lessons-brief { border: 1px solid var(--border-mid); border-radius: 8px; padding: 10px 12px; max-height: 210px; overflow-y: auto; }
+.lessons-brief-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+.lessons-brief .lib-comments { margin: 8px 0 4px; gap: 10px; }
+.lessons-brief .lib-comments p { font-size: 12.5px; }

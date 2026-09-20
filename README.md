@@ -86,8 +86,12 @@ people find it.
   closed-out runs" and "typically costs about $14,000". Cost is handled more carefully
   than dates: a middle figure only, never a lowest or highest, nothing until three runs
   in the same currency have answered, rounded, and any run can keep its numbers out.
-  The project a template was saved from counts as its first run, and "what I would
-  change" can go back to the template's owner, so the plan gets better each time.
+  The project a template was saved from counts as its first run.
+- **Lessons learned, in the words of the people who ran it.** "Worked in 9 of 11" is half the
+  story. Closing out asks a question that fits the answer ("What went wrong? When would you not use
+  this plan?"), and the lesson goes straight onto the template's page, signed or anonymous, with
+  how that run went. The plan's owner adds notes of their own, and the list is shown again when the
+  next person starts from the plan.
 - **Vote and comment.** One upvote each, and a comment thread for what worked and
   what to change. The built-in plans take votes and comments too.
 - **Make your own copy** of any template to adapt, and it remembers where it came from.
@@ -97,7 +101,7 @@ people find it.
   link pointed out. Leave the notes or to-dos out, or share it without your name.
   Your own copy keeps everything.
 
-![A template's page: the plan, its track record and comments](docs/images/template-page.png)
+![A template's page: the plan, its track record, and the lessons learned by the people who ran it](docs/images/template-page.png)
 
 An operator can limit sharing to teams, or switch it off, with `TEMPLATE_LIBRARY`.
 Still to come: handing a template to another server as a file, and a community

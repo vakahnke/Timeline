@@ -205,9 +205,11 @@ Open a template to see its page:
   "typically costs about $14,000". The cost is a middle figure, rounded, from at least three runs in
   the same currency. No lowest, highest or single run's figure is ever shown, and currencies are
   never converted or mixed.
+- **Lessons learned** sits right under the track record, so "worked in 9 of 11" comes with what
+  the other two found out. See [Lessons learned](#lessons-learned) below.
 - **Vote and comment.** One upvote per person, which you can take back. Comments show your
   username. You can delete your own comments; the template's owner and admins can delete any.
-  **Report** flags a template or a comment for an admin.
+  **Report** flags a template, a comment or a lesson for an admin.
 
 #### Closing out a project
 
@@ -219,11 +221,13 @@ things about the **plan**, all optional, and you can change the answers later:
 2. **What did it cost?** Money (with a currency), person-days of effort, either, both or neither. A
    rough figure is better than none. **Include my numbers in the template's totals** is ticked by
    default; untick it to keep the figures on this project only.
-3. **What would you change next time?** A sentence or two. Two tick boxes decide where it goes:
-   **Send this to the template's owner** (on by default; they see the text and the date, never
-   which project it came from, unless they are on that project anyway) and **Also post it as a
-   comment** on the template, under your username (off by default, and posted once). With both
-   off it stays with the project. For a built-in template there is no owner to send it to.
+3. **What did you learn?** A sentence or two. The question follows your first answer: *What would
+   you change next time?* if it worked, *What did you have to change, and why?* if it worked with
+   changes, *What went wrong? When would you not use this plan?* if it did not work, and *What
+   stopped it? Was there an early sign the plan could have caught?* if you stopped early. Under the
+   box the dialog says where your words go: onto the template's page, under **Lessons learned**,
+   with how the plan worked. Choose how it is **Signed**: **My name** (your username, as on a
+   comment) or **Anonymous**. See [Lessons learned](#lessons-learned).
 
 **Not now** is remembered and the offer does not come back. You can always reach it from the gear
 menu, **Close out…**, which is also how you record a project that stopped early, or close out a
@@ -237,8 +241,37 @@ the plan's first run in its track record. If you save a *finished* project as a 
 asked to close it out there and then, so the template starts with real numbers. (That first run
 is left out of "typically runs N% long", because its length *is* the plan's length.)
 
-**Lessons from runs.** On a template you own, the page lists what people who ran the plan said they
-would change. Only you see this list.
+#### Lessons learned
+
+A plan that did not work for someone is the most useful thing a template can know. What people
+type at close-out goes straight onto the template's page, under **Lessons learned**, for everyone
+who can see the template.
+
+- **Each lesson shows** the words as written, who wrote them (or *Anonymous*), how that run went
+  ("It did not work"), and the month and year. It never shows the project's name or what it cost.
+  Newest first.
+- **Anonymous means nobody is told**: not the template's owner, not an admin. You can change how a
+  lesson is signed, reword it or clear it at any time by reopening the close-out (the **Closed
+  out** marker, or **Close out…** in the gear menu); the template's page follows at once.
+- **The plan's owner adds notes of their own**, up to seven, marked *From the plan's owner* and
+  shown first: what no single run said, such as who the plan is and is not written for. The owner
+  can reorder, reword and delete their notes.
+- **The owner can take a lesson down, not reword it.** The words are someone else's. If a lesson is
+  wrong or out of date the owner takes it down and may add a note of their own instead. Its writer
+  still sees it on their project, with a line saying it was taken down. Admins can take down any
+  lesson, which is how the built-in templates are looked after, and **Report** flags one for them.
+- **Before you start.** When you start a project from a template, the dialog shows the owner's
+  notes and the five newest lessons under the start date, so you read them at the moment you are
+  about to commit to the plan.
+- **A copy** of a template starts with the owner's notes. What runs learned stays with the original,
+  like its track record, and the copy links back to it.
+- A project with **Count this project in its template's track record** unticked contributes nothing
+  to the template, its lesson included; the dialog says the lesson stays with the project. The same
+  goes for a project that was not started from a template.
+- Lessons written before this existed stay where their dialog said they would: with the project,
+  and, if they were sent to a template's owner, on that owner's private **Lessons from runs** list,
+  which gets nothing new and disappears when it is empty. Saving such a close-out again through the
+  new dialog moves its lesson to Lessons learned.
 
 **Sharing one of yours.** On your template's page choose **Edit details or share…**. Give it a
 one-line summary, a shelf and tags, then choose who can see it: only you, teams you choose (any

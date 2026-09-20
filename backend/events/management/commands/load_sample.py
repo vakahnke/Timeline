@@ -83,13 +83,24 @@ LIBRARY_COMMENTS = [
                'starting it the day after kickoff was the fix.'),
     ('viewer', 'Worth adding a security questionnaire step for larger customers. It cost us a week once.'),
 ]
-# Finished runs behind its track record: each run's real length as a multiple of the plan, and
-# how its owner closed it out (outcome, cost in USD, person-days).
+# Finished runs behind its track record: each run's real length as a multiple of the plan, how
+# its owner closed it out (outcome, cost in USD, person-days), and what they learned, signed with a
+# demo user's name or None for Anonymous. The lessons are what "Lessons learned" shows.
 LIBRARY_RUNS = [
-    (1.0,  'worked',              11500, 38),
-    (1.04, 'worked',              13200, 44),
-    (1.1,  'worked_with_changes', 14600, 47),
-    (1.22, 'worked_with_changes', 19800, 61),
+    (1.0,  'worked',              11500, 38, 'demo',
+     'Book the kickoff call before the contract is signed. Waiting for signature cost the first week.'),
+    (1.04, 'worked',              13200, 44, None, ''),
+    (1.1,  'worked_with_changes', 14600, 47, 'viewer',
+     'We moved data migration ahead of training. Training on an empty account taught people nothing.'),
+    (1.22, 'worked_with_changes', 19800, 61, None,
+     'The customer had no single owner on their side, so every decision took a week. Get one named in the kickoff.'),
+    (1.35, 'did_not_work',        23500, 72, 'viewer',
+     'Not a fit for a customer with more than three integrations: the plan gives them one week and they needed five. '
+     'Use it for simple accounts, or add an integration track first.'),
+]
+# From the template's owner, shown first.
+LIBRARY_OWNER_NOTES = [
+    'Written for accounts under 200 seats with at most one integration. Past that, copy it and add a track.',
 ]
 
 # Multi-week projects instantiated from built-in templates, anchored relative to
@@ -214,7 +225,7 @@ class Command(BaseCommand):
         ))
 
         self._seed_template_projects(users)
-        self._seed_library(users)
+        self._seed_library(users, clear=options['clear'])
 
     def _seed_report_history(self, project, owner, events, now):
         """A baseline and three earlier status reports, so slip, what moved and the milestone
@@ -276,14 +287,23 @@ class Command(BaseCommand):
                     'footer': {'text': ''},
                 })
 
-    def _seed_library(self, users):
+    def _seed_library(self, users, clear=False):
         """One shared template with votes, comments and a track record, so the template library
         has something in it besides the built-ins. The finished runs behind the track record belong
         to an account nobody can sign in to, which keeps them off the demo users' dashboards."""
-        from projects.models import ProjectTemplate, RunCloseout, TemplateComment, TemplateVote
+        from projects.models import (ProjectTemplate, RunCloseout, TemplateComment, TemplateOwnerNote,
+                                     TemplateVote)
 
         author = users['editor']
-        if ProjectTemplate.objects.filter(owner=author, name=LIBRARY_TEMPLATE['name']).exists():
+        seeded = ProjectTemplate.objects.filter(owner=author, name=LIBRARY_TEMPLATE['name'])
+        if clear:                                   # only what this command made: the template and its runs
+            for old in seeded:
+                old_key = f'saved:{old.id}'
+                for model in (TemplateVote, TemplateComment, TemplateOwnerNote):
+                    model.objects.filter(template_key=old_key).delete()
+            seeded.delete()
+            Project.objects.filter(owner__username='library-history').delete()
+        elif seeded.exists():
             return
         tpl = ProjectTemplate.objects.create(
             owner=author, visibility='instance', published_at=timezone.now() - timedelta(days=40),
@@ -300,7 +320,9 @@ class Command(BaseCommand):
         runner.save()
         spec = {'categories': tpl.categories, 'tasks': tpl.tasks}
         now = timezone.now()
-        for n, (stretch, outcome, cost, days) in enumerate(LIBRARY_RUNS):
+        for n, text in enumerate(LIBRARY_OWNER_NOTES):
+            TemplateOwnerNote.objects.create(template_key=key, text=text, position=n, created_by=author)
+        for n, (stretch, outcome, cost, days, signed, lesson) in enumerate(LIBRARY_RUNS):
             start = now - timedelta(days=60 + 45 * n)
             project = create_project_from_spec(
                 spec, name=f'{tpl.name} (run {n + 1})', description='', start=start, owner=runner,
@@ -310,8 +332,12 @@ class Command(BaseCommand):
                 ev.end = start + (ev.end - start) * stretch
                 ev.percent_complete = 100
                 ev.save(update_fields=['start', 'end', 'percent_complete'])
-            RunCloseout.objects.create(project=project, outcome=outcome, cost_amount=cost,
-                                       cost_currency='USD', effort_person_days=days, closed_by=runner)
+            closeout = RunCloseout.objects.create(
+                project=project, outcome=outcome, cost_amount=cost, cost_currency='USD',
+                effort_person_days=days, closed_by=users[signed] if signed else runner,
+                lesson=lesson, lesson_public=bool(lesson), lesson_anonymous=not signed)
+            # closed_at is set on creation; move it to when that run really ended.
+            RunCloseout.objects.filter(pk=closeout.pk).update(closed_at=start + timedelta(days=32 * stretch))
         self.stdout.write(self.style.SUCCESS(
             f'Seeded the template library: "{tpl.name}" shared by editor, {len(LIBRARY_RUNS)} finished runs.'))
 

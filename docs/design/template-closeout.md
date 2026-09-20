@@ -1,6 +1,6 @@
 # Closing out a run: what it cost and how well it worked — Design Document
 
-**Status:** Phases A and B built (2026-09-20); phase C waits for library phase 2; the addendum in section 8 (Lessons learned) is designed and waits for a go-ahead to build
+**Status:** Phases A and B built (2026-09-20); phase C waits for library phase 2; the addendum in section 8 (Lessons learned) is built (2026-09-20)
 **Last updated:** 2026-09-20
 **Scope:** A short, optional close-out when a project finishes, and what a template then shows from the close-outs of its runs. Touches the project model and API, the project page, and the template library's track record.
 
@@ -290,7 +290,7 @@ written; three figures minimum; owners only; the default currency is a server se
 
 ## 8. Addendum: what the runs that did not work have to teach
 
-**Status:** Design settled (2026-09-20): every question in 8.6 is answered. Not yet approved to build; nothing here is built.
+**Status:** Built (2026-09-20), D1 and D2 together. See 8.7 for what was built and where it differs.
 
 ### 8.0 Problem
 
@@ -464,3 +464,26 @@ D1 and D2 ship together as one release; they are listed apart because D1 has no 
       newest, read-only (decided 2026-09-20).
 - [x] **The owner can take a lesson down but not reword it,** and can add their own note instead
       (decided 2026-09-20).
+
+### 8.7 What was built
+
+As designed, with these notes:
+
+- **`lesson_public` is sent by the dialog**, true whenever the project came from a template and
+  counts in its track record. An older client that omits it publishes nothing.
+- **A lesson's public id is `RunCloseout.lesson_ref`**, a UUID made for the purpose.
+- **A lesson taken down stays down**, even if its writer rewords it afterwards; there is no
+  "put it back" yet. The close-out dialog tells the writer it was taken down.
+- **The owner's notes are `TemplateOwnerNote`**; "Move up" in the page reorders them through a
+  `position` on PATCH, and the server renumbers.
+- **The start-from-template dialog reads `GET …/lessons-learned/`** for the selected template and
+  shows nothing if that fails, so it can never block creating a project.
+- **`lesson_to_owner` now defaults to false and is read-only**, as is `posted_as_comment`.
+  `GET …/lessons/` (the owner's private list) leaves out any lesson since saved as public, so a
+  lesson is never in both places.
+- **Reports:** `TemplateReport.lesson_ref`; the Django admin shows the reported words, not who
+  wrote them.
+- The sample data (`load_sample`) gained lessons, a run that did not work and an owner's note, and
+  `--clear` now reseeds the shared library template too.
+- Tests: `LessonsLearned`, `TheOwnersNotes` and `LessonsSentBeforeLessonsLearned` in
+  `backend/projects/tests_closeout.py`; `check-lessons-learned.mjs` walks the UI (35 checks).
