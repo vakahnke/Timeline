@@ -53,11 +53,20 @@ railway login
 railway init                       # new project
 railway add --database postgres    # managed Postgres
 railway up --service web           # build and deploy from the repo (railway.json picks the Dockerfile)
+railway up --service reset         # the reset service too, from the same tree (see below)
 railway domain                     # get a public URL
 ```
 
 Then set the variables above on the web service (`railway variables --set KEY=VALUE`),
 redeploy, and add the reset service from the dashboard with the cron schedule.
+
+**Deploy `web` and `reset` together, every time.** `railway up` deploys one service, so a
+change needs two runs, from the same working tree. The reset wipes the database with Django's
+`flush`, which truncates the tables *its own code* knows about. If `web` has been deployed with
+a migration that adds a table and `reset` has not, Postgres refuses the truncate ("cannot
+truncate a table referenced in a foreign key constraint"), the cron run crashes, Railway sends a
+"deployment crashed" email every six hours, and the demo is never reset. `reset_demo` now
+checks for this before touching anything and says so in its error.
 
 ## Cost
 

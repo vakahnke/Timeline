@@ -44,6 +44,29 @@ class ResetDemoGuardTests(TestCase):
                 call_command('reset_demo', stdout=StringIO())
         self.assertDataIntact()
 
+    def test_refuses_when_the_database_is_ahead_of_this_code(self):
+        """The reset service was built before the web service's last migration (Railway, Sept
+        2026): its flush would fail on a foreign key from the table it does not know. It must
+        say so before touching anything."""
+        from django.db.migrations.recorder import MigrationRecorder
+        MigrationRecorder.Migration.objects.create(app='projects', name='9999_from_a_newer_build')
+        with mock.patch.dict(os.environ, {'ALLOW_DEMO_RESET': '1'}):
+            with self.assertRaises(CommandError) as ctx:
+                call_command('reset_demo', '--yes', stdout=StringIO())
+        msg = str(ctx.exception)
+        self.assertIn('projects.9999_from_a_newer_build', msg)
+        self.assertIn('railway up --service reset', msg)
+        self.assertDataIntact()
+
+    def test_refuses_when_this_code_is_ahead_of_the_database(self):
+        from django.db.migrations.recorder import MigrationRecorder
+        latest = MigrationRecorder.Migration.objects.filter(app='projects').order_by('-id').first()
+        latest.delete()                                   # rolled back with the test
+        with mock.patch.dict(os.environ, {'ALLOW_DEMO_RESET': '1'}):
+            with self.assertRaises(CommandError) as ctx:
+                call_command('reset_demo', '--yes', stdout=StringIO())
+        self.assertIn(f'projects.{latest.name}', str(ctx.exception))
+        self.assertDataIntact()
 
 
 class ResetDemoRunsTests(TransactionTestCase):
