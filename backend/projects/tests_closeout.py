@@ -374,7 +374,9 @@ class LessonsLearned(SharedPlanCase):
         closeout = RunCloseout.objects.get(project=self.run)
         row = self.learned()['runs'][0]
         self.assertNotIn(row['id'], (str(closeout.pk), str(self.run.pk)))
-        flat = str(self.learned()) + str(self.as_(self.stranger).get(f'/api/templates/{self.key}/').data['lessons_learned'])
+        pages = (self.learned(), self.as_(self.stranger).get(f'/api/templates/{self.key}/').data['lessons_learned'])
+        # The lesson's own id is a random UUID; leave it out so its hex digits can't collide with a sentinel.
+        flat = ''.join(str({**page, 'runs': [{k: v for k, v in r.items() if k != 'id'} for r in page['runs']]}) for page in pages)
         for leak in ('PROJECT-NAME-XYZ', '4321', '77'):
             self.assertNotIn(leak, flat)
 
