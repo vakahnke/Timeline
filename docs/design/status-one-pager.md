@@ -1,7 +1,7 @@
 # Status One-Pager — Design Document
 
-**Status:** Shipped — Phase 1 (the page, the print tool, print/PDF), phase 2 (native PowerPoint) and phase 3 (baselines, slip, limits, trends) shipped 2026-09-19. The portfolio slide and corporate templates remain under "Later".
-**Last updated:** 2026-09-19
+**Status:** Shipped — Phase 1 (the page, the print tool, print/PDF), phase 2 (native PowerPoint) and phase 3 (baselines, slip, limits, trends) shipped 2026-09-19. The portfolio slide and corporate templates remain under "Later".; section 8 (time window) is a draft, not approved
+**Last updated:** 2026-09-23
 **Scope:** A per-project status report composed inside Timeline and exported as a native, editable PowerPoint slide and a print-ready PDF handout. Touches the data model (reports, baselines, milestones), the API, a new composer page, and two export renderers.
 
 ![The proposed 16:9 slide](images/status-one-pager-slide.png)
@@ -388,6 +388,120 @@ saved reports. No new roles; it follows [PERMISSIONS.md](../PERMISSIONS.md).
    from day one?
 5. **Cadence.** Is the report weekly, monthly, or per meeting? It sets the default "since last
    report" and "next" windows.
+
+## 8. Addendum: choosing the timeline's time window
+
+**Status:** Draft (2026-09-23), not approved. Nothing here is built.
+
+### 8.0 Problem
+
+The report's timeline always shows the whole project: from four days before the first event to
+a week after the last (`ReportTimeline.jsx` on screen and in the PDF; `_draw_timeline` in
+`pptx_export.py` for PowerPoint, the same rule written twice). On a long project that squeezes
+this month, the part the audience is actually deciding about, into a sliver: a two-week track on
+a nine-month plan is 5% of the width, its milestone labels collide, and the today line sits in a
+crowd. The author has no way to say "show the next six weeks".
+
+- **R1. Fit is the default.** A new report shows the whole project, as today. Nothing changes
+  for anyone who does not touch the control.
+- **R2. One choice, three renderers.** The window the author picks is what the screen, the PDF
+  and the PowerPoint all draw. It is computed in one place per side and never differs.
+- **R3. Nothing is silently lost.** Work outside the window is shown to be outside it, not
+  dropped: bars are cut at the edge with a visible cut, and milestones outside the window stay
+  in the handout's table and in the status rule.
+- **R4. It is part of the report's shape.** The choice is saved with the report and carries to
+  the next one, like hidden tracks and chosen milestones, because the audience that wanted six
+  weeks last time wants six weeks this time.
+
+### 8.1 Design
+
+**The control.** In the composer's **Timeline** section, above *Progress fill*, one dropdown
+labelled **Time window**:
+
+| Option | Window drawn |
+|---|---|
+| **Whole project** (default) | today's rule: first event − 4 days to last date + 7 days |
+| Next 4 weeks | 7 days before today to 4 weeks after |
+| Next 8 weeks | 7 days before today to 8 weeks after |
+| Next 3 months | 2 weeks before today to 3 months after |
+| Next 6 months | 2 weeks before today to 6 months after |
+| Custom dates… | two date fields, *From* and *To*, prefilled with the current window |
+
+"Today" is the report's `as_of`, so a saved report re-opened later draws the window it was
+saved with, not a window that has drifted. The short lookback keeps the today line off the left
+edge, where a reader would miss it.
+
+**Drawing inside a window.**
+
+- Bars are clipped to the window. A bar that continues past an edge ends in a short diagonal
+  cut instead of a rounded end, so it reads as "continues", not "finishes here". Its progress
+  fill is drawn against the whole bar's length, then clipped, so the fill is still truthful.
+- A track with nothing inside the window is still listed, with its name and its percent figure
+  and a faint "before" or "after" in place of a bar, so the audience sees the track exists and
+  where its work sits. It is not dropped: dropping it would make the chart a different set of
+  tracks from the rest of the page.
+- Milestones outside the window are not drawn. The handout's milestone table lists every chosen
+  milestone regardless, with its date, as it does today. The status rule and the KPIs never
+  look at the window: the window is a view, not a filter.
+- Baseline ghosts, the past shading, the today line and the month bands all clip to the window.
+  The month bands switch to week bands ("Sep 28", "Oct 5", …) when the window is under ten
+  weeks, since a four-week chart with one or two month labels tells the reader little.
+- The empty state: a window with no bars and no milestones at all (a "Next 4 weeks" on a
+  finished project) draws the tracks with their "before"/"after" marks and a one-line note under
+  the chart, "Nothing scheduled in this window", so the author sees why.
+- A caption at the chart's top-left states the window when it is not the whole project:
+  "Sep 21 – Oct 19". The footer's "Schedule data as of" line is unchanged.
+
+**One rule, two sides.** The window's `t0`/`t1` come from one function on each side:
+`timelineWindow(doc.timeline, facts)` in `reportModel.js` and `_timeline_window(doc, facts, tz)`
+in `pptx_export.py`, each given the same inputs and pinned by tests to the same answers. The
+PowerPoint export clips with the same cut-end shapes (a rectangle with one slanted side, still a
+native shape, still grouped in "Timeline").
+
+**Saved with the report.** `doc.timeline.window` is `{ kind: 'fit' | 'next4w' | 'next8w' |
+'next3m' | 'next6m' | 'custom', from?: 'YYYY-MM-DD', to?: 'YYYY-MM-DD' }`. Absent means `fit`,
+so every existing report reads as today. `newDocument` copies it from the previous report like
+the rest of `timeline`. No migration: `content` is a JSON field owned by the composer.
+
+**Where it is not.** The phone's read view draws the same window. The interactive project
+timeline's own zoom is untouched and unrelated; this is only the report.
+
+### 8.2 Alternatives considered
+
+- **A zoom slider or +/− buttons, like the project timeline.** Continuous zoom on a printed page
+  gives windows nobody can name ("about seven weeks?"). A report should be able to say what it
+  shows; a named window can be said in the caption and repeated next time.
+- **Auto-pick the window from the project's length.** Guessing wrong on a report is worse than
+  the author choosing, and the author already chooses the milestones and tracks here.
+- **Hide tracks with nothing in the window.** Simpler to draw, but the chart would no longer
+  match the KPIs and the table on the same page.
+- **Let the window filter the whole report** (KPIs, milestones met, "next" items). Tempting and
+  wrong: the status must be the project's status, whatever the chart shows.
+
+### 8.3 Tests and checks
+
+- `reportModel` and `pptx_export` window functions agree for every option on the same facts,
+  including a project that ends before the window starts.
+- The SVG clips bars and marks cut ends; a milestone outside the window is absent from the SVG
+  and present in the handout table; the KPIs are identical under every window.
+- The PowerPoint's timeline group stays inside the slide under every option, and its bar
+  shapes carry the same dates in their alt text as today (`tests_pptx_export.py` pattern).
+- A saved report reopened after `as_of` has passed draws the window it was saved with.
+- `check-report.mjs` gains: pick *Next 4 weeks*, the caption appears, the today line is inside
+  the chart, print and PowerPoint still produce; phone width fits.
+
+### 8.4 Effort and risk
+
+**S to M**: one dropdown, one shared window rule per side, clipping and cut ends in two
+renderers, week bands, tests. The risk is the two renderers drifting; the paired tests are the
+guard. No data-model or API change.
+
+### 8.5 Open questions
+
+- [ ] **The preset list**: 4 and 8 weeks, 3 and 6 months (proposed), or fewer?
+- [ ] **Lookback before today**: one week for the week presets and two for the month presets
+      (proposed), or none, with the today line at the left edge?
+- [ ] **Week bands under ten weeks** (proposed), or keep month bands always?
 
 ## Sources
 
